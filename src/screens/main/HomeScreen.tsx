@@ -27,6 +27,19 @@ interface HomeScreenProps {
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) => {
   
+  // 🔍 DEBUG: Verificar token al cargar la pantalla
+  React.useEffect(() => {
+    const checkToken = async () => {
+      const token = await authService.getToken();
+      const isAuth = await authService.isAuthenticated();
+      
+      console.log('🔍 DEBUG - Token actual:', token ? token.substring(0, 20) + '...' : 'No hay token');
+      console.log('🔍 DEBUG - ¿Está autenticado?:', isAuth);
+    };
+    
+    checkToken();
+  }, []);
+  
   // Función para manejar el logout
   const handleLogout = async () => {
     Alert.alert(
@@ -74,12 +87,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
 
         {/* Footer */}
         <View style={styles.footer}>
+          {/* 🔍 BOTÓN DEBUG TEMPORAL */}
           <Button
-            title="Cerrar Sesión"
-            onPress={handleLogout}
-            variant="outline"
+            title="🔍 Verificar Token"
+            onPress={async () => {
+              const token = await authService.getToken();
+              const isAuth = await authService.isAuthenticated();
+              
+              Alert.alert(
+                'Estado del Token',
+                `Token: ${token ? 'SÍ EXISTE' : 'NO EXISTE'}\n` +
+                `Autenticado: ${isAuth ? 'SÍ' : 'NO'}\n` +
+                `Token (últimos 20 chars): ${token ? '...' + token.substring(token.length - 20) : 'Ninguno'}`
+              );
+            }}
+            variant="secondary"
             fullWidth
           />
+          
+          <View style={{ marginTop: spacing.md }}>
+            <Button
+              title="Cerrar Sesión"
+              onPress={handleLogout}
+              variant="outline"
+              fullWidth
+            />
+          </View>
         </View>
       </View>
     </SafeContainer>

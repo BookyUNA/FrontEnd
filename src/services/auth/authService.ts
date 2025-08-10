@@ -1,6 +1,6 @@
 /**
  * Servicio de Autenticación - Booky
- * Actualizado con hash SHA256 para contraseñas
+ * Actualizado con hash SHA256 para contraseñas y storage simple
  */
 
 import { apiService } from '../api/apiService';
@@ -8,6 +8,7 @@ import { API_CONFIG } from '../../config/api';
 import { ReqInicioSesion, ResInicioSesion, ApiError } from '../../types/api';
 import { LoginFormData } from '../../types/auth';
 import { hashService } from '../../utils/hashService';
+import { storageService } from '../storage/simpleStorageService';
 
 export interface LoginResult {
   success: boolean;
@@ -74,8 +75,14 @@ class AuthService {
       if (loginResponse.resultado && loginResponse.token) {
         console.log('Login exitoso, token recibido');
         
-        // TODO: Aquí se puede guardar el token en el almacenamiento seguro
-        // await SecureStore.setItemAsync('authToken', loginResponse.token);
+        // ✅ GUARDAR TOKEN en memoria
+        try {
+          await storageService.saveAuthToken(loginResponse.token);
+          console.log('Token guardado en memoria');
+        } catch (storageError) {
+          console.error('Error al guardar token:', storageError);
+          // No fallar el login por error de storage
+        }
         
         return {
           success: true,
@@ -208,14 +215,16 @@ class AuthService {
    */
   async logout(): Promise<void> {
     try {
-      // TODO: Limpiar token del almacenamiento seguro
-      // await SecureStore.deleteItemAsync('authToken');
+      // ✅ LIMPIAR TOKEN de memoria
+      await storageService.removeAuthToken();
+      console.log('Token eliminado de memoria');
       
       // TODO: Llamada al endpoint de logout para invalidar token en el servidor
       console.log('Usuario deslogueado');
       
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
+      // No lanzar error para que el logout siempre funcione en UI
     }
   }
 
@@ -224,11 +233,11 @@ class AuthService {
    */
   async isAuthenticated(): Promise<boolean> {
     try {
-      // TODO: Verificar token en almacenamiento seguro
-      // const token = await SecureStore.getItemAsync('authToken');
-      // return !!token;
+      // ✅ VERIFICAR TOKEN en memoria
+      const hasToken = await storageService.hasAuthToken();
+      console.log('Estado de autenticación:', hasToken ? 'Autenticado' : 'No autenticado');
+      return hasToken;
       
-      return false;
     } catch (error) {
       console.error('Error al verificar autenticación:', error);
       return false;
@@ -240,13 +249,25 @@ class AuthService {
    */
   async getToken(): Promise<string | null> {
     try {
-      // TODO: Obtener token del almacenamiento seguro
-      // return await SecureStore.getItemAsync('authToken');
+      // ✅ OBTENER TOKEN de memoria
+      const token = await storageService.getAuthToken();
+      return token;
       
-      return null;
     } catch (error) {
       console.error('Error al obtener token:', error);
       return null;
+    }
+  }
+
+  /**
+   * Limpiar todos los datos de autenticación
+   */
+  async clearAuthData(): Promise<void> {
+    try {
+      await storageService.clearAll();
+      console.log('Todos los datos de autenticación limpiados');
+    } catch (error) {
+      console.error('Error al limpiar datos:', error);
     }
   }
 }

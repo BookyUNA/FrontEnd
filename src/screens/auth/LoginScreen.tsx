@@ -3,7 +3,7 @@
  * Sistema de reservas para profesionales independientes
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,10 +20,12 @@ import { SafeContainer } from '../../components/ui/SafeContainer';
 import { Logo } from '../../components/ui/Logo';
 import { Input } from '../../components/forms/Input';
 import { Button } from '../../components/forms/Button';
-// IMPORTACIÓN DIRECTA (temporal)
-import { useForm } from '../../hooks/useForm.ts'; // Nota: añadí .ts explícitamente
+import { ErrorMessage } from '../../components/ui/ErrorMessage';
+import { useForm } from '../../hooks/useForm';
 import { validateLoginForm, sanitizeFormData } from '../../utils/validation';
 import { LoginFormData, AuthScreenProps } from '../../types/auth';
+// CORRECCIÓN: Importar desde la ruta correcta
+import { authService } from '../../services/auth/authService';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { layout, spacing } from '../../styles/spacing';
@@ -35,6 +37,10 @@ const initialFormValues: LoginFormData = {
 };
 
 export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
+  // Estados adicionales para manejo de errores
+  const [generalError, setGeneralError] = useState<string>('');
+  const [showError, setShowError] = useState<boolean>(false);
+
   // Hook personalizado para manejo del formulario
   const {
     values,
@@ -43,28 +49,45 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
     handleChange,
     handleSubmit,
     setFieldError,
+    clearFieldError,
   } = useForm<LoginFormData>({
     initialValues: initialFormValues,
     validationSchema: validateLoginForm,
     onSubmit: handleLogin,
   });
 
-  // Función para manejar el login
+  // Función para limpiar errores cuando el usuario modifica los campos
+  const handleFieldChange = (field: keyof LoginFormData) => (value: string) => {
+    // Limpiar errores generales cuando el usuario empieza a escribir
+    if (showError) {
+      setShowError(false);
+      setGeneralError('');
+    }
+    
+    // Limpiar errores específicos del campo
+    if (errors[field]) {
+      clearFieldError(field);
+    }
+    
+    // Actualizar el valor del campo
+    handleChange(field)(value);
+  };
+
+  // Función para manejar el login con el endpoint real
   async function handleLogin(formData: LoginFormData) {
     try {
+      // Limpiar errores previos
+      setGeneralError('');
+      setShowError(false);
+      
       // Sanitizar datos del formulario
       const sanitizedData = sanitizeFormData(formData);
       
-      // Aquí harías la llamada a tu API de autenticación
-      console.log('Datos de login:', sanitizedData);
+      // Llamada real al servicio de autenticación
+      const result = await authService.login(sanitizedData);
       
-      // Simulación de llamada a API
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simulación de respuesta exitosa
-      const mockSuccess = Math.random() > 0.3; // 70% de éxito
-      
-      if (mockSuccess) {
+      if (result.success && result.token) {
+        // Login exitoso
         Alert.alert(
           'Login Exitoso',
           'Bienvenido a Booky',
@@ -74,22 +97,36 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
               onPress: () => {
                 // Aquí navegarías a la pantalla principal
                 console.log('Navegando a pantalla principal...');
+                // TODO: Guardar token y navegar
+                // navigation.navigate('MainApp');
               },
             },
           ]
         );
       } else {
-        // Simular error de credenciales
-        setFieldError('email', 'Credenciales incorrectas');
-        setFieldError('password', 'Credenciales incorrectas');
+        // Login fallido - mostrar error específico
+        const errorMessage = result.error || 'Error de autenticación';
+        
+        if (result.isNetworkError) {
+          // Error de red - mostrar mensaje general
+          setGeneralError(errorMessage);
+          setShowError(true);
+        } else {
+          // Error de credenciales - mostrar mensaje específico
+          if (errorMessage.includes('Usuario o contraseña')) {
+            setGeneralError(errorMessage);
+          } else if (errorMessage.includes('obligatorios')) {
+            setGeneralError(errorMessage);
+          } else {
+            setGeneralError(errorMessage);
+          }
+          setShowError(true);
+        }
       }
     } catch (error) {
       console.error('Error en login:', error);
-      Alert.alert(
-        'Error',
-        'Ha ocurrido un error. Por favor, intenta nuevamente.',
-        [{ text: 'OK' }]
-      );
+      setGeneralError('Ha ocurrido un error inesperado. Por favor, intenta nuevamente.');
+      setShowError(true);
     }
   }
 
@@ -127,11 +164,18 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
           {/* Formulario */}
           <View style={styles.formContainer}>
             <View style={styles.form}>
+              {/* Mensaje de error general */}
+              <ErrorMessage 
+                message={generalError}
+                visible={showError}
+                style={styles.errorMessage}
+              />
+
               {/* Campo Email */}
               <Input
                 label="Correo electrónico"
                 value={values.email}
-                onChangeText={handleChange('email')}
+                onChangeText={handleFieldChange('email')}
                 placeholder="ejemplo@correo.com"
                 error={errors.email?.errorMessage}
                 keyboardType="email-address"
@@ -143,7 +187,7 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
               <Input
                 label="Contraseña"
                 value={values.password}
-                onChangeText={handleChange('password')}
+                onChangeText={handleFieldChange('password')}
                 placeholder="Tu contraseña"
                 error={errors.password?.errorMessage}
                 secureTextEntry
@@ -229,6 +273,11 @@ const styles = StyleSheet.create({
 
   form: {
     paddingHorizontal: spacing.sm,
+  },
+
+  // Mensaje de error
+  errorMessage: {
+    marginBottom: spacing.md,
   },
 
   forgotPasswordContainer: {

@@ -1,7 +1,7 @@
 /**
  * Pantalla de Login - Booky
  * Sistema de reservas para profesionales independientes
- * Actualizado con hash SHA256 para contraseñas
+ * Actualizado con hash SHA256 para contraseñas y navegación
  */
 
 import React, { useState } from 'react';
@@ -36,7 +36,14 @@ const initialFormValues: LoginFormData = {
   password: '',
 };
 
-export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
+interface LoginScreenProps extends AuthScreenProps {
+  onLoginSuccess?: () => void;
+}
+
+export const LoginScreen: React.FC<LoginScreenProps> = ({ 
+  navigation, 
+  onLoginSuccess 
+}) => {
   // Estados adicionales para manejo de errores
   const [generalError, setGeneralError] = useState<string>('');
   const [showError, setShowError] = useState<boolean>(false);
@@ -99,24 +106,24 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
         // Login exitoso
         console.log('Login exitoso, redirigiendo...');
         
-        Alert.alert(
-          'Login Exitoso',
-          'Bienvenido a Booky',
-          [
-            {
-              text: 'Continuar',
-              onPress: () => {
-                // Aquí navegarías a la pantalla principal
-                console.log('Navegando a pantalla principal...');
-                // TODO: Implementar navegación
-                // navigation.reset({
-                //   index: 0,
-                //   routes: [{ name: 'MainApp' }],
-                // });
+        // Notificar al componente padre sobre el login exitoso
+        if (onLoginSuccess) {
+          onLoginSuccess();
+        } else {
+          // Fallback: mostrar alert si no hay callback
+          Alert.alert(
+            'Login Exitoso',
+            'Bienvenido a Booky',
+            [
+              {
+                text: 'Continuar',
+                onPress: () => {
+                  console.log('Login completado');
+                },
               },
-            },
-          ]
-        );
+            ]
+          );
+        }
       } else {
         // Login fallido - mostrar error específico
         const errorMessage = result.error || 'Error de autenticación';
@@ -142,15 +149,19 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
   // Navegar a registro
   const navigateToRegister = () => {
     console.log('Navegando a registro...');
-    // TODO: Implementar navegación
-    // navigation.navigate('Register');
+    // TODO: Implementar navegación cuando esté disponible
+    if (navigation?.navigate) {
+      navigation.navigate('Register');
+    }
   };
 
   // Navegar a recuperar contraseña
   const navigateToForgotPassword = () => {
     console.log('Navegando a recuperar contraseña...');
-    // TODO: Implementar navegación
-    // navigation.navigate('ForgotPassword');
+    // TODO: Implementar navegación cuando esté disponible
+    if (navigation?.navigate) {
+      navigation.navigate('ForgotPassword');
+    }
   };
 
   return (

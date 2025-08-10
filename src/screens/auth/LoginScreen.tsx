@@ -1,9 +1,10 @@
 /**
  * Pantalla de Login - Booky
  * Sistema de reservas para profesionales independientes
+ * Actualizado con hash SHA256 para contraseñas
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -24,7 +25,6 @@ import { ErrorMessage } from '../../components/ui/ErrorMessage';
 import { useForm } from '../../hooks/useForm';
 import { validateLoginForm, sanitizeFormData } from '../../utils/validation';
 import { LoginFormData, AuthScreenProps } from '../../types/auth';
-// CORRECCIÓN: Importar desde la ruta correcta
 import { authService } from '../../services/auth/authService';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
@@ -73,7 +73,7 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
     handleChange(field)(value);
   };
 
-  // Función para manejar el login con el endpoint real
+  // Función para manejar el login con hash SHA256
   async function handleLogin(formData: LoginFormData) {
     try {
       // Limpiar errores previos
@@ -83,11 +83,22 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
       // Sanitizar datos del formulario
       const sanitizedData = sanitizeFormData(formData);
       
-      // Llamada real al servicio de autenticación
+      // Validación adicional antes de enviar
+      if (!sanitizedData.email || !sanitizedData.password) {
+        setGeneralError('Por favor, completa todos los campos');
+        setShowError(true);
+        return;
+      }
+
+      console.log('Iniciando proceso de login para:', sanitizedData.email);
+      
+      // Llamada al servicio de autenticación (la contraseña se hashea internamente)
       const result = await authService.login(sanitizedData);
       
       if (result.success && result.token) {
         // Login exitoso
+        console.log('Login exitoso, redirigiendo...');
+        
         Alert.alert(
           'Login Exitoso',
           'Bienvenido a Booky',
@@ -97,8 +108,11 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
               onPress: () => {
                 // Aquí navegarías a la pantalla principal
                 console.log('Navegando a pantalla principal...');
-                // TODO: Guardar token y navegar
-                // navigation.navigate('MainApp');
+                // TODO: Implementar navegación
+                // navigation.reset({
+                //   index: 0,
+                //   routes: [{ name: 'MainApp' }],
+                // });
               },
             },
           ]
@@ -107,24 +121,19 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
         // Login fallido - mostrar error específico
         const errorMessage = result.error || 'Error de autenticación';
         
+        console.log('Login fallido:', errorMessage);
+        
         if (result.isNetworkError) {
-          // Error de red - mostrar mensaje general
-          setGeneralError(errorMessage);
-          setShowError(true);
+          // Error de red - mostrar mensaje de conexión
+          setGeneralError('No se pudo conectar al servidor. Verifica tu conexión a internet.');
         } else {
-          // Error de credenciales - mostrar mensaje específico
-          if (errorMessage.includes('Usuario o contraseña')) {
-            setGeneralError(errorMessage);
-          } else if (errorMessage.includes('obligatorios')) {
-            setGeneralError(errorMessage);
-          } else {
-            setGeneralError(errorMessage);
-          }
-          setShowError(true);
+          // Error de credenciales u otros errores
+          setGeneralError(errorMessage);
         }
+        setShowError(true);
       }
     } catch (error) {
-      console.error('Error en login:', error);
+      console.error('Error inesperado en login:', error);
       setGeneralError('Ha ocurrido un error inesperado. Por favor, intenta nuevamente.');
       setShowError(true);
     }
@@ -132,14 +141,16 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
 
   // Navegar a registro
   const navigateToRegister = () => {
-    // navigation.navigate('Register');
     console.log('Navegando a registro...');
+    // TODO: Implementar navegación
+    // navigation.navigate('Register');
   };
 
   // Navegar a recuperar contraseña
   const navigateToForgotPassword = () => {
-    // navigation.navigate('ForgotPassword');
     console.log('Navegando a recuperar contraseña...');
+    // TODO: Implementar navegación
+    // navigation.navigate('ForgotPassword');
   };
 
   return (
@@ -180,6 +191,7 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
                 error={errors.email?.errorMessage}
                 keyboardType="email-address"
                 autoComplete="email"
+                autoCapitalize="none"
                 required
               />
 
@@ -192,6 +204,7 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
                 error={errors.password?.errorMessage}
                 secureTextEntry
                 autoComplete="password"
+                autoCapitalize="none"
                 required
               />
 
@@ -209,9 +222,10 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
               {/* Botón de Login */}
               <View style={styles.buttonContainer}>
                 <Button
-                  title="Iniciar Sesión"
+                  title={isSubmitting ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                   onPress={handleSubmit}
                   loading={isSubmitting}
+                  disabled={isSubmitting}
                   fullWidth
                   variant="primary"
                 />
@@ -228,6 +242,7 @@ export const LoginScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
               <TouchableOpacity
                 onPress={navigateToRegister}
                 activeOpacity={0.7}
+                disabled={isSubmitting}
               >
                 <Text style={styles.registerLink}>
                   Regístrate aquí
@@ -263,6 +278,14 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textAlign: 'center',
     marginTop: spacing.lg,
+  },
+
+  securityText: {
+    ...typography.styles.bodySmall,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    fontStyle: 'italic',
   },
 
   // Formulario

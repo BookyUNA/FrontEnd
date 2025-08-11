@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   // Header
   header: {
     alignItems: 'center',
-    paddingTop: spacing['4xl'],
+    paddingTop: spacing['8xl'], // Cambiado de spacing['4xl'] (40px) a spacing['8xl'] (96px)
     paddingBottom: spacing['3xl'],
   },
 

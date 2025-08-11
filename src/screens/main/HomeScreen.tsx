@@ -1,9 +1,10 @@
 /**
  * Pantalla de Inicio - Booky
  * Sistema de reservas para profesionales independientes
+ * Actualizado con Bottom Navigation
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +16,8 @@ import {
 import { SafeContainer } from '../../components/ui/SafeContainer';
 import { Logo } from '../../components/ui/Logo';
 import { Button } from '../../components/forms/Button';
+import { BottomNavigationBar, BottomNavTabType } from '../../components/navigation/BottomNavigationBar';
+import { ProfileScreen } from '../profile/ProfileScreen';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
@@ -26,6 +29,8 @@ interface HomeScreenProps {
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) => {
+  // Estado para manejar la tab activa
+  const [activeTab, setActiveTab] = useState<BottomNavTabType>('home');
   
   // 🔍 DEBUG: Verificar token al cargar la pantalla
   React.useEffect(() => {
@@ -64,62 +69,99 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
     );
   };
 
-  return (
-    <SafeContainer>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Logo size="medium" showTagline />
-          <Text style={styles.welcomeTitle}>
-            ¡Bienvenido a Booky!
-          </Text>
-        </View>
+  // Función para manejar el cambio de tab
+  const handleTabChange = (tab: BottomNavTabType) => {
+    setActiveTab(tab);
+  };
 
-        {/* Contenido Principal */}
-        <View style={styles.content}>
-          <Text style={styles.message}>
-            🚧 Aplicación en construcción
-          </Text>
-          <Text style={styles.description}>
-            Las funcionalidades principales están siendo desarrolladas.
-          </Text>
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          {/* 🔍 BOTÓN DEBUG TEMPORAL */}
-          <Button
-            title="🔍 Verificar Token"
-            onPress={async () => {
-              const token = await authService.getToken();
-              const isAuth = await authService.isAuthenticated();
-              
-              Alert.alert(
-                'Estado del Token',
-                `Token: ${token ? 'SÍ EXISTE' : 'NO EXISTE'}\n` +
-                `Autenticado: ${isAuth ? 'SÍ' : 'NO'}\n` +
-                `Token (últimos 20 chars): ${token ? '...' + token.substring(token.length - 20) : 'Ninguno'}`
-              );
-            }}
-            variant="secondary"
-            fullWidth
-          />
-          
-          <View style={{ marginTop: spacing.md }}>
-            <Button
-              title="Cerrar Sesión"
-              onPress={handleLogout}
-              variant="outline"
-              fullWidth
-            />
-          </View>
-        </View>
+  // Renderizar el contenido de la pantalla de Inicio
+  const renderHomeContent = () => (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Logo size="medium" showTagline />
+        <Text style={styles.welcomeTitle}>
+          ¡Bienvenido a Booky!
+        </Text>
       </View>
-    </SafeContainer>
+
+      {/* Contenido Principal */}
+      <View style={styles.content}>
+        <Text style={styles.message}>
+          🚧 Aplicación en construcción
+        </Text>
+        <Text style={styles.description}>
+          Las funcionalidades principales están siendo desarrolladas.
+        </Text>
+      </View>
+
+      {/* Botones de Debug */}
+      <View style={styles.debugSection}>
+        {/* 🔍 BOTÓN DEBUG TEMPORAL */}
+        <Button
+          title="🔍 Verificar Token"
+          onPress={async () => {
+            const token = await authService.getToken();
+            const isAuth = await authService.isAuthenticated();
+            
+            Alert.alert(
+              'Estado del Token',
+              `Token: ${token ? 'SÍ EXISTE' : 'NO EXISTE'}\n` +
+              `Autenticado: ${isAuth ? 'SÍ' : 'NO'}\n` +
+              `Token (últimos 20 chars): ${token ? '...' + token.substring(token.length - 20) : 'Ninguno'}`
+            );
+          }}
+          variant="secondary"
+          fullWidth
+        />
+      </View>
+    </View>
+  );
+
+  // Renderizar el contenido según la tab activa
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'home':
+        return renderHomeContent();
+      case 'profile':
+        return <ProfileScreen onLogout={handleLogout} />;
+      default:
+        return renderHomeContent();
+    }
+  };
+
+  return (
+    <View style={styles.mainContainer}>
+      {/* Contenido principal */}
+      <View style={styles.contentContainer}>
+        {activeTab === 'home' ? (
+          <SafeContainer>
+            {renderContent()}
+          </SafeContainer>
+        ) : (
+          renderContent()
+        )}
+      </View>
+
+      {/* Bottom Navigation */}
+      <BottomNavigationBar
+        activeTab={activeTab}
+        onTabPress={handleTabChange}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: colors.background.primary,
+  },
+
+  contentContainer: {
+    flex: 1,
+  },
+
   container: {
     flex: 1,
     paddingHorizontal: spacing.lg,
@@ -158,7 +200,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
 
-  footer: {
+  debugSection: {
     paddingVertical: spacing.xl,
+    paddingBottom: spacing['2xl'], // Espacio adicional para el bottom nav
   },
 });

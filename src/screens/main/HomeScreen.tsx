@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 // Importaciones locales
+import Icon from 'react-native-vector-icons/FontAwesome5';
 import { SafeContainer } from '../../components/ui/SafeContainer';
 import { Logo } from '../../components/ui/Logo';
 import { Button } from '../../components/forms/Button';
@@ -90,6 +91,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
         <Text style={styles.message}>
           🚧 Aplicación en construcción
         </Text>
+        <Icon name="rocket" size={50} color='black' />
         <Text style={styles.description}>
           Las funcionalidades principales están siendo desarrolladas.
         </Text>

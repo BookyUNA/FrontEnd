@@ -10,6 +10,17 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+// Opción 1: Si usas Expo
+// import { FontAwesome } from '@expo/vector-icons';
+
+// Opción 2: Si usas react-native-vector-icons (después de configurar)
+import Icon from 'react-native-vector-icons/FontAwesome';
+
+// Opción 3: Alternativa con caracteres Unicode (sin dependencias)
+// const ICONS = {
+//   home: '⌂',
+//   user: '👤'
+// };
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
@@ -25,7 +36,7 @@ interface TabItemProps {
   tab: BottomNavTabType;
   isActive: boolean;
   onPress: () => void;
-  icon: string;
+  iconName: string;
   label: string;
 }
 
@@ -33,7 +44,7 @@ const TabItem: React.FC<TabItemProps> = ({
   tab, 
   isActive, 
   onPress, 
-  icon, 
+  iconName, 
   label 
 }) => {
   return (
@@ -45,9 +56,12 @@ const TabItem: React.FC<TabItemProps> = ({
       <View style={styles.tabContent}>
         {/* Icono */}
         <View style={[styles.iconContainer, isActive && styles.iconContainerActive]}>
-          <Text style={[styles.icon, isActive && styles.iconActive]}>
-            {icon}
-          </Text>
+          <Icon 
+            name={iconName}
+            size={20}
+            color={colors.primary.contrast}
+            style={[styles.icon, isActive && styles.iconActive]}
+          />
         </View>
         
         {/* Label */}
@@ -69,12 +83,12 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   const tabs = [
     {
       key: 'home' as BottomNavTabType,
-      icon: '🏠',
+      iconName: 'home',
       label: 'Inicio',
     },
     {
       key: 'profile' as BottomNavTabType,
-      icon: '👤',
+      iconName: 'user',
       label: 'Perfil',
     },
   ];
@@ -92,7 +106,7 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
             tab={tab.key}
             isActive={activeTab === tab.key}
             onPress={() => onTabPress(tab.key)}
-            icon={tab.icon}
+            iconName={tab.iconName}
             label={tab.label}
           />
         ))}
@@ -136,9 +150,9 @@ const styles = StyleSheet.create({
   },
 
   iconContainer: {
-    width: 25,
-    height: 25,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xs,
@@ -150,7 +164,6 @@ const styles = StyleSheet.create({
   },
 
   icon: {
-    fontSize: 20,
     opacity: 0.7, // Un poco más visible sobre fondo morado
   },
 

@@ -1,5 +1,5 @@
 /**
- * Componente Input reutilizable - CORREGIDO
+ * Componente Input reutilizable - Con Vector Icons
  */
 
 import React, { useState } from 'react';
@@ -12,6 +12,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Feather'; // Feather tiene iconos eye y eye-off muy limpios
 import { InputProps } from '../../types/auth';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
@@ -63,6 +64,20 @@ export const Input: React.FC<InputProps> = ({
     setIsPasswordVisible(!isPasswordVisible);
   };
 
+  // Determinar color del icono basado en el estado
+  const getIconColor = () => {
+    if (error) {
+      return colors.states.error;
+    }
+    if (isFocused) {
+      return colors.primary.main; // Usar el color principal cuando esté enfocado
+    }
+    if (disabled) {
+      return colors.text.disabled;
+    }
+    return colors.text.tertiary;
+  };
+
   return (
     <View style={styles.wrapper}>
       {/* Label */}
@@ -98,10 +113,13 @@ export const Input: React.FC<InputProps> = ({
             style={styles.passwordToggle}
             onPress={togglePasswordVisibility}
             activeOpacity={0.7}
+            disabled={disabled}
           >
-            <Text style={styles.passwordToggleText}>
-              {isPasswordVisible ? '🙈' : '👁️'}
-            </Text>
+            <Icon
+              name={isPasswordVisible ? 'eye-off' : 'eye'}
+              size={20}
+              color={'#8676F3'}
+            />
           </TouchableOpacity>
         )}
       </View>
@@ -150,7 +168,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.background.primary,
     borderWidth: 2,
-    borderColor: colors.border.focus,
+    borderColor: colors.primary.main, // Usar el color principal para el borde enfocado
     borderRadius: layout.input.borderRadius,
     paddingHorizontal: layout.input.paddingHorizontal,
     height: layout.dimensions.inputHeight,
@@ -191,12 +209,10 @@ const styles = StyleSheet.create({
   },
 
   passwordToggle: {
-    padding: 4,
-    marginLeft: 8,
-  },
-
-  passwordToggleText: {
-    fontSize: 18,
+    padding: 8,
+    marginLeft: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   errorContainer: {

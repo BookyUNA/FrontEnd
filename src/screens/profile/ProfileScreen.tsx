@@ -1,6 +1,7 @@
 /**
  * Pantalla de Perfil - Booky
  * Sistema de reservas para profesionales independientes
+ * Actualizada con logout completo
  */
 
 import React from 'react';
@@ -9,20 +10,102 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Alert,
 } from 'react-native';
 
 // Importaciones locales
 import { SafeContainer } from '../../components/ui/SafeContainer';
 import { Button } from '../../components/forms/Button';
+import { authService } from '../../services/auth/authService';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 
 interface ProfileScreenProps {
   onLogout?: () => void;
+  isLoggingOut?: boolean;
 }
 
-export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
+export const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
+  onLogout, 
+  isLoggingOut = false 
+}) => {
+  
+  // Función para manejar el logout con confirmación completa
+  const handleLogout = async () => {
+    Alert.alert(
+      'Cerrar Sesión',
+      '¿Estás seguro que deseas cerrar sesión?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Cerrar Sesión',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('🚪 ProfileScreen: Usuario confirmó logout, iniciando proceso...');
+              
+              // Llamar al servicio de logout (que incluye llamada al endpoint)
+              const logoutResult = await authService.logout();
+              
+              console.log('🚪 ProfileScreen: Resultado del logout:', logoutResult);
+              
+              // Mostrar mensaje según el resultado
+              if (logoutResult.success) {
+                if (logoutResult.isNetworkError) {
+                  // Error de red pero logout local exitoso
+                  Alert.alert(
+                    'Sesión Cerrada',
+                    'Se cerró la sesión localmente. Hubo un problema de conexión con el servidor.',
+                    [{
+                      text: 'Entendido',
+                      onPress: () => {
+                        if (onLogout) {
+                          onLogout();
+                        }
+                      }
+                    }]
+                  );
+                } else {
+                  // Logout completamente exitoso
+                  console.log('🚪 ProfileScreen: Logout exitoso, redirigiendo al login...');
+                  if (onLogout) {
+                    onLogout();
+                  }
+                }
+              } else {
+                // Error en logout pero de todas formas redirigir
+                console.warn('🚪 ProfileScreen: Logout con advertencias:', logoutResult.error);
+                if (onLogout) {
+                  onLogout();
+                }
+              }
+              
+            } catch (error: unknown) {
+              console.error('🚪 ProfileScreen: Error inesperado en logout:', error);
+              
+              // En caso de error inesperado, forzar logout local
+              Alert.alert(
+                'Error',
+                'Hubo un problema al cerrar sesión. Se cerrará la sesión localmente.',
+                [{
+                  text: 'Entendido',
+                  onPress: () => {
+                    if (onLogout) {
+                      onLogout();
+                    }
+                  }
+                }]
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
   
   return (
     <SafeContainer>
@@ -57,21 +140,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout }) => {
               configurar preferencias y gestionar tu cuenta.
             </Text>
           </View>
-
-          
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
           <Button
-            title="Cerrar Sesión"
-            onPress={() => {
-              if (onLogout) {
-                onLogout();
-              }
-            }}
+            title={isLoggingOut ? "Cerrando Sesión..." : "Cerrar Sesión"}
+            onPress={handleLogout}
             variant="outline"
             fullWidth
+            loading={isLoggingOut}
+            disabled={isLoggingOut}
+            icon="sign-out-alt"
+            iconPosition="left"
           />
         </View>
       </ScrollView>
@@ -164,45 +245,6 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textAlign: 'center',
     lineHeight: typography.lineHeight.relaxed,
-  },
-
-  // Options Section
-  optionsSection: {
-    marginBottom: spacing['2xl'],
-  },
-
-  sectionTitle: {
-    ...typography.styles.h3,
-    color: colors.text.primary,
-    marginBottom: spacing.lg,
-  },
-
-  optionsList: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: spacing.md,
-    padding: spacing.sm,
-  },
-
-  optionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-  },
-
-  optionIcon: {
-    fontSize: 20,
-    marginRight: spacing.lg,
-    width: 24,
-    textAlign: 'center',
-  },
-
-  optionText: {
-    ...typography.styles.body,
-    color: colors.text.secondary,
-    flex: 1,
   },
 
   footer: {

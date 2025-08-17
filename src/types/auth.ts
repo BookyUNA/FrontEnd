@@ -1,5 +1,5 @@
 /**
- * Tipos TypeScript para el sistema de autenticación - CORREGIDO
+ * Tipos TypeScript para el sistema de autenticación - Actualizado con iconos
  */
 
 // Datos del formulario de login
@@ -85,7 +85,7 @@ export interface InputProps {
   required?: boolean;
 }
 
-// Props para el componente Button
+// Props para el componente Button - Actualizado con soporte para iconos
 export interface ButtonProps {
   title: string;
   onPress: () => void;
@@ -94,6 +94,8 @@ export interface ButtonProps {
   disabled?: boolean;
   loading?: boolean;
   fullWidth?: boolean;
+  icon?: string; // Nombre del icono de FontAwesome5
+  iconPosition?: 'left' | 'right'; // Posición del icono
 }
 
 // Props para el hook useForm

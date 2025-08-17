@@ -1,11 +1,11 @@
 /**
  * Servicio de Autenticación - Booky
- * Actualizado con hash SHA256 para contraseñas y storage simple
+ * Actualizado con hash SHA256 para contraseñas, storage simple y logout completo
  */
 
 import { apiService } from '../api/apiService';
 import { API_CONFIG } from '../../config/api';
-import { ReqInicioSesion, ResInicioSesion, ApiError } from '../../types/api';
+import { ReqInicioSesion, ResInicioSesion, ResCierreSesion, ApiError } from '../../types/api';
 import { LoginFormData } from '../../types/auth';
 import { hashService } from '../../utils/hashService';
 import { storageService } from '../storage/simpleStorageService';
@@ -17,6 +17,12 @@ export interface LoginResult {
   isNetworkError?: boolean;
 }
 
+export interface LogoutResult {
+  success: boolean;
+  error?: string;
+  isNetworkError?: boolean;
+}
+
 class AuthService {
   /**
    * Iniciar sesión con email y contraseña
@@ -24,6 +30,8 @@ class AuthService {
    */
   async login(credentials: LoginFormData): Promise<LoginResult> {
     try {
+      console.log('🔐 Iniciando proceso de login...');
+      
       // Validar que los datos estén presentes
       if (!credentials.email || !credentials.password) {
         return {
@@ -41,7 +49,7 @@ class AuthService {
         password: hashedPassword, // Contraseña ya hasheada
       };
 
-      console.log('Enviando datos de login:', {
+      console.log('🔐 Enviando datos de login:', {
         email: loginData.email,
         passwordHash: loginData.password.substring(0, 8) + '...', // Solo para debug
       });
@@ -54,6 +62,7 @@ class AuthService {
 
       // Error de red
       if (!response.success && response.status === 0) {
+        console.error('🔐 Error de red en login');
         return {
           success: false,
           error: response.error || 'Error de conexión. Verifica tu conexión a internet.',
@@ -65,6 +74,7 @@ class AuthService {
       const loginResponse = response.data;
       
       if (!loginResponse) {
+        console.error('🔐 Respuesta inválida del servidor');
         return {
           success: false,
           error: 'Respuesta inválida del servidor',
@@ -73,14 +83,14 @@ class AuthService {
 
       // Login exitoso
       if (loginResponse.resultado && loginResponse.token) {
-        console.log('Login exitoso, token recibido');
+        console.log('🔐 Login exitoso, token recibido');
         
         // ✅ GUARDAR TOKEN en memoria
         try {
           await storageService.saveAuthToken(loginResponse.token);
-          console.log('Token guardado en memoria');
+          console.log('🔐 Token guardado en memoria exitosamente');
         } catch (storageError) {
-          console.error('Error al guardar token:', storageError);
+          console.error('🔐 Error al guardar token:', storageError);
           // No fallar el login por error de storage
         }
         
@@ -93,7 +103,7 @@ class AuthService {
       // Login fallido - extraer mensaje de error
       const errorMessage = this.extractErrorMessage(loginResponse.error);
       
-      console.log('Login fallido:', errorMessage);
+      console.log('🔐 Login fallido:', errorMessage);
       
       return {
         success: false,
@@ -101,7 +111,7 @@ class AuthService {
       };
 
     } catch (error: any) {
-      console.error('Error en AuthService.login:', error);
+      console.error('🔐 Error inesperado en login:', error);
       
       // Verificar si es un error de hash
       if (error.message && error.message.includes('hashear')) {
@@ -119,6 +129,93 @@ class AuthService {
   }
 
   /**
+   * Cerrar sesión - Implementación completa con endpoint
+   */
+  async logout(): Promise<LogoutResult> {
+    try {
+      console.log('🚪 Iniciando proceso de logout...');
+      
+      // Obtener token actual antes de eliminarlo
+      const currentToken = await storageService.getAuthToken();
+      
+      if (!currentToken) {
+        console.log('🚪 No hay token para cerrar sesión, limpiando datos locales...');
+        // Limpiar datos locales por si acaso
+        await storageService.removeAuthToken();
+        return {
+          success: true,
+        };
+      }
+
+      console.log('🚪 Token encontrado, llamando endpoint de logout...', {
+        tokenPreview: currentToken.substring(0, 20) + '...'
+      });
+
+      // Llamar al endpoint de logout para invalidar token en el servidor
+      const response = await apiService.post<ResCierreSesion>(
+        API_CONFIG.ENDPOINTS.LOGOUT,
+        {}, // Body vacío para logout
+        currentToken // Token en Authorization header
+      );
+
+      // Verificar respuesta del servidor
+      if (response.success && response.data?.resultado) {
+        console.log('🚪 Logout exitoso en el servidor');
+      } else {
+        console.warn('🚪 Logout falló en el servidor, pero continuando con limpieza local:', {
+          serverResponse: response.data,
+          status: response.status,
+          error: response.error
+        });
+        
+        // Extraer mensaje de error si existe
+        const errorMessage = response.data?.error ? 
+          this.extractErrorMessage(response.data.error) : 
+          'Error al cerrar sesión en el servidor';
+
+        // No retornar error aquí - siempre limpiar datos locales
+        console.log('🚪 Error del servidor:', errorMessage, '- Limpiando datos locales de todas formas');
+      }
+
+      // ✅ SIEMPRE LIMPIAR TOKEN de memoria, sin importar la respuesta del servidor
+      await storageService.removeAuthToken();
+      console.log('🚪 Token eliminado de memoria exitosamente');
+      
+      console.log('🚪 Usuario deslogueado completamente');
+      
+      return {
+        success: true,
+      };
+      
+    } catch (error: any) {
+      console.error('🚪 Error en proceso de logout:', error);
+      
+      // En caso de error, SIEMPRE limpiar datos locales
+      try {
+        await storageService.removeAuthToken();
+        console.log('🚪 Token limpiado después de error');
+      } catch (cleanupError) {
+        console.error('🚪 Error al limpiar token después de fallo:', cleanupError);
+      }
+      
+      // Verificar si es error de red
+      if (error.message && (error.message.includes('conexión') || error.message.includes('network'))) {
+        return {
+          success: true, // Consideramos exitoso porque limpiamos datos locales
+          error: 'Se cerró la sesión localmente. Error de conexión al servidor.',
+          isNetworkError: true,
+        };
+      }
+      
+      // Otros errores
+      return {
+        success: true, // Consideramos exitoso porque limpiamos datos locales
+        error: 'Se cerró la sesión localmente. Error al comunicarse con el servidor.',
+      };
+    }
+  }
+
+  /**
    * Registrar nuevo usuario
    * También hashea la contraseña antes de enviarla
    */
@@ -130,6 +227,8 @@ class AuthService {
     phone?: string;
   }): Promise<LoginResult> {
     try {
+      console.log('📝 Preparando registro de usuario...');
+      
       // Hashear la contraseña
       const hashedPassword = hashService.hashPassword(userData.password);
 
@@ -140,7 +239,7 @@ class AuthService {
       };
 
       // TODO: Implementar llamada al endpoint de registro
-      console.log('Datos de registro preparados (contraseña hasheada)');
+      console.log('📝 Datos de registro preparados (contraseña hasheada)');
       
       return {
         success: false,
@@ -148,7 +247,7 @@ class AuthService {
       };
 
     } catch (error: any) {
-      console.error('Error en AuthService.register:', error);
+      console.error('📝 Error en AuthService.register:', error);
       return {
         success: false,
         error: 'Error al registrar usuario',
@@ -190,11 +289,13 @@ class AuthService {
    */
   async changePassword(currentPassword: string, newPassword: string): Promise<LoginResult> {
     try {
+      console.log('🔑 Preparando cambio de contraseña...');
+      
       const hashedCurrentPassword = hashService.hashPassword(currentPassword);
       const hashedNewPassword = hashService.hashPassword(newPassword);
 
       // TODO: Implementar llamada al endpoint de cambio de contraseña
-      console.log('Preparando cambio de contraseña con hashes SHA256');
+      console.log('🔑 Preparando cambio de contraseña con hashes SHA256');
       
       return {
         success: false,
@@ -202,29 +303,11 @@ class AuthService {
       };
 
     } catch (error: any) {
-      console.error('Error en AuthService.changePassword:', error);
+      console.error('🔑 Error en AuthService.changePassword:', error);
       return {
         success: false,
         error: 'Error al cambiar contraseña',
       };
-    }
-  }
-
-  /**
-   * Cerrar sesión
-   */
-  async logout(): Promise<void> {
-    try {
-      // ✅ LIMPIAR TOKEN de memoria
-      await storageService.removeAuthToken();
-      console.log('Token eliminado de memoria');
-      
-      // TODO: Llamada al endpoint de logout para invalidar token en el servidor
-      console.log('Usuario deslogueado');
-      
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error);
-      // No lanzar error para que el logout siempre funcione en UI
     }
   }
 
@@ -235,11 +318,11 @@ class AuthService {
     try {
       // ✅ VERIFICAR TOKEN en memoria
       const hasToken = await storageService.hasAuthToken();
-      console.log('Estado de autenticación:', hasToken ? 'Autenticado' : 'No autenticado');
+      console.log('🔍 Estado de autenticación:', hasToken ? 'Autenticado' : 'No autenticado');
       return hasToken;
       
     } catch (error) {
-      console.error('Error al verificar autenticación:', error);
+      console.error('🔍 Error al verificar autenticación:', error);
       return false;
     }
   }
@@ -254,7 +337,7 @@ class AuthService {
       return token;
       
     } catch (error) {
-      console.error('Error al obtener token:', error);
+      console.error('🔍 Error al obtener token:', error);
       return null;
     }
   }
@@ -265,9 +348,9 @@ class AuthService {
   async clearAuthData(): Promise<void> {
     try {
       await storageService.clearAll();
-      console.log('Todos los datos de autenticación limpiados');
+      console.log('🧹 Todos los datos de autenticación limpiados');
     } catch (error) {
-      console.error('Error al limpiar datos:', error);
+      console.error('🧹 Error al limpiar datos:', error);
     }
   }
 }

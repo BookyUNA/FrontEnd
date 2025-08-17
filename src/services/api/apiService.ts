@@ -28,8 +28,6 @@ class ApiService {
         ...DEFAULT_HEADERS,
         ...options.headers,
       },
-      // CORRECCIÓN: Remover timeout de RequestInit ya que no es estándar
-      // El timeout se manejará con AbortController
     };
 
     let lastError: any;
@@ -37,9 +35,15 @@ class ApiService {
     // Reintentos en caso de error de red
     for (let attempt = 1; attempt <= NETWORK_CONFIG.RETRY_ATTEMPTS; attempt++) {
       try {
-        // CORRECCIÓN: Implementar timeout usando AbortController
+        // Implementar timeout usando AbortController
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+        
+        console.log(`🌐 API Request [Intento ${attempt}]:`, {
+          method: config.method || 'GET',
+          url,
+          headers: config.headers,
+        });
         
         const response = await fetch(url, {
           ...config,
@@ -49,9 +53,17 @@ class ApiService {
         // Limpiar el timeout si la petición se completa
         clearTimeout(timeoutId);
         
+        console.log(`🌐 API Response:`, {
+          status: response.status,
+          ok: response.ok,
+          statusText: response.statusText,
+        });
+        
         // La respuesta se considera exitosa si el servidor responde
         // independientemente del código de estado
         const data = await response.json();
+        
+        console.log(`🌐 API Data:`, data);
         
         return {
           success: response.ok,
@@ -61,6 +73,8 @@ class ApiService {
       } catch (error: any) {
         lastError = error;
         
+        console.error(`🌐 API Error [Intento ${attempt}]:`, error);
+        
         // Verificar si es un error de timeout
         if (error.name === 'AbortError') {
           lastError = new Error('Timeout: La petición tardó demasiado tiempo');
@@ -68,6 +82,7 @@ class ApiService {
         
         // Si no es el último intento, esperar antes de reintentar
         if (attempt < NETWORK_CONFIG.RETRY_ATTEMPTS) {
+          console.log(`🌐 Reintentando en ${NETWORK_CONFIG.RETRY_DELAY * attempt}ms...`);
           await this.delay(NETWORK_CONFIG.RETRY_DELAY * attempt);
         }
       }
@@ -80,6 +95,8 @@ class ApiService {
       isNetworkError: true,
     };
 
+    console.error('🌐 API Request Failed:', networkError);
+
     return {
       success: false,
       error: networkError.message,
@@ -90,18 +107,32 @@ class ApiService {
   /**
    * Método GET
    */
-  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
+  async get<T>(endpoint: string, token?: string): Promise<ApiResponse<T>> {
+    const headers: Record<string, string> = {};
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     return this.request<T>(endpoint, {
       method: 'GET',
+      headers,
     });
   }
 
   /**
    * Método POST
    */
-  async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, data?: any, token?: string): Promise<ApiResponse<T>> {
+    const headers: Record<string, string> = {};
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     return this.request<T>(endpoint, {
       method: 'POST',
+      headers,
       body: data ? JSON.stringify(data) : undefined,
     });
   }
@@ -109,9 +140,16 @@ class ApiService {
   /**
    * Método PUT
    */
-  async put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async put<T>(endpoint: string, data?: any, token?: string): Promise<ApiResponse<T>> {
+    const headers: Record<string, string> = {};
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     return this.request<T>(endpoint, {
       method: 'PUT',
+      headers,
       body: data ? JSON.stringify(data) : undefined,
     });
   }
@@ -119,9 +157,16 @@ class ApiService {
   /**
    * Método DELETE
    */
-  async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
+  async delete<T>(endpoint: string, token?: string): Promise<ApiResponse<T>> {
+    const headers: Record<string, string> = {};
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     return this.request<T>(endpoint, {
       method: 'DELETE',
+      headers,
     });
   }
 

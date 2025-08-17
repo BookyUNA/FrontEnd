@@ -8,6 +8,13 @@ export interface ReqInicioSesion {
   password: string;
 }
 
+// Response de cierre de sesión
+export interface ResCierreSesion {
+  token: string;
+  error: ApiError[];
+  resultado: boolean;
+}
+
 // Error en la respuesta de la API
 export interface ApiError {
   ErrorCode: number;

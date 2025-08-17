@@ -1,7 +1,7 @@
 /**
  * Pantalla de Inicio - Booky
  * Sistema de reservas para profesionales independientes
- * Actualizado con Bottom Navigation
+ * Actualizado con Bottom Navigation y logout completo
  */
 
 import React, { useState } from 'react';
@@ -33,41 +33,43 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
   // Estado para manejar la tab activa
   const [activeTab, setActiveTab] = useState<BottomNavTabType>('home');
   
+  // Estado para controlar el loading del logout
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
+  
   // 🔍 DEBUG: Verificar token al cargar la pantalla
   React.useEffect(() => {
     const checkToken = async () => {
       const token = await authService.getToken();
       const isAuth = await authService.isAuthenticated();
       
-      console.log('🔍 DEBUG - Token actual:', token ? token.substring(0, 20) + '...' : 'No hay token');
-      console.log('🔍 DEBUG - ¿Está autenticado?:', isAuth);
+      console.log('🔍 DEBUG HomeScreen - Token actual:', token ? token.substring(0, 20) + '...' : 'No hay token');
+      console.log('🔍 DEBUG HomeScreen - ¿Está autenticado?:', isAuth);
     };
     
     checkToken();
   }, []);
   
-  // Función para manejar el logout
+  // Función simplificada para pasar logout a ProfileScreen
   const handleLogout = async () => {
-    Alert.alert(
-      'Cerrar Sesión',
-      '¿Estás seguro que deseas cerrar sesión?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Cerrar Sesión',
-          style: 'destructive',
-          onPress: async () => {
-            await authService.logout();
-            if (onLogout) {
-              onLogout();
-            }
-          },
-        },
-      ]
-    );
+    try {
+      setIsLoggingOut(true);
+      console.log('🚪 Iniciando logout desde HomeScreen...');
+      
+      const logoutResult = await authService.logout();
+      console.log('🚪 Resultado del logout:', logoutResult);
+      
+      if (onLogout) {
+        onLogout();
+      }
+    } catch (error: unknown) {
+      console.error('🚪 Error en logout:', error);
+      // Forzar logout local
+      if (onLogout) {
+        onLogout();
+      }
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   // Función para manejar el cambio de tab
@@ -115,6 +117,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
           }}
           variant="secondary"
           fullWidth
+          disabled={isLoggingOut}
         />
       </View>
     </View>
@@ -126,7 +129,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
       case 'home':
         return renderHomeContent();
       case 'profile':
-        return <ProfileScreen onLogout={handleLogout} />;
+        return <ProfileScreen onLogout={handleLogout} isLoggingOut={isLoggingOut} />;
       default:
         return renderHomeContent();
     }
@@ -171,7 +174,7 @@ const styles = StyleSheet.create({
 
   header: {
     alignItems: 'center',
-    paddingTop: spacing['3xl'],
+    paddingTop: spacing['8xl'],
     paddingBottom: spacing['2xl'],
   },
 

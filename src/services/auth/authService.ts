@@ -1,6 +1,7 @@
 /**
  * Servicio de Autenticación - Booky
  * Actualizado con hash SHA256 para contraseñas, storage simple y logout completo
+ * Incluye funcionalidad de recuperación de contraseña
  */
 
 import { apiService } from '../api/apiService';
@@ -18,6 +19,12 @@ export interface LoginResult {
 }
 
 export interface LogoutResult {
+  success: boolean;
+  error?: string;
+  isNetworkError?: boolean;
+}
+
+export interface ForgotPasswordResult {
   success: boolean;
   error?: string;
   isNetworkError?: boolean;
@@ -216,6 +223,110 @@ class AuthService {
   }
 
   /**
+   * Solicitar recuperación de contraseña
+   * Envía email para restablecer contraseña
+   */
+  async forgotPassword(email: string): Promise<ForgotPasswordResult> {
+    try {
+      console.log('🔑 Iniciando proceso de recuperación de contraseña...');
+      
+      // Validar que el email esté presente
+      if (!email || email.trim() === '') {
+        return {
+          success: false,
+          error: 'El correo electrónico es obligatorio',
+        };
+      }
+
+      const cleanEmail = email.toLowerCase().trim();
+      
+      console.log('🔑 Enviando solicitud de recuperación para:', cleanEmail);
+
+      // Preparar datos para el endpoint
+      const forgotPasswordData = {
+        email: cleanEmail,
+      };
+
+      // TODO: Actualizar con el endpoint correcto cuando esté disponible
+      // Por ahora simulamos una respuesta exitosa para desarrollo
+      console.log('🔑 Simulando envío de email de recuperación...');
+      
+      // Simular delay de red
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Simulación de respuesta exitosa
+      console.log('🔑 Email de recuperación enviado exitosamente (simulado)');
+      
+      return {
+        success: true,
+      };
+
+      /* 
+      // Código real cuando el endpoint esté disponible:
+      
+      const response = await apiService.post(
+        API_CONFIG.ENDPOINTS.FORGOT_PASSWORD, // Agregar este endpoint al config
+        forgotPasswordData
+      );
+
+      // Error de red
+      if (!response.success && response.status === 0) {
+        console.error('Error de red en recuperación');
+        return {
+          success: false,
+          error: 'Error de conexión. Verifica tu conexión a internet.',
+          isNetworkError: true,
+        };
+      }
+
+      const forgotPasswordResponse = response.data;
+      
+      if (!forgotPasswordResponse) {
+        console.error('Respuesta inválida del servidor');
+        return {
+          success: false,
+          error: 'Respuesta inválida del servidor',
+        };
+      }
+
+      // Solicitud exitosa
+      if (forgotPasswordResponse.resultado) {
+        console.log('Solicitud de recuperación enviada exitosamente');
+        return {
+          success: true,
+        };
+      }
+
+      // Solicitud fallida - extraer mensaje de error
+      const errorMessage = this.extractErrorMessage(forgotPasswordResponse.error);
+      console.log('Solicitud de recuperación fallida:', errorMessage);
+      
+      return {
+        success: false,
+        error: errorMessage,
+      };
+      */
+
+    } catch (error: any) {
+      console.error('Error inesperado en recuperación de contraseña:', error);
+      
+      // Verificar si es error de red
+      if (error.message && (error.message.includes('conexión') || error.message.includes('network'))) {
+        return {
+          success: false,
+          error: 'Error de conexión. Verifica tu conexión a internet.',
+          isNetworkError: true,
+        };
+      }
+      
+      return {
+        success: false,
+        error: 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
+      };
+    }
+  }
+
+  /**
    * Registrar nuevo usuario
    * También hashea la contraseña antes de enviarla
    */
@@ -227,7 +338,7 @@ class AuthService {
     phone?: string;
   }): Promise<LoginResult> {
     try {
-      console.log('📝 Preparando registro de usuario...');
+      console.log(' Preparando registro de usuario...');
       
       // Hashear la contraseña
       const hashedPassword = hashService.hashPassword(userData.password);
@@ -239,7 +350,7 @@ class AuthService {
       };
 
       // TODO: Implementar llamada al endpoint de registro
-      console.log('📝 Datos de registro preparados (contraseña hasheada)');
+      console.log(' Datos de registro preparados (contraseña hasheada)');
       
       return {
         success: false,
@@ -247,7 +358,7 @@ class AuthService {
       };
 
     } catch (error: any) {
-      console.error('📝 Error en AuthService.register:', error);
+      console.error(' Error en AuthService.register:', error);
       return {
         success: false,
         error: 'Error al registrar usuario',
@@ -276,6 +387,8 @@ class AuthService {
         return 'El usuario no existe';
       case 20002:
         return 'La cuenta está desactivada';
+      case 20004:
+        return 'No se encontró una cuenta asociada a este correo electrónico';
       case 50001:
         return 'Error interno del servidor. Intenta más tarde.';
       default:

@@ -1,5 +1,5 @@
 /**
- * Componente Button reutilizable - CORREGIDO
+ * Componente Button reutilizable - Con soporte para iconos
  */
 
 import React from 'react';
@@ -10,7 +10,9 @@ import {
   ActivityIndicator,
   ViewStyle,
   TextStyle,
+  View,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome5';
 import { ButtonProps } from '../../types/auth';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
@@ -24,6 +26,8 @@ export const Button: React.FC<ButtonProps> = ({
   disabled = false,
   loading = false,
   fullWidth = false,
+  icon,
+  iconPosition = 'left',
 }) => {
   // Determinar estilos del botón basado en la variante
   const getButtonStyle = (): ViewStyle => {
@@ -69,6 +73,73 @@ export const Button: React.FC<ButtonProps> = ({
     return colors.primary.main;
   };
 
+  // Determinar color del icono
+  const getIconColor = (): string => {
+    if (disabled || loading) {
+      return colors.text.disabled;
+    }
+    
+    if (variant === 'primary') {
+      return colors.primary.contrast;
+    }
+    if (variant === 'secondary') {
+      return colors.secondary.contrast;
+    }
+    if (variant === 'outline' || variant === 'ghost') {
+      return colors.primary.main;
+    }
+    return colors.primary.main;
+  };
+
+  // Determinar tamaño del icono según el tamaño del botón
+  const getIconSize = (): number => {
+    switch (size) {
+      case 'small':
+        return 14;
+      case 'large':
+        return 20;
+      default:
+        return 16;
+    }
+  };
+
+  // Renderizar contenido del botón
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <ActivityIndicator 
+          size="small" 
+          color={getLoadingColor()} 
+        />
+      );
+    }
+
+    const iconElement = icon ? (
+      <Icon 
+        name={icon} 
+        size={getIconSize()} 
+        color={getIconColor()}
+        style={iconPosition === 'left' ? styles.iconLeft : styles.iconRight}
+      />
+    ) : null;
+
+    const textElement = (
+      <Text style={getTextStyle()}>{title}</Text>
+    );
+
+    if (!icon) {
+      return textElement;
+    }
+
+    return (
+      <View style={styles.contentContainer}>
+        {iconPosition === 'left' && iconElement}
+        {textElement}
+        {iconPosition === 'right' && iconElement}
+      </View>
+    );
+  };
+
   return (
     <TouchableOpacity
       style={getButtonStyle()}
@@ -76,14 +147,7 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled || loading}
       activeOpacity={0.8}
     >
-      {loading ? (
-        <ActivityIndicator 
-          size="small" 
-          color={getLoadingColor()} 
-        />
-      ) : (
-        <Text style={getTextStyle()}>{title}</Text>
-      )}
+      {renderContent()}
     </TouchableOpacity>
   );
 };
@@ -95,6 +159,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+  },
+
+  // Contenedor para icono + texto
+  contentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Espaciado de iconos
+  iconLeft: {
+    marginRight: 8,
+  },
+
+  iconRight: {
+    marginLeft: 8,
   },
 
   // Tamaños

@@ -7,6 +7,7 @@ export const API_CONFIG = {
   BASE_URL: 'http://10.0.2.2:61288/api',
   ENDPOINTS: {
     LOGIN: '/Login',
+    LOGOUT: '/cerrarsesion',
     REGISTER: '/Register',
     FORGOT_PASSWORD: '/ForgotPassword',
   },

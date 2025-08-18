@@ -149,18 +149,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   // Navegar a registro
   const navigateToRegister = () => {
     console.log('Navegando a registro...');
-    // TODO: Implementar navegación cuando esté disponible
     if (navigation?.navigate) {
       navigation.navigate('Register');
+    } else {
+      console.warn('Navigation no disponible para Register');
     }
   };
 
-  // Navegar a recuperar contraseña
+  // Navegar a recuperar contraseña - ACTUALIZADO
   const navigateToForgotPassword = () => {
     console.log('Navegando a recuperar contraseña...');
-    // TODO: Implementar navegación cuando esté disponible
     if (navigation?.navigate) {
       navigation.navigate('ForgotPassword');
+    } else {
+      console.warn('Navigation no disponible para ForgotPassword');
+      // Fallback: mostrar mensaje al usuario
+      Alert.alert(
+        'Funcionalidad no disponible',
+        'La función de recuperar contraseña estará disponible próximamente.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -219,13 +227,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 required
               />
 
-              {/* Link para recuperar contraseña */}
+              {/* Link para recuperar contraseña - ACTUALIZADO */}
               <TouchableOpacity
                 style={styles.forgotPasswordContainer}
                 onPress={navigateToForgotPassword}
                 activeOpacity={0.7}
+                disabled={isSubmitting}
               >
-                <Text style={styles.forgotPasswordText}>
+                <Text style={[
+                  styles.forgotPasswordText,
+                  isSubmitting && styles.disabledText
+                ]}>
                   ¿Olvidaste tu contraseña?
                 </Text>
               </TouchableOpacity>
@@ -255,7 +267,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 activeOpacity={0.7}
                 disabled={isSubmitting}
               >
-                <Text style={styles.registerLink}>
+                <Text style={[
+                  styles.registerLink,
+                  isSubmitting && styles.disabledText
+                ]}>
                   Regístrate aquí
                 </Text>
               </TouchableOpacity>
@@ -323,6 +338,11 @@ const styles = StyleSheet.create({
     ...typography.styles.bodySmall,
     color: colors.primary.main,
     textDecorationLine: 'underline',
+  },
+
+  // Estilo para elementos deshabilitados
+  disabledText: {
+    opacity: 0.5,
   },
 
   buttonContainer: {

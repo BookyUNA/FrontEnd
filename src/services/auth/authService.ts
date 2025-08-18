@@ -222,14 +222,14 @@ class AuthService {
     }
   }
 
-  /**
-   * Solicitar recuperación de contraseña
-   * Envía email para restablecer contraseña
-   */
+/**
+ * Solicitar recuperación de contraseña
+ * Envía email para restablecer contraseña
+ */
   async forgotPassword(email: string): Promise<ForgotPasswordResult> {
     try {
       console.log('🔑 Iniciando proceso de recuperación de contraseña...');
-      
+
       // Validar que el email esté presente
       if (!email || email.trim() === '') {
         return {
@@ -239,39 +239,27 @@ class AuthService {
       }
 
       const cleanEmail = email.toLowerCase().trim();
-      
-      console.log('🔑 Enviando solicitud de recuperación para:', cleanEmail);
+      console.log('🔑 Preparando solicitud de recuperación para:', cleanEmail);
 
-      // Preparar datos para el endpoint
-      const forgotPasswordData = {
-        email: cleanEmail,
-      };
-
-      // TODO: Actualizar con el endpoint correcto cuando esté disponible
-      // Por ahora simulamos una respuesta exitosa para desarrollo
+      // -----------------------------
+      // Simulación de la respuesta (Comentar cuando se utilice version real)
+      // -----------------------------
       console.log('🔑 Simulando envío de email de recuperación...');
-      
-      // Simular delay de red
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simulación de respuesta exitosa
+      await new Promise(resolve => setTimeout(resolve, 1500)); // delay simulado
       console.log('🔑 Email de recuperación enviado exitosamente (simulado)');
-      
-      return {
-        success: true,
-      };
+      return { success: true };
 
-      /* 
-      // Código real cuando el endpoint esté disponible:
-      
+      // -----------------------------
+      // VERSION REAL (API)
+      // -----------------------------
+      /*
+      const requestData = { email: cleanEmail };
       const response = await apiService.post(
-        API_CONFIG.ENDPOINTS.FORGOT_PASSWORD, // Agregar este endpoint al config
-        forgotPasswordData
+        API_CONFIG.ENDPOINTS.FORGOT_PASSWORD, // '/api/generarNuevoCodigo'
+        requestData
       );
 
-      // Error de red
       if (!response.success && response.status === 0) {
-        console.error('Error de red en recuperación');
         return {
           success: false,
           error: 'Error de conexión. Verifica tu conexión a internet.',
@@ -279,38 +267,26 @@ class AuthService {
         };
       }
 
-      const forgotPasswordResponse = response.data;
-      
-      if (!forgotPasswordResponse) {
-        console.error('Respuesta inválida del servidor');
+      const data = response.data;
+
+      if (!data) {
         return {
           success: false,
           error: 'Respuesta inválida del servidor',
         };
       }
 
-      // Solicitud exitosa
-      if (forgotPasswordResponse.resultado) {
-        console.log('Solicitud de recuperación enviada exitosamente');
-        return {
-          success: true,
-        };
+      if (data.resultado) {
+        return { success: true };
       }
 
-      // Solicitud fallida - extraer mensaje de error
-      const errorMessage = this.extractErrorMessage(forgotPasswordResponse.error);
-      console.log('Solicitud de recuperación fallida:', errorMessage);
-      
-      return {
-        success: false,
-        error: errorMessage,
-      };
+      const errorMessage = data.error ? data.error[0]?.Message || 'Error desconocido' : 'Error desconocido';
+      return { success: false, error: errorMessage };
       */
 
     } catch (error: any) {
-      console.error('Error inesperado en recuperación de contraseña:', error);
-      
-      // Verificar si es error de red
+      console.error('🔑 Error inesperado en recuperación de contraseña:', error);
+
       if (error.message && (error.message.includes('conexión') || error.message.includes('network'))) {
         return {
           success: false,
@@ -318,13 +294,14 @@ class AuthService {
           isNetworkError: true,
         };
       }
-      
+
       return {
         success: false,
         error: 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
       };
     }
   }
+
 
   /**
    * Registrar nuevo usuario

@@ -15,6 +15,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { LoginScreen } from "./src/screens/auth/LoginScreen";
 import { HomeScreen } from "./src/screens/main/HomeScreen";
 import { ForgotPasswordScreen } from "./src/screens/auth/ForgotPasswordScreen";
+import { ResetPasswordScreen } from "./src/screens/auth/ResetPasswordScreen";
 
 import { authService } from "./src/services/auth/authService";
 import { SafeContainer } from "./src/components/ui/SafeContainer";
@@ -24,6 +25,7 @@ import { typography } from "./src/styles/typography";
 export type RootStackParamList = {
   Login: undefined;
   ForgotPassword: undefined;
+  ResetPassword: undefined;
   Home: undefined;
 };
 
@@ -87,6 +89,11 @@ function App(): React.JSX.Element {
               name="ForgotPassword"
               component={ForgotPasswordScreen}
               options={{ title: "Recuperar Contraseña" }}
+            />
+            <Stack.Screen
+              name="ResetPassword"
+              component={ResetPasswordScreen}
+              options={{ title: "Nueva Contraseña" }}
             />
           </>
         )}

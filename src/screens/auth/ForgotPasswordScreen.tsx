@@ -116,13 +116,6 @@ export const ForgotPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) 
     }
   };
 
-  const navigateToLogin = () => {
-    if (navigation?.goBack) {
-      navigation.goBack();
-    } else {
-      navigation.navigate('Login');
-    }
-  };
 
   return (
     <SafeContainer>
@@ -191,9 +184,6 @@ export const ForgotPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) 
           </View>
 
           <View style={styles.footer}>
-            <TouchableOpacity onPress={navigateToLogin} disabled={isSubmitting}>
-              <Text style={styles.footerText}>← Volver al inicio de sesión</Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

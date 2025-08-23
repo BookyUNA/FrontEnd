@@ -244,15 +244,15 @@ class AuthService {
       // -----------------------------
       // Simulación de la respuesta (Comentar cuando se utilice version real)
       // -----------------------------
-      console.log('🔑 Simulando envío de email de recuperación...');
-      await new Promise(resolve => setTimeout(resolve, 1500)); // delay simulado
-      console.log('🔑 Email de recuperación enviado exitosamente (simulado)');
-      return { success: true };
+      // console.log('🔑 Simulando envío de email de recuperación...');
+      // await new Promise(resolve => setTimeout(resolve, 1500)); // delay simulado
+      // console.log('🔑 Email de recuperación enviado exitosamente (simulado)');
+      // return { success: true };
 
       // -----------------------------
       // VERSION REAL (API)
       // -----------------------------
-      /*
+      
       const requestData = { email: cleanEmail };
       const response = await apiService.post(
         API_CONFIG.ENDPOINTS.FORGOT_PASSWORD, // '/api/generarNuevoCodigo'
@@ -282,7 +282,7 @@ class AuthService {
 
       const errorMessage = data.error ? data.error[0]?.Message || 'Error desconocido' : 'Error desconocido';
       return { success: false, error: errorMessage };
-      */
+      
 
     } catch (error: any) {
       console.error('🔑 Error inesperado en recuperación de contraseña:', error);

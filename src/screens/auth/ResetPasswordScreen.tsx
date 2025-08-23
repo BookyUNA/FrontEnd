@@ -1,7 +1,10 @@
 /**
- * Pantalla de Recuperación de Contraseña - Booky
+ * Pantalla de Reseteo de Contraseña - Booky (PLANTILLA)
  * Sistema de reservas para profesionales independientes
- * Solicita el email del usuario y envía un enlace de recuperación
+ * Permite al usuario ingresar un código y nueva contraseña
+ * 
+ * NOTA: Esta es una plantilla sin funcionalidad real.
+ * TODO: Implementar la lógica de reseteo cuando se desarrolle el backend
  */
 
 import React, { useState } from 'react';
@@ -12,7 +15,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
 } from 'react-native';
 
 // Importaciones locales
@@ -29,29 +31,43 @@ import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 
-interface ForgotPasswordFormData {
-  email: string;
+interface ResetPasswordFormData {
+  code: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
-const initialFormValues: ForgotPasswordFormData = {
-  email: '',
+const initialFormValues: ResetPasswordFormData = {
+  code: '',
+  newPassword: '',
+  confirmPassword: '',
 };
 
-export const ForgotPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
+export const ResetPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
   const [generalError, setGeneralError] = useState('');
   const [showError, setShowError] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [sentToEmail, setSentToEmail] = useState('');
 
-  // Validación simple de email
-  function validateForm(data: ForgotPasswordFormData) {
+  // Validación del formulario
+  function validateForm(data: ResetPasswordFormData) {
     const errors: any = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!data.email) {
-      errors.email = { errorMessage: 'El correo es obligatorio' };
-    } else if (!emailRegex.test(data.email)) {
-      errors.email = { errorMessage: 'Formato de correo inválido' };
+    if (!data.code) {
+      errors.code = { errorMessage: 'El código de verificación es obligatorio' };
+    } else if (data.code.length < 6) {
+      errors.code = { errorMessage: 'El código debe tener al menos 6 caracteres' };
+    }
+
+    if (!data.newPassword) {
+      errors.newPassword = { errorMessage: 'La nueva contraseña es obligatoria' };
+    } else if (data.newPassword.length < 8) {
+      errors.newPassword = { errorMessage: 'La contraseña debe tener al menos 8 caracteres' };
+    }
+
+    if (!data.confirmPassword) {
+      errors.confirmPassword = { errorMessage: 'Confirma tu nueva contraseña' };
+    } else if (data.newPassword !== data.confirmPassword) {
+      errors.confirmPassword = { errorMessage: 'Las contraseñas no coinciden' };
     }
 
     return errors;
@@ -64,13 +80,13 @@ export const ForgotPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) 
     handleChange,
     handleSubmit,
     clearFieldError,
-  } = useForm<ForgotPasswordFormData>({
+  } = useForm<ResetPasswordFormData>({
     initialValues: initialFormValues,
     validationSchema: validateForm,
     onSubmit: handlePasswordReset,
   });
 
-  const handleFieldChange = (field: keyof ForgotPasswordFormData) => (value: string) => {
+  const handleFieldChange = (field: keyof ResetPasswordFormData) => (value: string) => {
     if (showError) {
       setShowError(false);
       setGeneralError('');
@@ -81,41 +97,44 @@ export const ForgotPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) 
     handleChange(field)(value);
   };
 
-  async function handlePasswordReset(formData: ForgotPasswordFormData) {
+  async function handlePasswordReset(formData: ResetPasswordFormData) {
     try {
       setGeneralError('');
       setShowError(false);
 
       const sanitizedData = sanitizeFormData(formData);
 
-      if (!sanitizedData.email) {
-        setGeneralError('Por favor, ingresa tu correo electrónico');
-        setShowError(true);
-        return;
-      }
+      // TODO: Implementar la lógica real de reseteo de contraseña
+      // const result = await authService.resetPassword(
+      //   sanitizedData.code,
+      //   sanitizedData.newPassword
+      // );
 
-      const result = await authService.forgotPassword(sanitizedData.email);
+      // Por ahora simulamos éxito después de 2 segundos
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Simular éxito para propósitos de demo
+      setIsSuccess(true);
 
-      if (result.success) {
-        setIsSuccess(true);
-        setSentToEmail(sanitizedData.email);
-      } else {
-        setGeneralError(result.error || 'Error al procesar la solicitud');
-        setShowError(true);
-      }
+      // TODO: Manejar errores reales del servicio
+      // if (result.success) {
+      //   setIsSuccess(true);
+      // } else {
+      //   setGeneralError(result.error || 'Error al procesar la solicitud');
+      //   setShowError(true);
+      // }
     } catch (err) {
-      console.error('Error en forgot password:', err);
+      console.error('Error en reset password:', err);
       setGeneralError('Ha ocurrido un error inesperado. Intenta nuevamente.');
       setShowError(true);
     }
   }
 
-  const navigateToResetPassword = () => {
+  const navigateToLogin = () => {
     if (navigation?.navigate) {
-      navigation.navigate('ResetPassword');
+      navigation.navigate('Login');
     }
   };
-
 
   return (
     <SafeContainer>
@@ -128,12 +147,13 @@ export const ForgotPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) 
           <View style={styles.header}>
             <Logo size="large" showTagline />
             <Text style={styles.title}>
-              {isSuccess ? '¡Solicitud enviada!' : 'Recuperar contraseña'}
+              {isSuccess ? '¡Contraseña actualizada!' : 'Nueva contraseña'}
             </Text>
             {!isSuccess && (
               <Text style={styles.subtitle}>
-                Ingresa tu correo electrónico y te enviaremos las instrucciones
-                para restablecer tu contraseña
+                Ingresa el código que recibiste por correo y tu nueva contraseña
+                {'\n\n'}
+                
               </Text>
             )}
           </View>
@@ -144,19 +164,41 @@ export const ForgotPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) 
                 <ErrorMessage message={generalError} visible={showError} />
 
                 <Input
-                  label="Correo electrónico"
-                  value={values.email}
-                  onChangeText={handleFieldChange('email')}
-                  placeholder="ejemplo@correo.com"
-                  error={errors.email?.errorMessage}
-                  keyboardType="email-address"
+                  label="Código de verificación"
+                  value={values.code}
+                  onChangeText={handleFieldChange('code')}
+                  placeholder="123456"
+                  error={errors.code?.errorMessage}
+                  keyboardType="numeric"
+                  autoCapitalize="none"
+                  required
+                />
+
+                <Input
+                  label="Nueva contraseña"
+                  value={values.newPassword}
+                  onChangeText={handleFieldChange('newPassword')}
+                  placeholder="Mínimo 8 caracteres"
+                  error={errors.newPassword?.errorMessage}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  required
+                />
+
+                <Input
+                  label="Confirmar contraseña"
+                  value={values.confirmPassword}
+                  onChangeText={handleFieldChange('confirmPassword')}
+                  placeholder="Repite tu nueva contraseña"
+                  error={errors.confirmPassword?.errorMessage}
+                  secureTextEntry
                   autoCapitalize="none"
                   required
                 />
 
                 <View style={styles.buttonContainer}>
                   <Button
-                    title={isSubmitting ? 'Enviando...' : 'Recuperar Contraseña'}
+                    title={isSubmitting ? 'Actualizando...' : 'Cambiar Contraseña'}
                     onPress={handleSubmit}
                     loading={isSubmitting}
                     disabled={isSubmitting}
@@ -168,14 +210,13 @@ export const ForgotPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) 
               <View style={styles.successContainer}>
                 <Text style={styles.successIcon}>✓</Text>
                 <Text style={styles.successMessage}>
-                  Hemos enviado un correo con instrucciones a:
+                  Tu contraseña ha sido actualizada exitosamente
                 </Text>
-                <Text style={styles.emailHighlight}>{sentToEmail}</Text>
 
                 <View style={styles.buttonContainer}>
                   <Button
-                    title="Cambiar Contraseña"
-                    onPress={navigateToResetPassword}
+                    title="Iniciar Sesión"
+                    onPress={navigateToLogin}
                     fullWidth
                   />
                 </View>
@@ -213,6 +254,11 @@ const styles = StyleSheet.create({
     textAlign: 'center', 
     marginTop: spacing.md 
   },
+  templateNote: {
+    ...typography.styles.caption,
+    color: colors.states.warning,
+    fontStyle: 'italic',
+  },
 
   // Formulario
   formContainer: { paddingHorizontal: spacing.lg },
@@ -229,12 +275,6 @@ const styles = StyleSheet.create({
     ...typography.styles.body, 
     color: colors.text.secondary, 
     textAlign: 'center', 
-    marginBottom: spacing.sm 
-  },
-  emailHighlight: { 
-    ...typography.styles.body, 
-    color: colors.primary.main, 
-    fontWeight: typography.fontWeight.semibold, 
     marginBottom: spacing.lg 
   },
 
@@ -243,10 +283,5 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     paddingBottom: spacing['2xl'], 
     paddingTop: spacing.xl 
-  },
-  footerText: { 
-    ...typography.styles.body, 
-    color: colors.primary.main, 
-    textDecorationLine: 'underline' 
   },
 });

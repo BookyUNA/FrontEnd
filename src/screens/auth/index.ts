@@ -1,2 +1,3 @@
-export { LoginScreen } from './LoginScreen';
-export { ForgotPasswordScreen } from './ForgotPasswordScreen';
+import { LoginScreen } from './LoginScreen';
+import { ForgotPasswordScreen } from './ForgotPasswordScreen';
+import { ResetPasswordScreen } from './ResetPasswordScreen';

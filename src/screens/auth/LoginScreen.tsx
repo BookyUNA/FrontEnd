@@ -1,5 +1,5 @@
 /**
- * Pantalla de Login - Booky
+ * Pantalla de Login - Booky (CORREGIDA)
  * Sistema de reservas para profesionales independientes
  * Actualizado con hash SHA256 para contraseñas y navegación
  */
@@ -156,7 +156,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
-  // Navegar a recuperar contraseña - ACTUALIZADO
+  // Navegar a recuperar contraseña
   const navigateToForgotPassword = () => {
     console.log('Navegando a recuperar contraseña...');
     if (navigation?.navigate) {
@@ -183,10 +183,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header con Logo */}
+          {/* Header con Logo - TEXTOS SEPARADOS */}
           <View style={styles.header}>
-            <Logo size="large" showTagline />
+            <Logo size="large" showTagline={false} />
+            
+            {/* Tagline más grande */}
+            <Text style={styles.taglineText}>
+              Tu agenda profesional
+            </Text>
+            {/* Texto de bienvenida normal */}
             <Text style={styles.welcomeText}>
+               {'\n'}
               Inicia sesión en tu cuenta
             </Text>
           </View>
@@ -227,7 +234,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 required
               />
 
-              {/* Link para recuperar contraseña - ACTUALIZADO */}
+              {/* Link para recuperar contraseña */}
               <TouchableOpacity
                 style={styles.forgotPasswordContainer}
                 onPress={navigateToForgotPassword}
@@ -295,23 +302,26 @@ const styles = StyleSheet.create({
   // Header
   header: {
     alignItems: 'center',
-    paddingTop: spacing['8xl'], // Cambiado de spacing['4xl'] (40px) a spacing['8xl'] (96px)
+    paddingTop: spacing['8xl'],
     paddingBottom: spacing['3xl'],
   },
 
-  welcomeText: {
-    ...typography.styles.body,
+  // Tagline más grande y destacado
+  taglineText: {
+    ...typography.styles.h3, // Más grande que body
     color: colors.text.secondary,
     textAlign: 'center',
     marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+    fontStyle: 'italic',
+    fontWeight: typography.fontWeight.medium,
   },
 
-  securityText: {
-    ...typography.styles.bodySmall,
-    color: colors.text.tertiary,
+  // Texto de bienvenida normal
+  welcomeText: {
+    ...typography.styles.body, // Tamaño original
+    color: colors.text.secondary,
     textAlign: 'center',
-    marginTop: spacing.sm,
-    fontStyle: 'italic',
   },
 
   // Formulario

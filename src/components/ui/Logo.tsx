@@ -33,12 +33,6 @@ export const Logo: React.FC<LogoProps> = ({
         />
       </View>
 
-      {/* Tagline opcional */}
-      {showTagline && (
-        <Text style={[styles.tagline, styles[`tagline_${size}`]]}>
-          Tu agenda profesional
-        </Text>
-      )}
     </View>
   );
 };

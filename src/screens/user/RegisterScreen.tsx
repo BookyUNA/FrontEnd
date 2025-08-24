@@ -1,7 +1,7 @@
 /**
  * Pantalla de Registro - Booky
  * Sistema de reservas para profesionales independientes
- * Formulario completo de registro con todos los campos requeridos
+ * Formulario completo de registro con integración a la API real
  */
 
 import React, { useState } from 'react';
@@ -26,6 +26,7 @@ import { Picker } from '../../components/forms/Picker';
 import { useForm } from '../../hooks/useForm';
 import { validateRegisterForm, sanitizeFormData } from '../../utils/validation';
 import { RegisterFormData, AuthScreenProps } from '../../types/auth';
+import { userService } from '../../services/user';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { layout, spacing } from '../../styles/spacing';
@@ -58,6 +59,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   // Estados adicionales para manejo de errores
   const [generalError, setGeneralError] = useState<string>('');
   const [showError, setShowError] = useState<boolean>(false);
+  const [isNetworkError, setIsNetworkError] = useState<boolean>(false);
 
   // Hook personalizado para manejo del formulario
   const {
@@ -79,6 +81,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     if (showError) {
       setShowError(false);
       setGeneralError('');
+      setIsNetworkError(false);
     }
     
     // Limpiar errores específicos del campo
@@ -96,6 +99,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
       // Limpiar errores previos
       setGeneralError('');
       setShowError(false);
+      setIsNetworkError(false);
       
       // Sanitizar datos del formulario
       const sanitizedData = sanitizeFormData(formData);
@@ -110,40 +114,86 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         return;
       }
 
+      // Validaciones específicas usando el servicio de usuario
+      if (!userService.validateCedula(sanitizedData.cedula)) {
+        setGeneralError('El formato de la cédula no es válido');
+        setShowError(true);
+        return;
+      }
+
+      if (!userService.validatePhone(sanitizedData.telefono)) {
+        setGeneralError('El formato del teléfono no es válido (debe ser un número costarricense)');
+        setShowError(true);
+        return;
+      }
+
       console.log('Iniciando proceso de registro:', {
         ...sanitizedData,
         password: '[OCULTA]', // No mostrar la contraseña en logs
         confirmPassword: '[OCULTA]'
       });
       
-      // TODO: Implementar llamada al servicio de registro cuando esté disponible
-      // const result = await authService.register(sanitizedData);
+      // Preparar datos para el servicio (sin confirmPassword)
+      const registerData = {
+        nombreCompleto: sanitizedData.nombreCompleto,
+        cedula: sanitizedData.cedula,
+        email: sanitizedData.email,
+        telefono: sanitizedData.telefono,
+        rol: sanitizedData.rol,
+        password: sanitizedData.password,
+      };
+
+      // Llamar al servicio de registro
+      const result = await userService.registerUser(registerData);
       
-      // Por ahora, simular registro exitoso
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simular delay de red
-      
-      // Simular éxito
-      console.log('Registro simulado exitoso');
-      
-      Alert.alert(
-        'Registro Exitoso',
-        'Tu cuenta ha sido creada exitosamente. Ya puedes iniciar sesión.',
-        [
-          {
-            text: 'Iniciar Sesión',
-            onPress: () => {
-              if (navigation?.navigate) {
-                navigation.navigate('Login');
-              }
+      if (result.success) {
+        console.log('Registro exitoso');
+        
+        // Mostrar mensaje de éxito
+        Alert.alert(
+          '¡Registro Exitoso! 🎉',
+          'Tu cuenta ha sido creada exitosamente. Ya puedes iniciar sesión con tu correo electrónico y contraseña.',
+          [
+            {
+              text: 'Iniciar Sesión',
+              style: 'default',
+              onPress: () => {
+                // Ejecutar callback de éxito si existe
+                if (onRegisterSuccess) {
+                  onRegisterSuccess();
+                }
+                
+                // Navegar al login
+                if (navigation?.navigate) {
+                  navigation.navigate('Login', {
+                    email: sanitizedData.email, // Pre-llenar el email en login
+                  });
+                }
+              },
             },
-          },
-        ]
-      );
+          ],
+          { cancelable: false }
+        );
+        
+      } else {
+        console.error('Error en registro:', result.error);
+        
+        // Mostrar error específico del servidor
+        setGeneralError(result.error || 'Error en el registro. Por favor, intenta nuevamente.');
+        setShowError(true);
+        setIsNetworkError(result.isNetworkError || false);
+        
+        // Si hay errores específicos, mostrarlos en consola para debug
+        if (result.errors && result.errors.length > 0) {
+          console.error('Errores específicos:', result.errors);
+        }
+      }
       
     } catch (error) {
       console.error('Error inesperado en registro:', error);
-      setGeneralError('Ha ocurrido un error inesperado. Por favor, intenta nuevamente.');
+      setGeneralError('Ha ocurrido un error inesperado. Por favor, verifica tu conexión e intenta nuevamente.');
       setShowError(true);
+      setIsNetworkError(true);
     }
   }
 
@@ -154,6 +204,17 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
       navigation.navigate('Login');
     } else {
       console.warn('Navigation no disponible para Login');
+    }
+  };
+
+  // Función para reintentar cuando hay error de red
+  const handleRetry = () => {
+    if (values.nombreCompleto && values.cedula && values.email && values.telefono && values.password) {
+      handleSubmit();
+    } else {
+      setGeneralError('Por favor, completa todos los campos antes de reintentar');
+      setShowError(true);
+      setIsNetworkError(false);
     }
   };
 
@@ -183,11 +244,27 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           <View style={styles.formContainer}>
             <View style={styles.form}>
               {/* Mensaje de error general */}
-              <ErrorMessage 
-                message={generalError}
-                visible={showError}
-                style={styles.errorMessage}
-              />
+              {showError && (
+                <View style={styles.errorContainer}>
+                  <ErrorMessage 
+                    message={generalError}
+                    visible={showError}
+                    style={styles.errorMessage}
+                  />
+                  {isNetworkError && (
+                    <TouchableOpacity
+                      onPress={handleRetry}
+                      style={styles.retryButton}
+                      activeOpacity={0.7}
+                      disabled={isSubmitting}
+                    >
+                      <Text style={styles.retryButtonText}>
+                        📡 Reintentar conexión
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
 
               {/* Campo Nombre Completo */}
               <Input
@@ -206,10 +283,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 label="Cédula"
                 value={values.cedula}
                 onChangeText={handleFieldChange('cedula')}
-                placeholder="Número de cédula"
+                placeholder="1-2345-6789"
                 error={errors.cedula?.errorMessage}
                 keyboardType="numeric"
                 autoCapitalize="none"
+                maxLength={11} // Para formato con guiones
                 required
               />
 
@@ -231,11 +309,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 label="Teléfono"
                 value={values.telefono}
                 onChangeText={handleFieldChange('telefono')}
-                placeholder="Número de teléfono"
+                placeholder="8888-8888"
                 error={errors.telefono?.errorMessage}
                 keyboardType="phone-pad"
                 autoComplete="tel"
                 autoCapitalize="none"
+                maxLength={9} // Para formato con guión
                 required
               />
 
@@ -301,6 +380,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 </Text>
                 <Text style={styles.infoText}>
                   • Debe incluir mayúsculas, minúsculas y números
+                </Text>
+                <Text style={styles.infoText}>
+                  • Los datos se validan según estándares costarricenses
                 </Text>
               </View>
 
@@ -386,8 +468,28 @@ const styles = StyleSheet.create({
   },
 
   // Mensaje de error
-  errorMessage: {
+  errorContainer: {
     marginBottom: spacing.md,
+  },
+
+  errorMessage: {
+    marginBottom: spacing.sm,
+  },
+
+  retryButton: {
+    backgroundColor: colors.background.secondary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary.main,
+  },
+
+  retryButtonText: {
+    ...typography.styles.bodySmall,
+    color: colors.primary.main,
+    fontWeight: typography.fontWeight.semibold,
   },
 
   // Información adicional sobre contraseñas

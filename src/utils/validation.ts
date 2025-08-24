@@ -7,7 +7,7 @@ import { FormValidation, LoginFormData, RegisterFormData } from '../types/auth';
 // Expresiones regulares para validación
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[+]?[\d\s\-\(\)]{8,}$/; // Ajustado para números de Costa Rica
-const CEDULA_REGEX = /^\d{9}$/; // Cédula costarricense: 9 dígitos
+const CEDULA_REGEX = /^\d{9}$/; // Cédula costarricense: 9 dígitos exactos
 
 // Validaciones individuales
 export const validators = {
@@ -58,8 +58,8 @@ export const validators = {
     if (!nombre.trim()) {
       return { isValid: false, errorMessage: 'El nombre completo es requerido' };
     }
-    if (nombre.trim().length < 3) {
-      return { isValid: false, errorMessage: 'El nombre debe tener al menos 3 caracteres' };
+    if (nombre.trim().length < 5) {
+      return { isValid: false, errorMessage: 'El nombre debe tener al menos 5 caracteres' };
     }
     if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(nombre.trim())) {
       return { isValid: false, errorMessage: 'El nombre solo puede contener letras y espacios' };
@@ -72,7 +72,7 @@ export const validators = {
     return { isValid: true };
   },
 
-  // Validar cédula costarricense
+  // Validar cédula costarricense - SIMPLIFICADO: solo 9 números exactos
   cedula: (cedula: string): { isValid: boolean; errorMessage?: string } => {
     if (!cedula.trim()) {
       return { isValid: false, errorMessage: 'La cédula es requerida' };
@@ -81,8 +81,9 @@ export const validators = {
     // Remover espacios y guiones
     const cleanCedula = cedula.replace(/[\s-]/g, '');
     
+    // Verificar que sean exactamente 9 dígitos
     if (!CEDULA_REGEX.test(cleanCedula)) {
-      return { isValid: false, errorMessage: 'La cédula debe tener exactamente 9 dígitos' };
+      return { isValid: false, errorMessage: 'La cédula debe tener exactamente 9 números' };
     }
     
     return { isValid: true };

@@ -74,7 +74,7 @@ export type AutoCompleteType =
   | 'off' 
   | undefined;
 
-// Props para el componente Input
+// Props para el componente Input - ACTUALIZADO con maxLength
 export interface InputProps {
   value: string;
   onChangeText: (text: string) => void;
@@ -87,6 +87,7 @@ export interface InputProps {
   autoComplete?: AutoCompleteType;
   disabled?: boolean;
   required?: boolean;
+  maxLength?: number; // AGREGADO: Propiedad maxLength
 }
 
 // Props para el componente Button

@@ -1,11 +1,10 @@
 /**
- * Pantalla de Registro - Booky (CORREGIDA)
+ * Pantalla de Registro - Booky (MEJORADA)
  * Sistema de reservas para profesionales independientes
- * Formulario completo de registro con integración a la API real
- * CORREGIDO: Mejor manejo de errores de la API
+ * MEJORADO: Validación en tiempo real y scroll automático a errores
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -25,7 +24,7 @@ import { Button } from '../../components/forms/Button';
 import { ErrorMessage } from '../../components/ui/ErrorMessage';
 import { Picker } from '../../components/forms/Picker';
 import { useForm } from '../../hooks/useForm';
-import { validateRegisterForm, sanitizeFormData } from '../../utils/validation';
+import { validateRegisterForm, sanitizeFormData, validators } from '../../utils/validation';
 import { RegisterFormData, AuthScreenProps } from '../../types/auth';
 import { userService } from '../../services/user';
 import { colors } from '../../styles/colors';
@@ -57,10 +56,17 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   navigation, 
   onRegisterSuccess 
 }) => {
+  // Referencias para el scroll
+  const scrollViewRef = useRef<ScrollView>(null);
+  const errorViewRef = useRef<View>(null);
+  
   // Estados adicionales para manejo de errores
   const [generalError, setGeneralError] = useState<string>('');
   const [showError, setShowError] = useState<boolean>(false);
   const [isNetworkError, setIsNetworkError] = useState<boolean>(false);
+  
+  // Estados para validación en vivo
+  const [liveErrors, setLiveErrors] = useState<Record<string, string>>({});
 
   // Hook personalizado para manejo del formulario
   const {
@@ -70,13 +76,73 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     handleChange,
     handleSubmit,
     clearFieldError,
+    setFieldError,
   } = useForm<RegisterFormData>({
     initialValues: initialFormValues,
     validationSchema: validateRegisterForm,
     onSubmit: handleRegister,
   });
 
-  // Función para limpiar errores cuando el usuario modifica los campos
+  // Efecto para hacer scroll automático cuando aparece un error general
+  useEffect(() => {
+    if (showError && errorViewRef.current && scrollViewRef.current) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({
+          y: 0,
+          animated: true,
+        });
+      }, 100);
+    }
+  }, [showError]);
+
+  // Función de validación en tiempo real
+  const validateFieldLive = (field: keyof RegisterFormData, value: string) => {
+    let validationResult;
+    
+    switch (field) {
+      case 'nombreCompleto':
+        validationResult = validators.nombreCompleto(value);
+        break;
+      case 'cedula':
+        validationResult = validators.cedula(value);
+        break;
+      case 'email':
+        validationResult = validators.email(value);
+        break;
+      case 'telefono':
+        validationResult = validators.telefono(value);
+        break;
+      case 'password':
+        validationResult = validators.password(value);
+        break;
+      case 'confirmPassword':
+        validationResult = validators.confirmPassword(values.password, value);
+        break;
+      case 'rol':
+        validationResult = validators.rol(value);
+        break;
+      default:
+        validationResult = { isValid: true };
+    }
+
+    // Actualizar errores en vivo
+    if (!validationResult.isValid && value.length > 0) {
+      setLiveErrors(prev => ({
+        ...prev,
+        [field]: validationResult.errorMessage || ''
+      }));
+    } else {
+      setLiveErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+
+    return validationResult;
+  };
+
+  // Función para manejar cambios en los campos con validación en vivo
   const handleFieldChange = (field: keyof RegisterFormData) => (value: string) => {
     // Limpiar errores generales cuando el usuario empieza a escribir
     if (showError) {
@@ -85,16 +151,38 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
       setIsNetworkError(false);
     }
     
-    // Limpiar errores específicos del campo
+    // Limpiar errores específicos del campo del formulario
     if (errors[field]) {
       clearFieldError(field);
     }
     
     // Actualizar el valor del campo
     handleChange(field)(value);
+    
+    // Validación en tiempo real (solo si el campo no está vacío o es confirmPassword)
+    if (value.length > 0 || field === 'confirmPassword') {
+      validateFieldLive(field, value);
+    } else {
+      // Limpiar error en vivo si el campo está vacío
+      setLiveErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+
+    // Validación especial para confirmPassword cuando cambia password
+    if (field === 'password' && values.confirmPassword) {
+      validateFieldLive('confirmPassword', values.confirmPassword);
+    }
   };
 
-  // CORREGIDA: Función para manejar el registro con mejor manejo de errores
+  // Función para obtener el error a mostrar (prioriza errores del submit sobre errores en vivo)
+  const getFieldError = (field: keyof RegisterFormData): string | undefined => {
+    return errors[field]?.errorMessage || liveErrors[field];
+  };
+
+  // FUNCIÓN DE REGISTRO MEJORADA
   async function handleRegister(formData: RegisterFormData) {
     try {
       console.log('🔥 INICIANDO PROCESO DE REGISTRO...');
@@ -153,13 +241,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         password: '[OCULTA]'
       });
 
-      // CORREGIDO: Llamar al servicio de registro y esperar la respuesta
+      // Llamar al servicio de registro
       console.log('🔄 Llamando a userService.registerUser...');
       const result = await userService.registerUser(registerData);
       
       console.log('📥 Resultado del registro:', result);
       
-      // CORREGIDO: Verificar el resultado correctamente
+      // Verificar el resultado
       if (result.success) {
         console.log('🎉 REGISTRO EXITOSO - Redirigiendo a verificación de correo');
         
@@ -193,7 +281,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         );
         
       } else {
-        // CORREGIDO: Manejo de errores de la API
+        // Manejo de errores de la API
         console.log('❌ REGISTRO FALLIDO - Mostrando error al usuario');
         console.log('Error recibido:', result.error);
         console.log('Es error de red:', result.isNetworkError);
@@ -205,8 +293,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         setGeneralError(errorMessage);
         setShowError(true);
         setIsNetworkError(result.isNetworkError || false);
-        
-        
       }
       
     } catch (error: any) {
@@ -247,6 +333,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         style={styles.keyboardView}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -265,9 +352,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           {/* Formulario */}
           <View style={styles.formContainer}>
             <View style={styles.form}>
-              {/* CORREGIDO: Mensaje de error general más visible */}
+              {/* MEJORADO: Mensaje de error general con scroll automático */}
               {showError && (
-                <View style={styles.errorContainer}>
+                <View ref={errorViewRef} style={styles.errorContainer}>
                   <ErrorMessage 
                     message={generalError}
                     visible={showError}
@@ -294,23 +381,24 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 value={values.nombreCompleto}
                 onChangeText={handleFieldChange('nombreCompleto')}
                 placeholder="Ingresa tu nombre completo"
-                error={errors.nombreCompleto?.errorMessage}
+                error={getFieldError('nombreCompleto')}
                 autoComplete="name"
                 autoCapitalize="words"
                 required
               />
 
-              {/* Campo Cédula */}
+              {/* Campo Cédula con validación en vivo */}
               <Input
                 label="Cédula"
                 value={values.cedula}
                 onChangeText={handleFieldChange('cedula')}
-                placeholder="1-2345-6789"
-                error={errors.cedula?.errorMessage}
+                placeholder="123456789 (9 dígitos)"
+                error={getFieldError('cedula')}
                 keyboardType="numeric"
                 autoCapitalize="none"
-                maxLength={11} // Para formato con guiones
+                maxLength={9}
                 required
+                helperText="Debe tener exactamente 9 números"
               />
 
               {/* Campo Email */}
@@ -319,25 +407,26 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 value={values.email}
                 onChangeText={handleFieldChange('email')}
                 placeholder="ejemplo@correo.com"
-                error={errors.email?.errorMessage}
+                error={getFieldError('email')}
                 keyboardType="email-address"
                 autoComplete="email"
                 autoCapitalize="none"
                 required
               />
 
-              {/* Campo Teléfono */}
+              {/* Campo Teléfono con validación en vivo */}
               <Input
                 label="Teléfono"
                 value={values.telefono}
                 onChangeText={handleFieldChange('telefono')}
-                placeholder="8888-8888"
-                error={errors.telefono?.errorMessage}
+                placeholder="88888888 (8 dígitos)"
+                error={getFieldError('telefono')}
                 keyboardType="phone-pad"
                 autoComplete="tel"
                 autoCapitalize="none"
-                maxLength={9} // Para formato con guión
+                maxLength={8}
                 required
+                helperText="Número costarricense de 8 dígitos"
               />
 
               {/* Campo Rol */}
@@ -346,7 +435,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 value={values.rol}
                 onValueChange={handleFieldChange('rol')}
                 options={roleOptions}
-                error={errors.rol?.errorMessage}
+                error={getFieldError('rol')}
                 required
               />
 
@@ -369,26 +458,27 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 )}
               </View>
 
-              {/* Campo Contraseña */}
+              {/* Campo Contraseña con validación en vivo */}
               <Input
                 label="Contraseña"
                 value={values.password}
                 onChangeText={handleFieldChange('password')}
                 placeholder="Crea una contraseña segura"
-                error={errors.password?.errorMessage}
+                error={getFieldError('password')}
                 secureTextEntry
                 autoComplete="new-password"
                 autoCapitalize="none"
                 required
+                helperText="Mín. 8 caracteres, mayúsculas, minúsculas y números"
               />
 
-              {/* Campo Confirmar Contraseña */}
+              {/* Campo Confirmar Contraseña con validación en vivo */}
               <Input
                 label="Confirmar Contraseña"
                 value={values.confirmPassword}
                 onChangeText={handleFieldChange('confirmPassword')}
                 placeholder="Confirma tu contraseña"
-                error={errors.confirmPassword?.errorMessage}
+                error={getFieldError('confirmPassword')}
                 secureTextEntry
                 autoComplete="new-password"
                 autoCapitalize="none"
@@ -398,10 +488,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               {/* Información adicional */}
               <View style={styles.infoContainer}>
                 <Text style={styles.infoText}>
-                  • La contraseña debe tener al menos 8 caracteres
+                  • Los campos se validan en tiempo real mientras escribes
                 </Text>
                 <Text style={styles.infoText}>
-                  • Debe incluir mayúsculas, minúsculas y números
+                  • La cédula debe tener exactamente 9 números
                 </Text>
                 <Text style={styles.infoText}>
                   • Recibirás un código de verificación en tu correo
@@ -489,14 +579,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
 
-  // CORREGIDO: Mensaje de error más visible
+  // MEJORADO: Mensaje de error con mejor posicionamiento
   errorContainer: {
     marginBottom: spacing.md,
-    backgroundColor: '#FEF2F2', // Fondo ligero rojo
+    backgroundColor: '#FEF2F2',
     padding: spacing.md,
     borderRadius: 8,
     borderLeftWidth: 4,
     borderLeftColor: colors.states.error,
+    // Asegurar que esté en la parte superior
+    marginTop: -spacing.md,
   },
 
   errorMessage: {
@@ -519,12 +611,14 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.semibold,
   },
 
-  // Información adicional sobre contraseñas
+  // Información adicional
   infoContainer: {
     backgroundColor: colors.background.secondary,
     padding: spacing.md,
     borderRadius: 8,
     marginBottom: spacing.lg,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary.main,
   },
 
   infoText: {

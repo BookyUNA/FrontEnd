@@ -1,7 +1,7 @@
 /**
  * FrontBooky - App de Gestión de Citas - ACTUALIZADO
  * Sistema de reservas para profesionales independientes
- * Actualizado con pantalla de registro
+ * Actualizado con pantalla de registro y verificación de correo
  *
  * @format
  */
@@ -12,7 +12,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { LoginScreen } from "./src/screens/auth/LoginScreen";
-import { RegisterScreen } from "./src/screens/user/RegisterScreen"; // NUEVO
+import { RegisterScreen } from "./src/screens/user/RegisterScreen";
+import { EmailVerificationScreen } from "./src/screens/user/EmailVerificationScreen"; // NUEVO
 import { HomeScreen } from "./src/screens/main/HomeScreen";
 import { ForgotPasswordScreen } from "./src/screens/auth/ForgotPasswordScreen";
 import { ResetPasswordScreen } from "./src/screens/auth/ResetPasswordScreen";
@@ -22,10 +23,11 @@ import { SafeContainer } from "./src/components/ui/SafeContainer";
 import { colors } from "./src/styles/colors";
 import { typography } from "./src/styles/typography";
 
-// ACTUALIZADO: Añadida la pantalla Register
+// ACTUALIZADO: Añadida la pantalla EmailVerification
 export type RootStackParamList = {
-  Login: undefined;
-  Register: undefined; // NUEVO
+  Login: { email?: string; verified?: boolean } | undefined;
+  Register: undefined;
+  EmailVerification: { email: string; fromRegister?: boolean }; // NUEVO
   ForgotPassword: undefined;
   ResetPassword: undefined;
   Home: undefined;
@@ -87,7 +89,8 @@ function App(): React.JSX.Element {
                 />
               )}
             </Stack.Screen>
-            {/* NUEVA PANTALLA DE REGISTRO */}
+            
+            {/* PANTALLA DE REGISTRO */}
             <Stack.Screen 
               name="Register" 
               options={{ 
@@ -107,12 +110,38 @@ function App(): React.JSX.Element {
                 <RegisterScreen
                   {...props}
                   onRegisterSuccess={() => {
-                    // Opcional: puedes redirigir al login o autenticar directamente
-                    console.log('Registro completado, redirigiendo a login...');
+                    console.log('Registro completado exitosamente');
                   }}
                 />
               )}
             </Stack.Screen>
+
+            {/* NUEVA PANTALLA DE VERIFICACIÓN DE CORREO */}
+            <Stack.Screen 
+              name="EmailVerification" 
+              options={{ 
+                headerShown: true,
+                title: "Verificar Correo",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
+            >
+              {(props) => (
+                <EmailVerificationScreen
+                  {...props}
+                  onVerificationSuccess={() => {
+                    console.log('Correo verificado exitosamente');
+                  }}
+                />
+              )}
+            </Stack.Screen>
+            
             <Stack.Screen
               name="ForgotPassword"
               component={ForgotPasswordScreen}

@@ -81,13 +81,14 @@ export interface InputProps {
   placeholder?: string;
   label?: string;
   error?: string;
+  helperText?: string; // NUEVO: Texto de ayuda
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   autoComplete?: AutoCompleteType;
   disabled?: boolean;
   required?: boolean;
-  maxLength?: number; // AGREGADO: Propiedad maxLength
+  maxLength?: number;
 }
 
 // Props para el componente Button

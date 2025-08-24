@@ -6,6 +6,7 @@ import React from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
 } from 'react-native';
 import { colors } from '../../styles/colors';
@@ -23,19 +24,15 @@ export const Logo: React.FC<LogoProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      {/* Logo principal */}
+      {/* Logo principal - ahora es una imagen */}
       <View style={[styles.logoContainer, styles[`logoContainer_${size}`]]}>
-        <Text style={[styles.logoText, styles[`logoText_${size}`]]}>
-          Booky
-        </Text>
+        <Image
+          source={require('../../../assets/images/LogoBooky.png')} // Cambia esta ruta por la ruta real de tu logo
+          style={[styles.logoImage, styles[`logoImage_${size}`]]}
+          resizeMode="contain"
+        />
       </View>
 
-      {/* Tagline opcional */}
-      {showTagline && (
-        <Text style={[styles.tagline, styles[`tagline_${size}`]]}>
-          Tu agenda profesional
-        </Text>
-      )}
     </View>
   );
 };
@@ -65,23 +62,25 @@ const styles = StyleSheet.create({
     height: 80,
   },
 
-  // Texto del logo - tamaños
-  logoText: {
-    fontWeight: typography.fontWeight.bold,
-    color: colors.primary.main,
-    letterSpacing: typography.letterSpacing.tight,
+  // Imagen del logo - tamaños
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
 
-  logoText_small: {
-    fontSize: typography.fontSize.xl,
+  logoImage_small: {
+    width: 120,
+    height: 40,
   },
 
-  logoText_medium: {
-    fontSize: typography.fontSize['3xl'],
+  logoImage_medium: {
+    width: 180,
+    height: layout.dimensions.logoHeight,
   },
 
-  logoText_large: {
-    fontSize: typography.fontSize['4xl'],
+  logoImage_large: {
+    width: 240,
+    height: 80,
   },
 
   // Tagline - tamaños
@@ -90,6 +89,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.normal,
     fontStyle: 'italic',
     textAlign: 'center',
+    marginTop: 4,
   },
 
   tagline_small: {

@@ -1,8 +1,7 @@
-// App.tsx
 /**
- * FrontBooky - App de Gestión de Citas
+ * FrontBooky - App de Gestión de Citas - ACTUALIZADO
  * Sistema de reservas para profesionales independientes
- * Actualizado con manejo de estado de autenticación y navegación
+ * Actualizado con pantalla de registro y verificación de correo
  *
  * @format
  */
@@ -13,6 +12,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { LoginScreen } from "./src/screens/auth/LoginScreen";
+import { RegisterScreen } from "./src/screens/user/RegisterScreen";
+import { EmailVerificationScreen } from "./src/screens/user/EmailVerificationScreen"; // NUEVO
 import { HomeScreen } from "./src/screens/main/HomeScreen";
 import { ForgotPasswordScreen } from "./src/screens/auth/ForgotPasswordScreen";
 import { ResetPasswordScreen } from "./src/screens/auth/ResetPasswordScreen";
@@ -22,8 +23,11 @@ import { SafeContainer } from "./src/components/ui/SafeContainer";
 import { colors } from "./src/styles/colors";
 import { typography } from "./src/styles/typography";
 
+// ACTUALIZADO: Añadida la pantalla EmailVerification
 export type RootStackParamList = {
-  Login: undefined;
+  Login: { email?: string; verified?: boolean } | undefined;
+  Register: undefined;
+  EmailVerification: { email: string; fromRegister?: boolean }; // NUEVO
   ForgotPassword: undefined;
   ResetPassword: undefined;
   Home: undefined;
@@ -85,15 +89,88 @@ function App(): React.JSX.Element {
                 />
               )}
             </Stack.Screen>
+            
+            {/* PANTALLA DE REGISTRO */}
+            <Stack.Screen 
+              name="Register" 
+              options={{ 
+                headerShown: true,
+                title: "Crear Cuenta",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
+            >
+              {(props) => (
+                <RegisterScreen
+                  {...props}
+                  onRegisterSuccess={() => {
+                    console.log('Registro completado exitosamente');
+                  }}
+                />
+              )}
+            </Stack.Screen>
+
+            {/* NUEVA PANTALLA DE VERIFICACIÓN DE CORREO */}
+            <Stack.Screen 
+              name="EmailVerification" 
+              options={{ 
+                headerShown: true,
+                title: "Verificar Correo",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
+            >
+              {(props) => (
+                <EmailVerificationScreen
+                  {...props}
+                  onVerificationSuccess={() => {
+                    console.log('Correo verificado exitosamente');
+                  }}
+                />
+              )}
+            </Stack.Screen>
+            
             <Stack.Screen
               name="ForgotPassword"
               component={ForgotPasswordScreen}
-              options={{ title: "Recuperar Contraseña" }}
+              options={{ 
+                title: "Recuperar Contraseña",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
             />
             <Stack.Screen
               name="ResetPassword"
               component={ResetPasswordScreen}
-              options={{ title: "Nueva Contraseña" }}
+              options={{ 
+                title: "Nueva Contraseña",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
             />
           </>
         )}

@@ -1,5 +1,5 @@
 /**
- * Tipos TypeScript para el sistema de autenticación - Actualizado con iconos
+ * Tipos TypeScript para el sistema de autenticación - Actualizado con nuevos campos
  */
 
 // Datos del formulario de login
@@ -8,14 +8,15 @@ export interface LoginFormData {
   password: string;
 }
 
-// Datos del formulario de registro
+// Datos del formulario de registro - ACTUALIZADO con todos los campos requeridos
 export interface RegisterFormData {
+  nombreCompleto: string;
+  cedula: string;
   email: string;
+  telefono: string;
+  rol: string;
   password: string;
   confirmPassword: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
 }
 
 // Estado de validación de un campo
@@ -29,15 +30,15 @@ export interface FormValidation {
   [key: string]: FieldValidation;
 }
 
-// Datos del usuario autenticado
+// Datos del usuario autenticado - ACTUALIZADO
 export interface User {
   id: string;
+  nombreCompleto: string;
+  cedula: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
+  telefono: string;
+  rol: 'Cliente' | 'Profesional' | 'Admin';
   profileImage?: string;
-  role: 'professional' | 'client';
   isVerified: boolean;
   createdAt: string;
   updatedAt: string;
@@ -50,6 +51,8 @@ export interface AuthResponse {
   token?: string;
   refreshToken?: string;
   message?: string;
+  error?: string;
+  isNetworkError?: boolean;
 }
 
 // Estados de la autenticación
@@ -67,25 +70,28 @@ export type AutoCompleteType =
   | 'username' 
   | 'name' 
   | 'tel' 
+  | 'new-password'
   | 'off' 
   | undefined;
 
-// Props para el componente Input
+// Props para el componente Input - ACTUALIZADO con maxLength
 export interface InputProps {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
   label?: string;
   error?: string;
+  helperText?: string; // NUEVO: Texto de ayuda
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-  autoComplete?: AutoCompleteType; // Tipo corregido
+  autoComplete?: AutoCompleteType;
   disabled?: boolean;
   required?: boolean;
+  maxLength?: number;
 }
 
-// Props para el componente Button - Actualizado con soporte para iconos
+// Props para el componente Button
 export interface ButtonProps {
   title: string;
   onPress: () => void;
@@ -94,8 +100,8 @@ export interface ButtonProps {
   disabled?: boolean;
   loading?: boolean;
   fullWidth?: boolean;
-  icon?: string; // Nombre del icono de FontAwesome5
-  iconPosition?: 'left' | 'right'; // Posición del icono
+  icon?: string;
+  iconPosition?: 'left' | 'right';
 }
 
 // Props para el hook useForm

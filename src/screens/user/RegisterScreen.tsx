@@ -1,7 +1,8 @@
 /**
- * Pantalla de Registro - Booky
+ * Pantalla de Registro - Booky (CORREGIDA)
  * Sistema de reservas para profesionales independientes
  * Formulario completo de registro con integración a la API real
+ * CORREGIDO: Mejor manejo de errores de la API
  */
 
 import React, { useState } from 'react';
@@ -93,9 +94,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     handleChange(field)(value);
   };
 
-  // Función para manejar el registro
+  // CORREGIDA: Función para manejar el registro con mejor manejo de errores
   async function handleRegister(formData: RegisterFormData) {
     try {
+      console.log('🔥 INICIANDO PROCESO DE REGISTRO...');
+      
       // Limpiar errores previos
       setGeneralError('');
       setShowError(false);
@@ -109,29 +112,31 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
       const missingFields = requiredFields.filter(field => !sanitizedData[field]);
       
       if (missingFields.length > 0) {
-        setGeneralError('Por favor, completa todos los campos obligatorios');
+        const errorMsg = 'Por favor, completa todos los campos obligatorios';
+        console.log('❌ Error de validación:', errorMsg);
+        setGeneralError(errorMsg);
         setShowError(true);
         return;
       }
 
       // Validaciones específicas usando el servicio de usuario
       if (!userService.validateCedula(sanitizedData.cedula)) {
-        setGeneralError('El formato de la cédula no es válido');
+        const errorMsg = 'El formato de la cédula no es válido';
+        console.log('❌ Error de validación de cédula:', errorMsg);
+        setGeneralError(errorMsg);
         setShowError(true);
         return;
       }
 
       if (!userService.validatePhone(sanitizedData.telefono)) {
-        setGeneralError('El formato del teléfono no es válido (debe ser un número costarricense)');
+        const errorMsg = 'El formato del teléfono no es válido (debe ser un número costarricense)';
+        console.log('❌ Error de validación de teléfono:', errorMsg);
+        setGeneralError(errorMsg);
         setShowError(true);
         return;
       }
 
-      console.log('Iniciando proceso de registro:', {
-        ...sanitizedData,
-        password: '[OCULTA]', // No mostrar la contraseña en logs
-        confirmPassword: '[OCULTA]'
-      });
+      console.log('✅ Validaciones locales pasadas, enviando al servidor...');
       
       // Preparar datos para el servicio (sin confirmPassword)
       const registerData = {
@@ -143,19 +148,28 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         password: sanitizedData.password,
       };
 
-      // Llamar al servicio de registro
+      console.log('📤 Datos a enviar:', {
+        ...registerData,
+        password: '[OCULTA]'
+      });
+
+      // CORREGIDO: Llamar al servicio de registro y esperar la respuesta
+      console.log('🔄 Llamando a userService.registerUser...');
       const result = await userService.registerUser(registerData);
       
+      console.log('📥 Resultado del registro:', result);
+      
+      // CORREGIDO: Verificar el resultado correctamente
       if (result.success) {
-        console.log('Registro exitoso');
+        console.log('🎉 REGISTRO EXITOSO - Redirigiendo a verificación de correo');
         
-        // Mostrar mensaje de éxito
+        // Mostrar mensaje de registro exitoso y redirigir
         Alert.alert(
           '¡Registro Exitoso! 🎉',
-          'Tu cuenta ha sido creada exitosamente. Ya puedes iniciar sesión con tu correo electrónico y contraseña.',
+          'Tu cuenta ha sido creada exitosamente. Ahora debes verificar tu correo electrónico para completar el proceso.',
           [
             {
-              text: 'Iniciar Sesión',
+              text: 'Verificar Correo',
               style: 'default',
               onPress: () => {
                 // Ejecutar callback de éxito si existe
@@ -163,11 +177,14 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                   onRegisterSuccess();
                 }
                 
-                // Navegar al login
+                // Navegar a la pantalla de verificación de correo
                 if (navigation?.navigate) {
-                  navigation.navigate('Login', {
-                    email: sanitizedData.email, // Pre-llenar el email en login
+                  navigation.navigate('EmailVerification', {
+                    email: sanitizedData.email,
+                    fromRegister: true,
                   });
+                } else {
+                  console.warn('Navigation no disponible para EmailVerification');
                 }
               },
             },
@@ -176,22 +193,26 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         );
         
       } else {
-        console.error('Error en registro:', result.error);
+        // CORREGIDO: Manejo de errores de la API
+        console.log('❌ REGISTRO FALLIDO - Mostrando error al usuario');
+        console.log('Error recibido:', result.error);
+        console.log('Es error de red:', result.isNetworkError);
         
-        // Mostrar error específico del servidor
-        setGeneralError(result.error || 'Error en el registro. Por favor, intenta nuevamente.');
+        // Mostrar error específico del servidor o genérico
+        const errorMessage = result.error || 'Error en el registro. Por favor, intenta nuevamente.';
+        console.log('Mensaje de error para mostrar:', errorMessage);
+        
+        setGeneralError(errorMessage);
         setShowError(true);
         setIsNetworkError(result.isNetworkError || false);
         
-        // Si hay errores específicos, mostrarlos en consola para debug
-        if (result.errors && result.errors.length > 0) {
-          console.error('Errores específicos:', result.errors);
-        }
+        
       }
       
-    } catch (error) {
-      console.error('Error inesperado en registro:', error);
-      setGeneralError('Ha ocurrido un error inesperado. Por favor, verifica tu conexión e intenta nuevamente.');
+    } catch (error: any) {
+      console.error('💥 ERROR INESPERADO en handleRegister:', error);
+      const errorMessage = 'Ha ocurrido un error inesperado. Por favor, verifica tu conexión e intenta nuevamente.';
+      setGeneralError(errorMessage);
       setShowError(true);
       setIsNetworkError(true);
     }
@@ -209,6 +230,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
   // Función para reintentar cuando hay error de red
   const handleRetry = () => {
+    console.log('🔄 Reintentando registro...');
     if (values.nombreCompleto && values.cedula && values.email && values.telefono && values.password) {
       handleSubmit();
     } else {
@@ -243,7 +265,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           {/* Formulario */}
           <View style={styles.formContainer}>
             <View style={styles.form}>
-              {/* Mensaje de error general */}
+              {/* CORREGIDO: Mensaje de error general más visible */}
               {showError && (
                 <View style={styles.errorContainer}>
                   <ErrorMessage 
@@ -382,7 +404,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                   • Debe incluir mayúsculas, minúsculas y números
                 </Text>
                 <Text style={styles.infoText}>
-                  • Los datos se validan según estándares costarricenses
+                  • Recibirás un código de verificación en tu correo
                 </Text>
               </View>
 
@@ -439,7 +461,7 @@ const styles = StyleSheet.create({
   // Header
   header: {
     alignItems: 'center',
-    paddingTop: spacing['6xl'], // Un poco menos que login para dar más espacio al formulario
+    paddingTop: spacing['6xl'],
     paddingBottom: spacing['2xl'],
   },
 
@@ -467,9 +489,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
 
-  // Mensaje de error
+  // CORREGIDO: Mensaje de error más visible
   errorContainer: {
     marginBottom: spacing.md,
+    backgroundColor: '#FEF2F2', // Fondo ligero rojo
+    padding: spacing.md,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.states.error,
   },
 
   errorMessage: {

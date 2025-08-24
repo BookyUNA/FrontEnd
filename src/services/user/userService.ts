@@ -1,6 +1,7 @@
 /**
- * Servicio de Usuario - Booky
+ * Servicio de Usuario - Booky (CORREGIDO)
  * Gestión de operaciones relacionadas con usuarios
+ * CORREGIDO: Mejor manejo de errores de API y respuestas del servidor
  */
 
 import { apiService } from '../api/apiService';
@@ -39,6 +40,7 @@ class UserService {
   /**
    * Registrar un nuevo usuario
    * La contraseña se hashea con SHA256 antes de enviarla
+   * CORREGIDO: Mejor manejo de la respuesta del servidor
    */
   async registerUser(userData: RegisterUserRequest): Promise<RegisterResult> {
     try {
@@ -81,7 +83,7 @@ class UserService {
 
       console.log('👤 Respuesta del servidor:', response);
 
-      // Error de red
+      // CORREGIDO: Verificar primero errores de red/conexión
       if (!response.success && response.status === 0) {
         console.error('👤 Error de red en registro');
         return {
@@ -91,16 +93,7 @@ class UserService {
         };
       }
 
-      // Si la respuesta del servidor no es exitosa (pero hay respuesta)
-      if (!response.success) {
-        console.error('👤 Error del servidor:', response);
-        return {
-          success: false,
-          error: response.error || 'Error del servidor. Por favor, intenta nuevamente.',
-        };
-      }
-
-      // La API respondió correctamente, revisar el contenido
+      // CORREGIDO: Verificar si llegaron datos del servidor
       const data = response.data;
       
       if (!data) {
@@ -111,21 +104,26 @@ class UserService {
         };
       }
 
-      // Verificar si el registro fue exitoso según la API
+      // CORREGIDO: Verificar PRIMERO si el registro fue exitoso según la API
+      // La API devuelve resultado: true para éxito, false para error
       if (data.resultado === true) {
-        console.log('👤 Registro exitoso');
+        console.log('👤 ✅ Registro exitoso según la API');
         return {
           success: true,
         };
       }
 
-      // El registro falló según la API, verificar errores
+      // CORREGIDO: Si resultado es false, es un error de negocio de la API
+      console.log('👤 ❌ Registro falló según la API (resultado: false)');
+      
+      // Extraer y mostrar errores específicos
       if (data.error && data.error.length > 0) {
-        console.error('👤 Errores de registro:', data.error);
         
         // Obtener el primer error como mensaje principal
         const firstError = data.error[0];
         const errorMessage = firstError.Message || 'Error en el registro';
+        
+        console.log('👤 Mensaje de error para mostrar al usuario:', errorMessage);
         
         return {
           success: false,
@@ -135,7 +133,7 @@ class UserService {
       }
 
       // Caso donde resultado es false pero no hay errores específicos
-      console.error('👤 Registro falló sin errores específicos');
+      console.error('👤 Registro falló sin errores específicos en la respuesta');
       return {
         success: false,
         error: 'No se pudo completar el registro. Por favor, intenta nuevamente.',
@@ -146,52 +144,75 @@ class UserService {
       return {
         success: false,
         error: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
+        isNetworkError: true,
       };
     }
   }
 
   /**
-   * Validar formato de cédula costarricense - SIMPLIFICADO
-   * Solo verifica que sean exactamente 9 números
+   * Validar formato de cédula costarricense
+   * Formato esperado: 9 dígitos (con o sin guiones)
    */
   validateCedula(cedula: string): boolean {
-    // Remover espacios y guiones
+    if (!cedula) return false;
+    
+    // Remover guiones y espacios
     const cleanCedula = cedula.replace(/[\s-]/g, '');
     
-    // Debe tener exactamente 9 dígitos
+    // Verificar que sean exactamente 9 dígitos
     return /^\d{9}$/.test(cleanCedula);
   }
 
   /**
-   * Formatear cédula con guiones para mostrar
+   * Validar formato de teléfono costarricense
+   * Formato esperado: 8 dígitos (puede tener guión después del 4to dígito)
    */
-  formatCedula(cedula: string): string {
-    const cleanCedula = cedula.replace(/[\s-]/g, '');
-    if (cleanCedula.length === 9) {
-      return `${cleanCedula.substring(0, 1)}-${cleanCedula.substring(1, 5)}-${cleanCedula.substring(5, 9)}`;
+  validatePhone(phone: string): boolean {
+    if (!phone) return false;
+    
+    // Remover guiones, espacios y paréntesis
+    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+    
+    // Verificar que sean 8 dígitos para números de Costa Rica
+    if (/^\d{8}$/.test(cleanPhone)) {
+      return true;
     }
-    return cedula;
+    
+    // También aceptar con código de país +506
+    if (cleanPhone.length === 11 && cleanPhone.startsWith('506')) {
+      return /^506\d{8}$/.test(cleanPhone);
+    }
+    
+    return false;
   }
 
   /**
-   * Validar formato de teléfono costarricense
+   * Formatear cédula para mostrar
    */
-  validatePhone(phone: string): boolean {
-    // Remover espacios, guiones y paréntesis
-    const cleanPhone = phone.replace(/[\s()-]/g, '');
+  formatCedula(cedula: string): string {
+    if (!cedula) return cedula;
     
-    // Debe tener 8 dígitos y empezar con 2, 4, 6, 7, u 8
-    return /^[24678]\d{7}$/.test(cleanPhone);
+    const clean = cedula.replace(/[\s-]/g, '');
+    
+    if (clean.length === 9) {
+      return `${clean.substring(0, 1)}-${clean.substring(1, 5)}-${clean.substring(5, 9)}`;
+    }
+    
+    return cedula;
   }
 
   /**
    * Formatear teléfono para mostrar
    */
   formatPhone(phone: string): string {
-    const cleanPhone = phone.replace(/[\s()-]/g, '');
-    if (cleanPhone.length === 8) {
-      return `${cleanPhone.substring(0, 4)}-${cleanPhone.substring(4, 8)}`;
+    if (!phone) return phone;
+    
+    const clean = phone.replace(/[\s\-\(\)]/g, '');
+    
+    if (clean.length === 8) {
+      return `${clean.substring(0, 4)}-${clean.substring(4, 8)}`;
     }
+    
     return phone;
   }
 }

@@ -255,7 +255,7 @@ class AuthService {
       
       const requestData = { email: cleanEmail };
       const response = await apiService.post(
-        API_CONFIG.ENDPOINTS.FORGOT_PASSWORD, // '/api/generarNuevoCodigo'
+        API_CONFIG.ENDPOINTS.FORGOT_PASSWORD, // '/api/generarNuevoCodigoRecuperacion'
         requestData
       );
 
@@ -267,7 +267,7 @@ class AuthService {
         };
       }
 
-      const data = response.data;
+      const data = response.data as any;
 
       if (!data) {
         return {
@@ -276,16 +276,144 @@ class AuthService {
         };
       }
 
-      if (data.resultado) {
+      // Verificar si la operación fue exitosa
+      if (data.resultado === true) {
         return { success: true };
       }
 
-      const errorMessage = data.error ? data.error[0]?.Message || 'Error desconocido' : 'Error desconocido';
+      // Extraer mensaje de error si existe
+      let errorMessage = 'Error desconocido';
+      
+      if (data.error && Array.isArray(data.error) && data.error.length > 0) {
+        errorMessage = data.error[0]?.Message || 'Error desconocido';
+      } else if (typeof data.error === 'string') {
+        errorMessage = data.error;
+      }
+      
       return { success: false, error: errorMessage };
       
 
     } catch (error: any) {
       console.error('🔑 Error inesperado en recuperación de contraseña:', error);
+
+      if (error.message && (error.message.includes('conexión') || error.message.includes('network'))) {
+        return {
+          success: false,
+          error: 'Error de conexión. Verifica tu conexión a internet.',
+          isNetworkError: true,
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
+      };
+    }
+  }
+
+  /**
+   * Restablecer contraseña
+   * Requiere: código recibido por email + nueva contraseña + confirmación
+   */
+  async resetPassword(code: string, newPassword: string, confirmPassword: string): Promise<ForgotPasswordResult> {
+    try {
+      console.log('🔒 Iniciando proceso de reseteo de contraseña...');
+
+      // Validar que todos los datos estén presentes
+      if (!code || !newPassword || !confirmPassword) {
+        return {
+          success: false,
+          error: 'Todos los campos son obligatorios',
+        };
+      }
+
+      // Validar que las contraseñas coincidan
+      if (newPassword !== confirmPassword) {
+        return {
+          success: false,
+          error: 'Las contraseñas no coinciden',
+        };
+      }
+
+      // Validar código de 6 dígitos numéricos
+      if (!/^\d{6}$/.test(code)) {
+        return {
+          success: false,
+          error: 'El código debe tener 6 dígitos numéricos',
+        };
+      }
+
+      // Hashear las contraseñas
+      const hashedNewPassword = hashService.hashPassword(newPassword);
+      const hashedConfirmPassword = hashService.hashPassword(confirmPassword);
+
+      console.log('🔒 Preparando datos de reseteo con contraseñas hasheadas');
+
+      const requestData = {
+        CodigoRecuperacion: code,
+        NuevaContrasenaHash: hashedNewPassword,
+        ConfirmacionContrasenaHash: hashedConfirmPassword,
+      };
+
+      console.log('🔒 Enviando solicitud de reseteo al servidor...');
+
+      const response = await apiService.post(
+        API_CONFIG.ENDPOINTS.RESET_PASSWORD, // '/api/CambiarContrasena'
+        requestData
+      );
+
+      // Error de red
+      if (!response.success && response.status === 0) {
+        console.error('🔒 Error de red en reseteo de contraseña');
+        return {
+          success: false,
+          error: 'Error de conexión. Verifica tu conexión a internet.',
+          isNetworkError: true,
+        };
+      }
+
+      const data = response.data as any;
+
+      if (!data) {
+        console.error('🔒 Respuesta inválida del servidor');
+        return {
+          success: false,
+          error: 'Respuesta inválida del servidor',
+        };
+      }
+
+      // Verificar si el reseteo fue exitoso
+      if (data.resultado === true) {
+        console.log('🔒 Contraseña reseteada exitosamente');
+        return { success: true };
+      }
+
+      // Extraer mensaje de error si existe
+      let errorMessage = 'Error al cambiar la contraseña';
+      
+      if (data.error && Array.isArray(data.error) && data.error.length > 0) {
+        errorMessage = this.extractErrorMessage(data.error);
+      } else if (typeof data.error === 'string') {
+        errorMessage = data.error;
+      }
+      
+      console.log('🔒 Error al resetear contraseña:', errorMessage);
+      
+      return { 
+        success: false, 
+        error: errorMessage 
+      };
+
+    } catch (error: any) {
+      console.error('🔒 Error inesperado en resetPassword:', error);
+
+      // Verificar si es un error de hash
+      if (error.message && error.message.includes('hashear')) {
+        return {
+          success: false,
+          error: 'Error al procesar las contraseñas',
+        };
+      }
 
       if (error.message && (error.message.includes('conexión') || error.message.includes('network'))) {
         return {
@@ -315,7 +443,7 @@ class AuthService {
     phone?: string;
   }): Promise<LoginResult> {
     try {
-      console.log(' Preparando registro de usuario...');
+      console.log('📝 Preparando registro de usuario...');
       
       // Hashear la contraseña
       const hashedPassword = hashService.hashPassword(userData.password);
@@ -327,7 +455,7 @@ class AuthService {
       };
 
       // TODO: Implementar llamada al endpoint de registro
-      console.log(' Datos de registro preparados (contraseña hasheada)');
+      console.log('📝 Datos de registro preparados (contraseña hasheada)');
       
       return {
         success: false,
@@ -335,7 +463,7 @@ class AuthService {
       };
 
     } catch (error: any) {
-      console.error(' Error en AuthService.register:', error);
+      console.error('📝 Error en AuthService.register:', error);
       return {
         success: false,
         error: 'Error al registrar usuario',
@@ -366,6 +494,14 @@ class AuthService {
         return 'La cuenta está desactivada';
       case 20004:
         return 'No se encontró una cuenta asociada a este correo electrónico';
+      case 30001:
+        return 'El código de recuperación es inválido o ha expirado';
+      case 30002:
+        return 'El código de recuperación ya fue utilizado';
+      case 30003:
+        return 'Las contraseñas no coinciden';
+      case 30004:
+        return 'La nueva contraseña no cumple con los requisitos de seguridad';
       case 50001:
         return 'Error interno del servidor. Intenta más tarde.';
       default:
@@ -443,6 +579,7 @@ class AuthService {
       console.error('🧹 Error al limpiar datos:', error);
     }
   }
+
 }
 
 // Instancia singleton del servicio

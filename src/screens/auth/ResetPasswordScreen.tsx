@@ -1,10 +1,7 @@
 /**
- * Pantalla de Reseteo de Contraseña - Booky (PLANTILLA)
+ * Pantalla de Reseteo de Contraseña - Booky
  * Sistema de reservas para profesionales independientes
  * Permite al usuario ingresar un código y nueva contraseña
- * 
- * NOTA: Esta es una plantilla sin funcionalidad real.
- * TODO: Implementar la lógica de reseteo cuando se desarrolle el backend
  */
 
 import React, { useState } from 'react';
@@ -15,6 +12,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 
 // Importaciones locales
@@ -54,8 +52,10 @@ export const ResetPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) =
 
     if (!data.code) {
       errors.code = { errorMessage: 'El código de verificación es obligatorio' };
-    } else if (data.code.length < 6) {
-      errors.code = { errorMessage: 'El código debe tener al menos 6 caracteres' };
+    } else if (data.code.length !== 6) {
+      errors.code = { errorMessage: 'El código debe tener 6 dígitos' };
+    } else if (!/^\d{6}$/.test(data.code)) {
+      errors.code = { errorMessage: 'El código solo debe contener números' };
     }
 
     if (!data.newPassword) {
@@ -104,35 +104,54 @@ export const ResetPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) =
 
       const sanitizedData = sanitizeFormData(formData);
 
-      // TODO: Implementar la lógica real de reseteo de contraseña
-      // const result = await authService.resetPassword(
-      //   sanitizedData.code,
-      //   sanitizedData.newPassword
-      // );
+      // Validación adicional antes de enviar
+      if (!sanitizedData.code || !sanitizedData.newPassword || !sanitizedData.confirmPassword) {
+        setGeneralError('Por favor, completa todos los campos');
+        setShowError(true);
+        return;
+      }
 
-      // Por ahora simulamos éxito después de 2 segundos
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simular éxito para propósitos de demo
-      setIsSuccess(true);
+      if (sanitizedData.newPassword !== sanitizedData.confirmPassword) {
+        setGeneralError('Las contraseñas no coinciden');
+        setShowError(true);
+        return;
+      }
 
-      // TODO: Manejar errores reales del servicio
-      // if (result.success) {
-      //   setIsSuccess(true);
-      // } else {
-      //   setGeneralError(result.error || 'Error al procesar la solicitud');
-      //   setShowError(true);
-      // }
+      console.log('Iniciando proceso de reseteo de contraseña...');
+
+      // Llamar al servicio de reseteo de contraseña
+      const result = await authService.resetPassword(
+        sanitizedData.code,
+        sanitizedData.newPassword,
+        sanitizedData.confirmPassword
+      );
+
+      if (result.success) {
+        console.log('Contraseña reseteada exitosamente');
+        setIsSuccess(true);
+      } else {
+        console.log('Error al resetear contraseña:', result.error);
+        
+        if (result.isNetworkError) {
+          setGeneralError('No se pudo conectar al servidor. Verifica tu conexión a internet.');
+        } else {
+          setGeneralError(result.error || 'Error al procesar la solicitud');
+        }
+        setShowError(true);
+      }
     } catch (err) {
-      console.error('Error en reset password:', err);
+      console.error('Error inesperado en reset password:', err);
       setGeneralError('Ha ocurrido un error inesperado. Intenta nuevamente.');
       setShowError(true);
     }
   }
 
   const navigateToLogin = () => {
+    console.log('Navegando al login...');
     if (navigation?.navigate) {
       navigation.navigate('Login');
+    } else {
+      console.warn('Navigation no disponible para Login');
     }
   };
 
@@ -142,26 +161,32 @@ export const ResetPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) =
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Header */}
           <View style={styles.header}>
             <Logo size="large" showTagline />
             <Text style={styles.title}>
-              {isSuccess ? '¡Contraseña actualizada!' : 'Nueva contraseña'}
+              {isSuccess ? 'Contraseña actualizada' : 'Nueva contraseña'}
             </Text>
             {!isSuccess && (
               <Text style={styles.subtitle}>
                 Ingresa el código que recibiste por correo y tu nueva contraseña
-                {'\n\n'}
-                
               </Text>
             )}
           </View>
 
           <View style={styles.formContainer}>
             {!isSuccess ? (
-              <View>
-                <ErrorMessage message={generalError} visible={showError} />
+              <View style={styles.form}>
+                <ErrorMessage 
+                  message={generalError} 
+                  visible={showError}
+                  style={styles.errorMessage}
+                />
 
                 <Input
                   label="Código de verificación"
@@ -181,6 +206,7 @@ export const ResetPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) =
                   placeholder="Mínimo 8 caracteres"
                   error={errors.newPassword?.errorMessage}
                   secureTextEntry
+                  autoComplete="password"
                   autoCapitalize="none"
                   required
                 />
@@ -192,6 +218,7 @@ export const ResetPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) =
                   placeholder="Repite tu nueva contraseña"
                   error={errors.confirmPassword?.errorMessage}
                   secureTextEntry
+                  autoComplete="password"
                   autoCapitalize="none"
                   required
                 />
@@ -203,12 +230,15 @@ export const ResetPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) =
                     loading={isSubmitting}
                     disabled={isSubmitting}
                     fullWidth
+                    variant="primary"
                   />
                 </View>
               </View>
             ) : (
               <View style={styles.successContainer}>
-                <Text style={styles.successIcon}>✓</Text>
+                <View style={styles.successIcon}>
+                  <View style={styles.checkmark} />
+                </View>
                 <Text style={styles.successMessage}>
                   Tu contraseña ha sido actualizada exitosamente
                 </Text>
@@ -218,6 +248,7 @@ export const ResetPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) =
                     title="Iniciar Sesión"
                     onPress={navigateToLogin}
                     fullWidth
+                    variant="primary"
                   />
                 </View>
               </View>
@@ -225,6 +256,21 @@ export const ResetPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) =
           </View>
 
           <View style={styles.footer}>
+            {!isSuccess && (
+              <TouchableOpacity
+                style={styles.backToLoginContainer}
+                onPress={navigateToLogin}
+                activeOpacity={0.7}
+                disabled={isSubmitting}
+              >
+                <Text style={[
+                  styles.backToLoginText,
+                  isSubmitting && styles.disabledText
+                ]}>
+                  ¿Recordaste tu contraseña? Inicia sesión
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -254,28 +300,50 @@ const styles = StyleSheet.create({
     textAlign: 'center', 
     marginTop: spacing.md 
   },
-  templateNote: {
-    ...typography.styles.caption,
-    color: colors.states.warning,
-    fontStyle: 'italic',
-  },
 
   // Formulario
-  formContainer: { paddingHorizontal: spacing.lg },
-  buttonContainer: { marginTop: spacing.lg },
+  formContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  form: {
+    paddingHorizontal: spacing.lg,
+  },
+  errorMessage: {
+    marginBottom: spacing.md,
+  },
+  buttonContainer: { 
+    marginTop: spacing.lg 
+  },
 
   // Éxito
-  successContainer: { alignItems: 'center', padding: spacing.lg },
-  successIcon: { 
-    ...typography.styles.h1, 
-    color: colors.primary.main, 
-    marginBottom: spacing.lg 
+  successContainer: { 
+    alignItems: 'center', 
+    padding: spacing.lg 
+  },
+  successIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  checkmark: {
+    width: 24,
+    height: 12,
+    borderLeftWidth: 3,
+    borderBottomWidth: 3,
+    borderColor: colors.background.primary,
+    transform: [{ rotate: '-45deg' }],
+    marginTop: -4,
   },
   successMessage: { 
     ...typography.styles.body, 
     color: colors.text.secondary, 
     textAlign: 'center', 
-    marginBottom: spacing.lg 
+    marginBottom: spacing.xl 
   },
 
   // Footer
@@ -284,4 +352,17 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['2xl'], 
     paddingTop: spacing.xl 
   },
+  backToLoginContainer: {
+    alignItems: 'center',
+  },
+  backToLoginText: {
+    ...typography.styles.bodySmall,
+    color: colors.primary.main,
+    textDecorationLine: 'underline',
+  },
+  disabledText: {
+    opacity: 0.5,
+  },
 });
+
+export default ResetPasswordScreen;

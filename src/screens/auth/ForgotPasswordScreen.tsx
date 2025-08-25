@@ -111,11 +111,13 @@ export const ForgotPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) 
   }
 
   const navigateToResetPassword = () => {
+    console.log('Navegando a reseteo de contraseña...');
     if (navigation?.navigate) {
       navigation.navigate('ResetPassword');
+    } else {
+      console.warn('Navigation no disponible para ResetPassword');
     }
   };
-
 
   return (
     <SafeContainer>
@@ -128,7 +130,7 @@ export const ForgotPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) 
           <View style={styles.header}>
             <Logo size="large" showTagline />
             <Text style={styles.title}>
-              {isSuccess ? '¡Solicitud enviada!' : 'Recuperar contraseña'}
+              {isSuccess ? 'Solicitud enviada' : 'Recuperar contraseña'}
             </Text>
             {!isSuccess && (
               <Text style={styles.subtitle}>
@@ -166,7 +168,9 @@ export const ForgotPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) 
               </View>
             ) : (
               <View style={styles.successContainer}>
-                <Text style={styles.successIcon}>✓</Text>
+                <View style={styles.successIcon}>
+                  <View style={styles.checkmark} />
+                </View>
                 <Text style={styles.successMessage}>
                   Hemos enviado un correo con instrucciones a:
                 </Text>
@@ -177,6 +181,7 @@ export const ForgotPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) 
                     title="Cambiar Contraseña"
                     onPress={navigateToResetPassword}
                     fullWidth
+                    variant="primary"
                   />
                 </View>
               </View>
@@ -220,22 +225,35 @@ const styles = StyleSheet.create({
 
   // Éxito
   successContainer: { alignItems: 'center', padding: spacing.lg },
-  successIcon: { 
-    ...typography.styles.h1, 
-    color: colors.primary.main, 
-    marginBottom: spacing.lg 
+  successIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  checkmark: {
+    width: 24,
+    height: 12,
+    borderLeftWidth: 3,
+    borderBottomWidth: 3,
+    borderColor: colors.background.primary,
+    transform: [{ rotate: '-45deg' }],
+    marginTop: -4,
   },
   successMessage: { 
     ...typography.styles.body, 
     color: colors.text.secondary, 
     textAlign: 'center', 
-    marginBottom: spacing.sm 
-  },
-  emailHighlight: { 
-    ...typography.styles.body, 
-    color: colors.primary.main, 
-    fontWeight: typography.fontWeight.semibold, 
     marginBottom: spacing.lg 
+  },
+  emailHighlight: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
   },
 
   // Footer
@@ -244,9 +262,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['2xl'], 
     paddingTop: spacing.xl 
   },
-  footerText: { 
-    ...typography.styles.body, 
-    color: colors.primary.main, 
-    textDecorationLine: 'underline' 
-  },
 });
+
+export default ForgotPasswordScreen;

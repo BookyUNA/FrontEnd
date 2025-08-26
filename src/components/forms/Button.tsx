@@ -103,7 +103,7 @@ export const Button: React.FC<ButtonProps> = ({
     }
   };
 
-  // Renderizar contenido del botón
+  // Renderizar contenido del botón - CORREGIDO
   const renderContent = () => {
     if (loading) {
       return (
@@ -127,10 +127,7 @@ export const Button: React.FC<ButtonProps> = ({
       <Text style={getTextStyle()}>{title}</Text>
     );
 
-    if (!icon) {
-      return textElement;
-    }
-
+    // CORRECCIÓN: Siempre usar contentContainer para centrado consistente
     return (
       <View style={styles.contentContainer}>
         {iconPosition === 'left' && iconElement}
@@ -161,11 +158,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
 
-  // Contenedor para icono + texto
+  // Contenedor para icono + texto - CORREGIDO
   contentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%', // Asegurar que ocupe todo el ancho
   },
 
   // Espaciado de iconos
@@ -261,10 +259,11 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 
-  // Estilos de texto base
+  // Estilos de texto base - CORREGIDO
   text: {
     ...typography.styles.button,
     textAlign: 'center',
+    flex: 1, // Permite que el texto ocupe el espacio disponible
   },
 
   // Texto Primary

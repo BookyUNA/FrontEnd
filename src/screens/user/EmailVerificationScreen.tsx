@@ -2,10 +2,7 @@
  * Pantalla de Verificación de Correo Electrónico - Booky
  * Sistema de reservas para profesionales independientes
  * Solicita al usuario ingresar el código enviado por correo
- * 
- * NOTA: Esta pantalla aún no tiene funcionalidad real del backend.
- * TODO: Implementar la verificación real cuando se desarrolle el servicio
- */
+ *  */
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -28,6 +25,7 @@ import { ErrorMessage } from '../../components/ui/ErrorMessage';
 import { useForm } from '../../hooks/useForm';
 import { sanitizeFormData } from '../../utils/validation';
 import { AuthScreenProps } from '../../types/auth';
+import { userService } from '../../services/user/userService'; // ✅ ACTUALIZADO: Usando userService integrado
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
@@ -107,7 +105,7 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
     handleChange(field)(value);
   };
 
-  // Función para manejar la verificación del código
+  // Usa el servicio real de verificación
   async function handleVerification(formData: EmailVerificationFormData) {
     try {
       setGeneralError('');
@@ -121,23 +119,25 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
         return;
       }
 
-      console.log('Verificando código:', {
+      if (!userEmail) {
+        setGeneralError('Error: No se encontró el correo electrónico');
+        setShowError(true);
+        return;
+      }
+
+      console.log('📧 Iniciando verificación real:', {
         email: userEmail,
         code: sanitizedData.code,
         fromRegister
       });
 
-      // TODO: Implementar llamada real al servicio de verificación
-      // const result = await emailService.verifyCode(userEmail, sanitizedData.code);
-      
-      // Simulación temporal - siempre será exitosa para desarrollo
-      const mockResult = {
-        success: true,
-        error: null
-      };
+      // Llamada al servicio de verificación integrado
+      const result = await userService.verifyEmailCode(userEmail, sanitizedData.code);
 
-      if (mockResult.success) {
-        console.log('Verificación exitosa (simulada)');
+      console.log('📧 Resultado de verificación:', result);
+
+      if (result.success) {
+        console.log('📧 ✅ Verificación exitosa');
         
         // Mostrar mensaje de éxito
         Alert.alert(
@@ -175,8 +175,11 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
         );
         
       } else {
-        console.error('Error en verificación:', mockResult.error);
-        setGeneralError('Código de verificación incorrecto. Intenta nuevamente.');
+        console.error('📧 ❌ Error en verificación:', result.error);
+        
+        // Mostrar error específico del servidor o genérico
+        const errorMessage = result.error || 'Código de verificación incorrecto. Intenta nuevamente.';
+        setGeneralError(errorMessage);
         setShowError(true);
         
         // Limpiar el campo del código para reintento
@@ -184,13 +187,13 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
       }
       
     } catch (error) {
-      console.error('Error inesperado en verificación:', error);
+      console.error('📧 Error inesperado en verificación:', error);
       setGeneralError('Ha ocurrido un error inesperado. Por favor, intenta nuevamente.');
       setShowError(true);
     }
   }
 
-  // Función para reenviar código
+  // Usa el servicio real de reenvío
   const handleResendCode = async () => {
     if (resendCooldown > 0 || isResending) return;
 
@@ -199,25 +202,37 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
       setGeneralError('');
       setShowError(false);
 
-      console.log('Reenviando código a:', userEmail);
+      console.log('📧 Reenviando código real a:', userEmail);
 
-      // TODO: Implementar llamada real al servicio de reenvío
-      // const result = await emailService.resendVerificationCode(userEmail);
-      
-      // Simulación temporal
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      Alert.alert(
-        'Código Reenviado 📧',
-        `Se ha enviado un nuevo código de verificación a ${userEmail}`,
-        [{ text: 'Entendido' }]
-      );
+      if (!userEmail) {
+        setGeneralError('Error: No se encontró el correo electrónico');
+        setShowError(true);
+        return;
+      }
 
-      // Iniciar cooldown de 60 segundos
-      setResendCooldown(60);
+      // ✅ IMPLEMENTACIÓN REAL: Llamada al servicio de reenvío integrado
+      const result = await userService.resendEmailVerificationCode(userEmail);
+      
+      console.log('📧 Resultado de reenvío:', result);
+
+      if (result.success) {
+        Alert.alert(
+          'Código Reenviado 📧',
+          `Se ha enviado un nuevo código de verificación a ${userService.formatEmailForDisplay(userEmail)}`,
+          [{ text: 'Entendido' }]
+        );
+
+        // Iniciar cooldown de 60 segundos
+        setResendCooldown(60);
+      } else {
+        console.error('📧 ❌ Error en reenvío:', result.error);
+        const errorMessage = result.error || 'No se pudo reenviar el código. Intenta nuevamente.';
+        setGeneralError(errorMessage);
+        setShowError(true);
+      }
       
     } catch (error) {
-      console.error('Error al reenviar código:', error);
+      console.error('📧 Error inesperado en reenvío:', error);
       setGeneralError('No se pudo reenviar el código. Intenta nuevamente.');
       setShowError(true);
     } finally {
@@ -248,17 +263,9 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
-  // Función para formatear el email (ocultar parte del dominio)
+  // Función para formatear el email (usando el servicio integrado)
   const formatEmailForDisplay = (email: string) => {
-    if (!email) return '';
-    const [localPart, domain] = email.split('@');
-    if (!domain) return email;
-    
-    const maskedLocal = localPart.length > 2 
-      ? localPart.substring(0, 2) + '***' + localPart.slice(-1)
-      : localPart;
-    
-    return `${maskedLocal}@${domain}`;
+    return userService.formatEmailForDisplay(email);
   };
 
   return (

@@ -12,7 +12,8 @@ export const API_CONFIG = {
     FORGOT_PASSWORD: '/generarNuevoCodigoRecuperacion',
     RESET_PASSWORD: '/CambiarContrasena',
     VERIFY_EMAIL: '/VerificarEmail',  
-    REGISTER_USER: '/RegistrarUsuario', 
+    REGISTER_USER: '/RegistrarUsuario',
+    RESEND_VERIFICATION_CODE: '/GenerarNuevoCodigoVerificacion',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

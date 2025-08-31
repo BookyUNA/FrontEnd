@@ -35,7 +35,7 @@ export interface RegisterResult {
   isNetworkError?: boolean;
 }
 
-  // TIPOS para verificación de email
+// Tipos para verificación de email
 export interface VerifyEmailRequest {
   email: string;
   codigo: string;
@@ -59,6 +59,19 @@ export interface VerifyEmailResult {
   isNetworkError?: boolean;
 }
 
+// Tipos para el reenvío de código de verificación
+export interface ResendVerificationCodeRequest {
+  email: string;
+}
+
+export interface ResendVerificationCodeResponse {
+  error: Array<{
+    ErrorCode: number;
+    Message: string;
+  }>;
+  resultado: boolean;
+}
+
 export interface ResendCodeResult {
   success: boolean;
   error?: string;
@@ -73,7 +86,6 @@ class UserService {
   /**
    * Registrar un nuevo usuario
    * La contraseña se hashea con SHA256 antes de enviarla
-   * CORREGIDO: Mejor manejo de la respuesta del servidor
    */
   async registerUser(userData: RegisterUserRequest): Promise<RegisterResult> {
     try {
@@ -116,7 +128,7 @@ class UserService {
 
       console.log('👤 Respuesta del servidor:', response);
 
-      // CORREGIDO: Verificar primero errores de red/conexión
+      // Verificar primero errores de red/conexión
       if (!response.success && response.status === 0) {
         console.error('👤 Error de red en registro');
         return {
@@ -126,7 +138,7 @@ class UserService {
         };
       }
 
-      // CORREGIDO: Verificar si llegaron datos del servidor
+      // Verificar si llegaron datos del servidor
       const data = response.data;
       
       if (!data) {
@@ -137,7 +149,7 @@ class UserService {
         };
       }
 
-      // CORREGIDO: Verificar PRIMERO si el registro fue exitoso según la API
+      // Verificar PRIMERO si el registro fue exitoso según la API
       // La API devuelve resultado: true para éxito, false para error
       if (data.resultado === true) {
         console.log('👤 ✅ Registro exitoso según la API');
@@ -146,7 +158,7 @@ class UserService {
         };
       }
 
-      // CORREGIDO: Si resultado es false, es un error de negocio de la API
+      // Si resultado es false, es un error de negocio de la API
       console.log('👤 ❌ Registro falló según la API (resultado: false)');
       
       // Extraer y mostrar errores específicos
@@ -299,11 +311,9 @@ class UserService {
     }
   }
 
-  // Reenviar código de verificación de email
   /**
    * Reenviar código de verificación de email
-   * NOTA: Usa el endpoint de recuperación de contraseña como base
-   * Puede requerir un endpoint específico en el futuro
+   * Implementa el endpoint POST api/GenerarNuevoCodigoVerificacion
    */
   async resendEmailVerificationCode(email: string): Promise<ResendCodeResult> {
     try {
@@ -320,13 +330,16 @@ class UserService {
       const cleanEmail = email.toLowerCase().trim();
       console.log('👤📧 Preparando reenvío de código para:', cleanEmail);
 
-      // Preparar datos para el endpoint
-      const resendData = { email: cleanEmail };
+      // Preparar datos para el endpoint específico de reenvío de verificación
+      const resendData: ResendVerificationCodeRequest = { 
+        email: cleanEmail 
+      };
       
-      // NOTA: Usando el endpoint de recuperación de contraseña como base
-      // Puede requerir un endpoint específico para reenvío de verificación
-      const response = await apiService.post<VerifyEmailResponse>(
-        API_CONFIG.ENDPOINTS.FORGOT_PASSWORD, // Este endpoint podría cambiar
+      console.log('👤📧 Enviando solicitud de reenvío:', resendData);
+      
+      // Realizar petición al endpoint específico
+      const response = await apiService.post<ResendVerificationCodeResponse>(
+        API_CONFIG.ENDPOINTS.RESEND_VERIFICATION_CODE,
         resendData
       );
 
@@ -345,12 +358,14 @@ class UserService {
       const data = response.data;
 
       if (!data) {
+        console.error('👤📧 Respuesta vacía del servidor para reenvío');
         return {
           success: false,
           error: 'Respuesta inválida del servidor',
         };
       }
 
+      // Verificar si el reenvío fue exitoso según la API
       if (data.resultado === true) {
         console.log('👤📧 ✅ Reenvío exitoso según la API');
         return { 
@@ -358,10 +373,15 @@ class UserService {
         };
       }
 
+      // Si resultado es false, es un error de negocio de la API
+      console.log('👤📧 ❌ Reenvío falló según la API (resultado: false)');
+      
       // Manejar errores específicos de la API
       if (data.error && data.error.length > 0) {
         const firstError = data.error[0];
         const errorMessage = firstError.Message || 'Error al reenviar el código';
+        
+        console.log('👤📧 Mensaje de error de reenvío:', errorMessage);
         
         return {
           success: false,
@@ -370,6 +390,8 @@ class UserService {
         };
       }
 
+      // Caso donde resultado es false pero no hay errores específicos
+      console.error('👤📧 Reenvío falló sin errores específicos');
       return {
         success: false,
         error: 'No se pudo reenviar el código de verificación.',

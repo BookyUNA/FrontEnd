@@ -1,7 +1,6 @@
 /**
- * FrontBooky - App de Gestión de Citas - ACTUALIZADO
+ * FrontBooky - App de Gestión de Citas
  * Sistema de reservas para profesionales independientes
- * Actualizado con pantalla de registro y verificación de correo
  *
  * @format
  */
@@ -13,24 +12,26 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { LoginScreen } from "./src/screens/auth/LoginScreen";
 import { RegisterScreen } from "./src/screens/user/RegisterScreen";
-import { EmailVerificationScreen } from "./src/screens/user/EmailVerificationScreen"; // NUEVO
+import { EmailVerificationScreen } from "./src/screens/user/EmailVerificationScreen";
 import { HomeScreen } from "./src/screens/main/HomeScreen";
 import { ForgotPasswordScreen } from "./src/screens/auth/ForgotPasswordScreen";
 import { ResetPasswordScreen } from "./src/screens/auth/ResetPasswordScreen";
+import { CreateServiceScreen } from "./src/screens/services/CreateServiceScreen";
 
 import { authService } from "./src/services/auth/authService";
 import { SafeContainer } from "./src/components/ui/SafeContainer";
 import { colors } from "./src/styles/colors";
 import { typography } from "./src/styles/typography";
 
-// ACTUALIZADO: Añadida la pantalla EmailVerification
+// Tipos de navegación actualizados
 export type RootStackParamList = {
   Login: { email?: string; verified?: boolean } | undefined;
   Register: undefined;
-  EmailVerification: { email: string; fromRegister?: boolean }; // NUEVO
+  EmailVerification: { email?: string; fromRegister?: boolean } | undefined;
   ForgotPassword: undefined;
   ResetPassword: undefined;
   Home: undefined;
+  CreateService: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -74,13 +75,37 @@ function App(): React.JSX.Element {
     <NavigationContainer>
       <Stack.Navigator>
         {isAuthenticated ? (
-          <Stack.Screen name="Home" options={{ headerShown: false }}>
-            {(props) => (
-              <HomeScreen {...props} onLogout={() => setIsAuthenticated(false)} />
-            )}
-          </Stack.Screen>
+          <>
+            {/* Pantalla principal - Home con navegación bottom tabs */}
+            <Stack.Screen name="Home" options={{ headerShown: false }}>
+              {(props) => (
+                <HomeScreen 
+                  {...props} 
+                  onLogout={() => setIsAuthenticated(false)} 
+                />
+              )}
+            </Stack.Screen>
+
+            {/* Pantalla de crear servicio - solo accesible desde navegación */}
+            <Stack.Screen 
+              name="CreateService" 
+              component={CreateServiceScreen}
+              options={{ 
+                title: "Crear Servicio",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
+            />
+          </>
         ) : (
           <>
+            {/* Pantalla de login */}
             <Stack.Screen name="Login" options={{ headerShown: false }}>
               {(props) => (
                 <LoginScreen
@@ -90,7 +115,7 @@ function App(): React.JSX.Element {
               )}
             </Stack.Screen>
             
-            {/* PANTALLA DE REGISTRO */}
+            {/* Pantalla de registro */}
             <Stack.Screen 
               name="Register" 
               options={{ 
@@ -116,7 +141,7 @@ function App(): React.JSX.Element {
               )}
             </Stack.Screen>
 
-            {/* NUEVA PANTALLA DE VERIFICACIÓN DE CORREO */}
+            {/* Pantalla de verificación de correo */}
             <Stack.Screen 
               name="EmailVerification" 
               options={{ 
@@ -142,6 +167,7 @@ function App(): React.JSX.Element {
               )}
             </Stack.Screen>
             
+            {/* Pantalla de recuperar contraseña */}
             <Stack.Screen
               name="ForgotPassword"
               component={ForgotPasswordScreen}
@@ -157,6 +183,8 @@ function App(): React.JSX.Element {
                 },
               }}
             />
+            
+            {/* Pantalla de resetear contraseña */}
             <Stack.Screen
               name="ResetPassword"
               component={ResetPasswordScreen}

@@ -1,7 +1,7 @@
 /**
- * Pantalla de Login - Booky (CORREGIDA)
+ * Pantalla de Login - Booky
  * Sistema de reservas para profesionales independientes
- * Actualizado con hash SHA256 para contraseñas y navegación
+ * Actualizada con botón para verificación de correo
  */
 
 import React, { useState } from 'react';
@@ -37,16 +37,33 @@ const initialFormValues: LoginFormData = {
 };
 
 interface LoginScreenProps extends AuthScreenProps {
+  route?: {
+    params?: {
+      email?: string;
+      verified?: boolean;
+    };
+  };
   onLoginSuccess?: () => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ 
   navigation, 
+  route,
   onLoginSuccess 
 }) => {
-  // Estados adicionales para manejo de errores
+  // Estados para manejo de errores
   const [generalError, setGeneralError] = useState<string>('');
   const [showError, setShowError] = useState<boolean>(false);
+
+  // Obtener email de los parámetros si existe
+  const emailFromParams = route?.params?.email || '';
+  const isVerified = route?.params?.verified || false;
+
+  // Ajustar valores iniciales si hay email por parámetro
+  const formInitialValues: LoginFormData = {
+    email: emailFromParams,
+    password: '',
+  };
 
   // Hook personalizado para manejo del formulario
   const {
@@ -58,7 +75,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setFieldError,
     clearFieldError,
   } = useForm<LoginFormData>({
-    initialValues: initialFormValues,
+    initialValues: formInitialValues,
     validationSchema: validateLoginForm,
     onSubmit: handleLogin,
   });
@@ -80,7 +97,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     handleChange(field)(value);
   };
 
-  // Función para manejar el login con hash SHA256
+  // Función para manejar el login
   async function handleLogin(formData: LoginFormData) {
     try {
       // Limpiar errores previos
@@ -99,7 +116,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
       console.log('Iniciando proceso de login para:', sanitizedData.email);
       
-      // Llamada al servicio de autenticación (la contraseña se hashea internamente)
+      // Llamada al servicio de autenticación
       const result = await authService.login(sanitizedData);
       
       if (result.success && result.token) {
@@ -172,6 +189,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
+  // Navegar a verificación de correo
+  const navigateToEmailVerification = () => {
+    console.log('Navegando a verificación de correo...');
+    if (navigation?.navigate) {
+      navigation.navigate('EmailVerification');
+    } else {
+      console.warn('Navigation no disponible para EmailVerification');
+    }
+  };
+
   return (
     <SafeContainer>
       <KeyboardAvoidingView
@@ -183,7 +210,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header con Logo - TEXTOS SEPARADOS */}
+          {/* Header con Logo */}
           <View style={styles.header}>
             <Logo size="large" showTagline={false} />
             
@@ -191,10 +218,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <Text style={styles.taglineText}>
               Tu agenda profesional
             </Text>
-            {/* Texto de bienvenida normal */}
+            
+            {/* Texto de bienvenida con mensaje de verificación si aplica */}
             <Text style={styles.welcomeText}>
-               {'\n'}
-              Inicia sesión en tu cuenta
+              {'\n'}
+              {isVerified 
+                ? 'Correo verificado. Inicia sesión en tu cuenta' 
+                : 'Inicia sesión en tu cuenta'
+              }
             </Text>
           </View>
 
@@ -260,6 +291,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   variant="primary"
                 />
               </View>
+
+              {/* Botón discreto para verificación de correo */}
+              <View style={styles.verificationContainer}>
+                <TouchableOpacity
+                  onPress={navigateToEmailVerification}
+                  activeOpacity={0.7}
+                  disabled={isSubmitting}
+                  style={styles.verificationButton}
+                >
+                  <Text style={[
+                    styles.verificationText,
+                    isSubmitting && styles.disabledText
+                  ]}>
+                    ¿No has verificado tu correo electrónico? Toca aquí
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -308,7 +356,7 @@ const styles = StyleSheet.create({
 
   // Tagline más grande y destacado
   taglineText: {
-    ...typography.styles.h3, // Más grande que body
+    ...typography.styles.h3,
     color: colors.text.secondary,
     textAlign: 'center',
     marginTop: spacing.lg,
@@ -319,7 +367,7 @@ const styles = StyleSheet.create({
 
   // Texto de bienvenida normal
   welcomeText: {
-    ...typography.styles.body, // Tamaño original
+    ...typography.styles.body,
     color: colors.text.secondary,
     textAlign: 'center',
   },
@@ -348,6 +396,26 @@ const styles = StyleSheet.create({
     ...typography.styles.bodySmall,
     color: colors.primary.main,
     textDecorationLine: 'underline',
+  },
+
+  // Botón de verificación de correo discreto
+  verificationContainer: {
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+
+  verificationButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+
+  verificationText: {
+    ...typography.styles.bodySmall,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+    fontSize: 13,
   },
 
   // Estilo para elementos deshabilitados

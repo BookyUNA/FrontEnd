@@ -1,7 +1,7 @@
 /**
- * Pantalla de Inicio - Booky
+ * Pantalla de Inicio - Booky (ACTUALIZADA)
  * Sistema de reservas para profesionales independientes
- * Actualizado con Bottom Navigation y logout completo
+ * Actualizado con navegación a servicios para profesionales
  */
 
 import React, { useState } from 'react';
@@ -12,13 +12,13 @@ import {
   Alert,
 } from 'react-native';
 
-// Importaciones locales
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { SafeContainer } from '../../components/ui/SafeContainer';
 import { Logo } from '../../components/ui/Logo';
 import { Button } from '../../components/forms/Button';
 import { BottomNavigationBar, BottomNavTabType } from '../../components/navigation/BottomNavigationBar';
 import { ProfileScreen } from '../profile/ProfileScreen';
+import { ServicesScreen } from '../services/ServicesScreen';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
@@ -36,17 +36,48 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
   // Estado para controlar el loading del logout
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
   
-  // 🔍 DEBUG: Verificar token al cargar la pantalla
+  // Estado para almacenar el rol del usuario
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isProfessional, setIsProfessional] = useState<boolean>(false);
+  
+  // Verificar token y rol al cargar la pantalla
   React.useEffect(() => {
-    const checkToken = async () => {
-      const token = await authService.getToken();
-      const isAuth = await authService.isAuthenticated();
-      
-      console.log('🔍 DEBUG HomeScreen - Token actual:', token ? token.substring(0, 20) + '...' : 'No hay token');
-      console.log('🔍 DEBUG HomeScreen - ¿Está autenticado?:', isAuth);
+    const checkUserAuth = async () => {
+      try {
+        const token = await authService.getToken();
+        const isAuth = await authService.isAuthenticated();
+        const role = await authService.getUserRole();
+        const isProf = await authService.isProfessional();
+        const userData = await authService.getUserData();
+        
+        console.log('🔍 DEBUG HomeScreen - Estado completo:', {
+          hasToken: !!token,
+          isAuthenticated: isAuth,
+          userRole: role,
+          isProfessional: isProf,
+          userData: userData
+        });
+
+        // Actualizar estados locales
+        setUserRole(role);
+        setIsProfessional(isProf);
+        
+        if (token && userData) {
+          console.log('🔍 DEBUG HomeScreen - Token válido:', {
+            tokenPreview: token.substring(0, 20) + '...',
+            userId: userData.userId,
+            role: userData.role,
+            isExpired: userData.isExpired,
+            expiresAt: new Date(userData.expiresAt * 1000).toLocaleString()
+          });
+        }
+        
+      } catch (error) {
+        console.error('🔍 Error al verificar autenticación:', error);
+      }
     };
     
-    checkToken();
+    checkUserAuth();
   }, []);
   
   // Función simplificada para pasar logout a ProfileScreen
@@ -75,6 +106,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
   // Función para manejar el cambio de tab
   const handleTabChange = (tab: BottomNavTabType) => {
     setActiveTab(tab);
+    console.log('📱 Cambiando a tab:', tab);
+  };
+
+  // Función para navegar a crear servicio desde ServicesScreen
+  const handleCreateService = () => {
+    if (navigation?.navigate) {
+      navigation.navigate('CreateService');
+    } else {
+      Alert.alert(
+        'Crear Servicio',
+        'La funcionalidad para crear servicios estará disponible próximamente.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   // Renderizar el contenido de la pantalla de Inicio
@@ -93,43 +138,76 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
         <Text style={styles.message}>
           🚧 Aplicación en construcción
         </Text>
-        <Icon name="rocket" size={50} color='black' />
+        <Icon name="rocket" size={50} color={colors.text.primary} />
         <Text style={styles.description}>
           Las funcionalidades principales están siendo desarrolladas.
         </Text>
+
       </View>
 
       {/* Botones de Debug */}
       <View style={styles.debugSection}>
-        {/* 🔍 BOTÓN DEBUG TEMPORAL */}
         <Button
-          title="🔍 Verificar Token"
+          title="🔍 Verificar Estado Completo"
           onPress={async () => {
-            const token = await authService.getToken();
-            const isAuth = await authService.isAuthenticated();
-            
-            Alert.alert(
-              'Estado del Token',
-              `Token: ${token ? 'SÍ EXISTE' : 'NO EXISTE'}\n` +
-              `Autenticado: ${isAuth ? 'SÍ' : 'NO'}\n` +
-              `Token (últimos 20 chars): ${token ? '...' + token.substring(token.length - 20) : 'Ninguno'}`
-            );
+            try {
+              await authService.debugAuthState();
+              
+              const token = await authService.getToken();
+              const isAuth = await authService.isAuthenticated();
+              const role = await authService.getUserRole();
+              const isProf = await authService.isProfessional();
+              const userData = await authService.getUserData();
+              
+              Alert.alert(
+                'Estado Completo de Autenticación',
+                `Token: ${token ? 'SÍ EXISTE' : 'NO EXISTE'}\n` +
+                `Autenticado: ${isAuth ? 'SÍ' : 'NO'}\n` +
+                `Rol: ${role || 'Sin rol'}\n` +
+                `¿Es Profesional?: ${isProf ? 'SÍ' : 'NO'}\n` +
+                `User ID: ${userData?.userId || 'N/A'}\n` +
+                `Token expirado: ${userData?.isExpired ? 'SÍ' : 'NO'}\n` +
+                `Token preview: ${token ? token.substring(0, 30) + '...' : 'N/A'}`,
+                [{ text: 'OK' }]
+              );
+            } catch (error) {
+              console.error('Error en debug:', error);
+            }
           }}
-          variant="secondary"
-          fullWidth
-          disabled={isLoggingOut}
+          variant="outline"
         />
       </View>
     </View>
   );
 
-  // Renderizar el contenido según la tab activa
+  // Renderizar contenido según la tab activa
   const renderContent = () => {
     switch (activeTab) {
       case 'home':
         return renderHomeContent();
+      
+      case 'services':
+        // Solo mostrar servicios si es profesional
+        if (isProfessional) {
+          return (
+            <ServicesScreen 
+              navigation={navigation}
+              onCreateService={handleCreateService}
+            />
+          );
+        } else {
+          // Fallback por si acaso
+          return renderHomeContent();
+        }
+      
       case 'profile':
-        return <ProfileScreen onLogout={handleLogout} isLoggingOut={isLoggingOut} />;
+        return (
+          <ProfileScreen
+            onLogout={handleLogout}
+            isLoggingOut={isLoggingOut}
+          />
+        );
+      
       default:
         return renderHomeContent();
     }
@@ -139,7 +217,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
     <View style={styles.mainContainer}>
       {/* Contenido principal */}
       <View style={styles.contentContainer}>
-        {activeTab === 'home' ? (
+        {activeTab === 'profile' ? (
           <SafeContainer>
             {renderContent()}
           </SafeContainer>
@@ -152,6 +230,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
       <BottomNavigationBar
         activeTab={activeTab}
         onTabPress={handleTabChange}
+        isProfessional={isProfessional}
       />
     </View>
   );
@@ -185,6 +264,29 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
 
+  roleContainer: {
+    marginTop: spacing.lg,
+    padding: spacing.md,
+    backgroundColor: colors.primary.main + '10',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary.main + '30',
+  },
+
+  roleText: {
+    ...typography.styles.h3,
+    color: colors.primary.main,
+    textAlign: 'center',
+    fontWeight: typography.fontWeight.semibold,
+  },
+
+  roleSubtext: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+
   content: {
     flex: 1,
     justifyContent: 'center',
@@ -203,10 +305,27 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textAlign: 'center',
     paddingHorizontal: spacing.xl,
+    marginTop: spacing.lg,
+  },
+
+  professionalInfo: {
+    marginTop: spacing.xl,
+    padding: spacing.lg,
+    backgroundColor: colors.states.success + '20',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.states.success + '30',
+  },
+
+  professionalText: {
+    ...typography.styles.body,
+    color: colors.states.success,
+    textAlign: 'center',
+    fontWeight: typography.fontWeight.medium,
   },
 
   debugSection: {
     paddingVertical: spacing.xl,
-    paddingBottom: spacing['2xl'], // Espacio adicional para el bottom nav
+    paddingBottom: spacing['2xl'],
   },
 });

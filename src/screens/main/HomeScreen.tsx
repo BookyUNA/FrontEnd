@@ -1,7 +1,8 @@
 /**
- * Pantalla de Inicio - Booky
+ * Pantalla de Inicio - Booky (ACTUALIZADA)
  * Sistema de reservas para profesionales independientes
  * Actualizado con Bottom Navigation y logout completo
+ * NUEVO: Detección de rol de usuario y debug mejorado
  */
 
 import React, { useState } from 'react';
@@ -36,17 +37,48 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
   // Estado para controlar el loading del logout
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
   
-  // 🔍 DEBUG: Verificar token al cargar la pantalla
+  // Estado para almacenar el rol del usuario
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isProfessional, setIsProfessional] = useState<boolean>(false);
+  
+  // 🔍 DEBUG: Verificar token y rol al cargar la pantalla
   React.useEffect(() => {
-    const checkToken = async () => {
-      const token = await authService.getToken();
-      const isAuth = await authService.isAuthenticated();
-      
-      console.log('🔍 DEBUG HomeScreen - Token actual:', token ? token.substring(0, 20) + '...' : 'No hay token');
-      console.log('🔍 DEBUG HomeScreen - ¿Está autenticado?:', isAuth);
+    const checkUserAuth = async () => {
+      try {
+        const token = await authService.getToken();
+        const isAuth = await authService.isAuthenticated();
+        const role = await authService.getUserRole();
+        const isProf = await authService.isProfessional();
+        const userData = await authService.getUserData();
+        
+        console.log('🔍 DEBUG HomeScreen - Estado completo:', {
+          hasToken: !!token,
+          isAuthenticated: isAuth,
+          userRole: role,
+          isProfessional: isProf,
+          userData: userData
+        });
+
+        // Actualizar estados locales
+        setUserRole(role);
+        setIsProfessional(isProf);
+        
+        if (token && userData) {
+          console.log('🔍 DEBUG HomeScreen - Token válido:', {
+            tokenPreview: token.substring(0, 20) + '...',
+            userId: userData.userId,
+            role: userData.role,
+            isExpired: userData.isExpired,
+            expiresAt: new Date(userData.expiresAt * 1000).toLocaleString()
+          });
+        }
+        
+      } catch (error) {
+        console.error('🔍 Error al verificar autenticación:', error);
+      }
     };
     
-    checkToken();
+    checkUserAuth();
   }, []);
   
   // Función simplificada para pasar logout a ProfileScreen
@@ -97,28 +129,76 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
         <Text style={styles.description}>
           Las funcionalidades principales están siendo desarrolladas.
         </Text>
+        
       </View>
 
       {/* Botones de Debug */}
       <View style={styles.debugSection}>
-        {/* 🔍 BOTÓN DEBUG TEMPORAL */}
+        {/* 🔍 BOTÓN DEBUG MEJORADO */}
         <Button
-          title="🔍 Verificar Token"
+          title="🔍 Verificar Estado Completo"
           onPress={async () => {
-            const token = await authService.getToken();
-            const isAuth = await authService.isAuthenticated();
-            
-            Alert.alert(
-              'Estado del Token',
-              `Token: ${token ? 'SÍ EXISTE' : 'NO EXISTE'}\n` +
-              `Autenticado: ${isAuth ? 'SÍ' : 'NO'}\n` +
-              `Token (últimos 20 chars): ${token ? '...' + token.substring(token.length - 20) : 'Ninguno'}`
-            );
+            try {
+              // Usar el nuevo método de debug completo
+              await authService.debugAuthState();
+              
+              // También mostrar en Alert para el usuario
+              const token = await authService.getToken();
+              const isAuth = await authService.isAuthenticated();
+              const role = await authService.getUserRole();
+              const isProf = await authService.isProfessional();
+              const userData = await authService.getUserData();
+              
+              Alert.alert(
+                'Estado Completo de Autenticación',
+                `Token: ${token ? 'SÍ EXISTE' : 'NO EXISTE'}\n` +
+                `Autenticado: ${isAuth ? 'SÍ' : 'NO'}\n` +
+                `Rol: ${role || 'Sin rol'}\n` +
+                `¿Es Profesional?: ${isProf ? 'SÍ' : 'NO'}\n` +
+                `User ID: ${userData?.userId || 'N/A'}\n` +
+                `Token expirado: ${userData?.isExpired ? 'SÍ' : 'NO'}\n` +
+                `Token preview: ${token ? '...' + token.substring(token.length - 20) : 'Ninguno'}`
+              );
+            } catch (error) {
+              console.error('Error en debug:', error);
+              Alert.alert('Error', 'Error al obtener estado de autenticación');
+            }
           }}
           variant="secondary"
           fullWidth
           disabled={isLoggingOut}
         />
+
+        {/* Botón para probar decodificación de token específico */}
+        <View style={{ marginTop: spacing.md }}>
+          <Button
+            title="🧪 Probar Token de Ejemplo"
+            onPress={() => {
+              const exampleToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkNsaWVudGUiLCJqdGkiOiI2YzYxNGE0Mi1lYTRjLTQ4YzUtOWIwZS00MGExZmE3NTE2ZmEiLCJpYXQiOjE3NTY3MDI2MjAsImV4cCI6MTc1NjcxNzAyMCwiaXNzIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6NDQzMTgiLCJhdWQiOiJodHRwczovL2xvY2FsaG9zdDo0NDMxOCJ9.t0heqGMX8n95ZR8eECwNdD-EEvWTH7Z9-cac7Zs6-FE";
+              
+              // Importar el decoder para prueba
+              import('../../utils/jwtDecoder').then(({ jwtDecoder }) => {
+                console.log('🧪 Probando token de ejemplo...');
+                jwtDecoder.debugToken(exampleToken);
+                
+                const userData = jwtDecoder.extractUserData(exampleToken);
+                
+                Alert.alert(
+                  'Token de Ejemplo Decodificado',
+                  userData ? 
+                    `User ID: ${userData.userId}\n` +
+                    `Rol: ${userData.role}\n` +
+                    `¿Expirado?: ${userData.isExpired ? 'SÍ' : 'NO'}\n` +
+                    `Expira: ${new Date(userData.expiresAt * 1000).toLocaleString()}`
+                    : 'Error al decodificar token de ejemplo'
+                );
+              });
+            }}
+            variant="outline"
+            fullWidth
+            disabled={isLoggingOut}
+          />
+        </View>
       </View>
     </View>
   );
@@ -185,6 +265,29 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
 
+  roleContainer: {
+    marginTop: spacing.lg,
+    padding: spacing.md,
+    backgroundColor: colors.primary.main + '10',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary.main + '30',
+  },
+
+  roleText: {
+    ...typography.styles.h3,
+    color: colors.primary.main,
+    textAlign: 'center',
+    fontWeight: typography.fontWeight.semibold,
+  },
+
+  roleSubtext: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+
   content: {
     flex: 1,
     justifyContent: 'center',
@@ -203,6 +306,22 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textAlign: 'center',
     paddingHorizontal: spacing.xl,
+  },
+
+  professionalInfo: {
+    marginTop: spacing.xl,
+    padding: spacing.lg,
+    backgroundColor: colors.states.success + '20',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.states.success + '30',
+  },
+
+  professionalText: {
+    ...typography.styles.body,
+    color: colors.states.success,
+    textAlign: 'center',
+    fontWeight: typography.fontWeight.medium,
   },
 
   debugSection: {

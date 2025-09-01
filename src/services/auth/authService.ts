@@ -1,7 +1,8 @@
 /**
- * Servicio de Autenticación - Booky
+ * Servicio de Autenticación - Booky (ACTUALIZADO)
  * Actualizado con hash SHA256 para contraseñas, storage simple y logout completo
  * Incluye funcionalidad de recuperación de contraseña
+ * NUEVO: Decodificación de JWT y manejo de roles de usuario
  */
 
 import { apiService } from '../api/apiService';
@@ -10,10 +11,13 @@ import { ReqInicioSesion, ResInicioSesion, ResCierreSesion, ApiError } from '../
 import { LoginFormData } from '../../types/auth';
 import { hashService } from '../../utils/hashService';
 import { storageService } from '../storage/simpleStorageService';
+import { jwtDecoder, DecodedUserData } from '../../utils/jwtDecoder';
 
 export interface LoginResult {
   success: boolean;
   token?: string;
+  userRole?: string;
+  userData?: DecodedUserData;
   error?: string;
   isNetworkError?: boolean;
 }
@@ -34,6 +38,7 @@ class AuthService {
   /**
    * Iniciar sesión con email y contraseña
    * La contraseña se hashea con SHA256 antes de enviarla
+   * ACTUALIZADO: Ahora decodifica el JWT y guarda el rol del usuario
    */
   async login(credentials: LoginFormData): Promise<LoginResult> {
     try {
@@ -92,6 +97,32 @@ class AuthService {
       if (loginResponse.resultado && loginResponse.token) {
         console.log('🔐 Login exitoso, token recibido');
         
+        // ✅ DECODIFICAR JWT y extraer datos del usuario
+        const userData = jwtDecoder.extractUserData(loginResponse.token);
+        
+        if (!userData) {
+          console.error('🔐 Error al decodificar token JWT');
+          return {
+            success: false,
+            error: 'Token recibido inválido',
+          };
+        }
+
+        // Verificar si el token ha expirado
+        if (userData.isExpired) {
+          console.error('🔐 Token recibido ya ha expirado');
+          return {
+            success: false,
+            error: 'El token de sesión ha expirado',
+          };
+        }
+
+        console.log('🔐 Datos del usuario decodificados:', {
+          userId: userData.userId,
+          role: userData.role,
+          expiresAt: new Date(userData.expiresAt * 1000).toISOString()
+        });
+        
         // ✅ GUARDAR TOKEN en memoria
         try {
           await storageService.saveAuthToken(loginResponse.token);
@@ -100,10 +131,21 @@ class AuthService {
           console.error('🔐 Error al guardar token:', storageError);
           // No fallar el login por error de storage
         }
+
+        // ✅ GUARDAR ROL en memoria
+        try {
+          await storageService.saveUserRole(userData.role);
+          console.log('🔐 Rol guardado en memoria exitosamente:', userData.role);
+        } catch (storageError) {
+          console.error('🔐 Error al guardar rol:', storageError);
+          // No fallar el login por error de storage
+        }
         
         return {
           success: true,
           token: loginResponse.token,
+          userRole: userData.role,
+          userData: userData,
         };
       }
 
@@ -137,6 +179,7 @@ class AuthService {
 
   /**
    * Cerrar sesión - Implementación completa con endpoint
+   * ACTUALIZADO: Limpia también el rol del usuario
    */
   async logout(): Promise<LogoutResult> {
     try {
@@ -148,7 +191,7 @@ class AuthService {
       if (!currentToken) {
         console.log('🚪 No hay token para cerrar sesión, limpiando datos locales...');
         // Limpiar datos locales por si acaso
-        await storageService.removeAuthToken();
+        await storageService.clearAll();
         return {
           success: true,
         };
@@ -184,9 +227,9 @@ class AuthService {
         console.log('🚪 Error del servidor:', errorMessage, '- Limpiando datos locales de todas formas');
       }
 
-      // ✅ SIEMPRE LIMPIAR TOKEN de memoria, sin importar la respuesta del servidor
-      await storageService.removeAuthToken();
-      console.log('🚪 Token eliminado de memoria exitosamente');
+      // ✅ SIEMPRE LIMPIAR TODOS LOS DATOS de memoria, sin importar la respuesta del servidor
+      await storageService.clearAll();
+      console.log('🚪 Token y rol eliminados de memoria exitosamente');
       
       console.log('🚪 Usuario deslogueado completamente');
       
@@ -199,10 +242,10 @@ class AuthService {
       
       // En caso de error, SIEMPRE limpiar datos locales
       try {
-        await storageService.removeAuthToken();
-        console.log('🚪 Token limpiado después de error');
+        await storageService.clearAll();
+        console.log('🚪 Datos limpiados después de error');
       } catch (cleanupError) {
-        console.error('🚪 Error al limpiar token después de fallo:', cleanupError);
+        console.error('🚪 Error al limpiar datos después de fallo:', cleanupError);
       }
       
       // Verificar si es error de red
@@ -222,10 +265,168 @@ class AuthService {
     }
   }
 
-/**
- * Solicitar recuperación de contraseña
- * Envía email para restablecer contraseña
- */
+  /**
+   * Obtener rol del usuario actual
+   * NUEVO: Método para obtener el rol desde storage o decodificando el token
+   */
+  async getUserRole(): Promise<string | null> {
+    try {
+      // Primero intentar obtener desde storage
+      const roleFromStorage = await storageService.getUserRole();
+      
+      if (roleFromStorage) {
+        console.log('👤 Rol obtenido desde storage:', roleFromStorage);
+        return roleFromStorage;
+      }
+
+      // Si no hay rol en storage, intentar decodificar token actual
+      const currentToken = await storageService.getAuthToken();
+      
+      if (!currentToken) {
+        console.log('👤 No hay token disponible para obtener rol');
+        return null;
+      }
+
+      const roleFromToken = jwtDecoder.getUserRole(currentToken);
+      
+      if (roleFromToken) {
+        // Guardar rol en storage para próximas consultas
+        await storageService.saveUserRole(roleFromToken);
+        console.log('👤 Rol obtenido desde token y guardado en storage:', roleFromToken);
+        return roleFromToken;
+      }
+
+      console.log('👤 No se pudo obtener rol del usuario');
+      return null;
+      
+    } catch (error) {
+      console.error('👤 Error al obtener rol del usuario:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Verificar si el usuario actual es profesional
+   * NUEVO: Método de conveniencia para verificar rol profesional
+   */
+  async isProfessional(): Promise<boolean> {
+    try {
+      const role = await this.getUserRole();
+      return role === 'Profesional';
+    } catch (error) {
+      console.error('👤 Error al verificar si es profesional:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Verificar si el usuario actual es cliente
+   * NUEVO: Método de conveniencia para verificar rol cliente
+   */
+  async isClient(): Promise<boolean> {
+    try {
+      const role = await this.getUserRole();
+      return role === 'Cliente';
+    } catch (error) {
+      console.error('👤 Error al verificar si es cliente:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Obtener datos completos del usuario desde el token
+   * NUEVO: Método para obtener toda la información del token
+   */
+  async getUserData(): Promise<DecodedUserData | null> {
+    try {
+      const currentToken = await storageService.getAuthToken();
+      
+      if (!currentToken) {
+        console.log('👤 No hay token disponible para obtener datos');
+        return null;
+      }
+
+      const userData = jwtDecoder.extractUserData(currentToken);
+      
+      if (userData) {
+        console.log('👤 Datos del usuario obtenidos:', {
+          userId: userData.userId,
+          role: userData.role,
+          isExpired: userData.isExpired
+        });
+      }
+
+      return userData;
+      
+    } catch (error) {
+      console.error('👤 Error al obtener datos del usuario:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Verificar si el token actual es válido (no expirado)
+   * ACTUALIZADO: Usa el decoder para verificar expiración
+   */
+  async isTokenValid(): Promise<boolean> {
+    try {
+      const currentToken = await storageService.getAuthToken();
+      
+      if (!currentToken) {
+        return false;
+      }
+
+      return !jwtDecoder.isTokenExpired(currentToken);
+      
+    } catch (error) {
+      console.error('🔍 Error al verificar validez del token:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Función de debug para verificar el estado completo de autenticación
+   * NUEVO: Función mejorada que muestra token y rol
+   */
+  async debugAuthState(): Promise<void> {
+    console.log('🔍 === DEBUG ESTADO AUTENTICACIÓN ===');
+    
+    const token = await storageService.getAuthToken();
+    const role = await storageService.getUserRole();
+    const isAuth = await this.isAuthenticated();
+    const isValidToken = await this.isTokenValid();
+    const userData = await this.getUserData();
+    
+    console.log('- Token existe:', !!token);
+    console.log('- Token preview:', token ? token.substring(0, 20) + '...' : 'null');
+    console.log('- Rol guardado:', role);
+    console.log('- ¿Autenticado?:', isAuth);
+    console.log('- ¿Token válido?:', isValidToken);
+    
+    if (userData) {
+      console.log('- Datos del token:');
+      console.log('  - User ID:', userData.userId);
+      console.log('  - Rol desde token:', userData.role);
+      console.log('  - ¿Expirado?:', userData.isExpired);
+      console.log('  - Expira en:', new Date(userData.expiresAt * 1000).toISOString());
+    }
+
+    if (token) {
+      jwtDecoder.debugToken(token);
+    }
+
+    await storageService.debugStorage();
+    
+    console.log('🔍 === FIN DEBUG AUTENTICACIÓN ===');
+  }
+
+  // ... resto de métodos anteriores (forgotPassword, resetPassword, etc.)
+  // Los mantengo igual que antes por brevedad
+
+  /**
+   * Solicitar recuperación de contraseña
+   * Envía email para restablecer contraseña
+   */
   async forgotPassword(email: string): Promise<ForgotPasswordResult> {
     try {
       console.log('🔑 Iniciando proceso de recuperación de contraseña...');
@@ -241,21 +442,9 @@ class AuthService {
       const cleanEmail = email.toLowerCase().trim();
       console.log('🔑 Preparando solicitud de recuperación para:', cleanEmail);
 
-      // -----------------------------
-      // Simulación de la respuesta (Comentar cuando se utilice version real)
-      // -----------------------------
-      // console.log('🔑 Simulando envío de email de recuperación...');
-      // await new Promise(resolve => setTimeout(resolve, 1500)); // delay simulado
-      // console.log('🔑 Email de recuperación enviado exitosamente (simulado)');
-      // return { success: true };
-
-      // -----------------------------
-      // VERSION REAL (API)
-      // -----------------------------
-      
       const requestData = { email: cleanEmail };
       const response = await apiService.post(
-        API_CONFIG.ENDPOINTS.FORGOT_PASSWORD, // '/api/generarNuevoCodigoRecuperacion'
+        API_CONFIG.ENDPOINTS.FORGOT_PASSWORD,
         requestData
       );
 
@@ -291,7 +480,6 @@ class AuthService {
       }
       
       return { success: false, error: errorMessage };
-      
 
     } catch (error: any) {
       console.error('🔑 Error inesperado en recuperación de contraseña:', error);
@@ -358,7 +546,7 @@ class AuthService {
       console.log('🔒 Enviando solicitud de reseteo al servidor...');
 
       const response = await apiService.post(
-        API_CONFIG.ENDPOINTS.RESET_PASSWORD, // '/api/CambiarContrasena'
+        API_CONFIG.ENDPOINTS.RESET_PASSWORD,
         requestData
       );
 
@@ -429,7 +617,6 @@ class AuthService {
       };
     }
   }
-
 
   /**
    * Registrar nuevo usuario
@@ -542,10 +729,19 @@ class AuthService {
    */
   async isAuthenticated(): Promise<boolean> {
     try {
-      // ✅ VERIFICAR TOKEN en memoria
+      // Verificar si hay token en memoria
       const hasToken = await storageService.hasAuthToken();
-      console.log('🔍 Estado de autenticación:', hasToken ? 'Autenticado' : 'No autenticado');
-      return hasToken;
+      
+      if (!hasToken) {
+        console.log('🔍 No hay token - usuario no autenticado');
+        return false;
+      }
+
+      // Verificar si el token es válido (no expirado)
+      const isValid = await this.isTokenValid();
+      
+      console.log('🔍 Estado de autenticación:', isValid ? 'Autenticado' : 'Token expirado');
+      return isValid;
       
     } catch (error) {
       console.error('🔍 Error al verificar autenticación:', error);
@@ -558,7 +754,7 @@ class AuthService {
    */
   async getToken(): Promise<string | null> {
     try {
-      // ✅ OBTENER TOKEN de memoria
+      // Obtener token de memoria
       const token = await storageService.getAuthToken();
       return token;
       
@@ -579,7 +775,6 @@ class AuthService {
       console.error('🧹 Error al limpiar datos:', error);
     }
   }
-
 }
 
 // Instancia singleton del servicio

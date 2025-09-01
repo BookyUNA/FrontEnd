@@ -14,6 +14,7 @@ export const API_CONFIG = {
     VERIFY_EMAIL: '/VerificarEmail',  
     REGISTER_USER: '/RegistrarUsuario',
     RESEND_VERIFICATION_CODE: '/GenerarNuevoCodigoVerificacion',
+    LISTAR_SERVICIOS_PROFESIONAL: '/Servicios/ListarServiciosProfesional',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

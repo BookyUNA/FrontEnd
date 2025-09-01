@@ -1,8 +1,7 @@
 /**
  * Pantalla de Inicio - Booky (ACTUALIZADA)
  * Sistema de reservas para profesionales independientes
- * Actualizado con Bottom Navigation y logout completo
- * NUEVO: Detección de rol de usuario y debug mejorado
+ * Actualizado con navegación a servicios para profesionales
  */
 
 import React, { useState } from 'react';
@@ -13,13 +12,13 @@ import {
   Alert,
 } from 'react-native';
 
-// Importaciones locales
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { SafeContainer } from '../../components/ui/SafeContainer';
 import { Logo } from '../../components/ui/Logo';
 import { Button } from '../../components/forms/Button';
 import { BottomNavigationBar, BottomNavTabType } from '../../components/navigation/BottomNavigationBar';
 import { ProfileScreen } from '../profile/ProfileScreen';
+import { ServicesScreen } from '../services/ServicesScreen';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
@@ -41,7 +40,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isProfessional, setIsProfessional] = useState<boolean>(false);
   
-  // 🔍 DEBUG: Verificar token y rol al cargar la pantalla
+  // Verificar token y rol al cargar la pantalla
   React.useEffect(() => {
     const checkUserAuth = async () => {
       try {
@@ -107,6 +106,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
   // Función para manejar el cambio de tab
   const handleTabChange = (tab: BottomNavTabType) => {
     setActiveTab(tab);
+    console.log('📱 Cambiando a tab:', tab);
+  };
+
+  // Función para navegar a crear servicio desde ServicesScreen
+  const handleCreateService = () => {
+    if (navigation?.navigate) {
+      navigation.navigate('CreateService');
+    } else {
+      Alert.alert(
+        'Crear Servicio',
+        'La funcionalidad para crear servicios estará disponible próximamente.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   // Renderizar el contenido de la pantalla de Inicio
@@ -125,24 +138,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
         <Text style={styles.message}>
           🚧 Aplicación en construcción
         </Text>
-        <Icon name="rocket" size={50} color='black' />
+        <Icon name="rocket" size={50} color={colors.text.primary} />
         <Text style={styles.description}>
           Las funcionalidades principales están siendo desarrolladas.
         </Text>
-        
+
       </View>
 
       {/* Botones de Debug */}
       <View style={styles.debugSection}>
-        {/* 🔍 BOTÓN DEBUG MEJORADO */}
         <Button
           title="🔍 Verificar Estado Completo"
           onPress={async () => {
             try {
-              // Usar el nuevo método de debug completo
               await authService.debugAuthState();
               
-              // También mostrar en Alert para el usuario
               const token = await authService.getToken();
               const isAuth = await authService.isAuthenticated();
               const role = await authService.getUserRole();
@@ -157,59 +167,47 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
                 `¿Es Profesional?: ${isProf ? 'SÍ' : 'NO'}\n` +
                 `User ID: ${userData?.userId || 'N/A'}\n` +
                 `Token expirado: ${userData?.isExpired ? 'SÍ' : 'NO'}\n` +
-                `Token preview: ${token ? '...' + token.substring(token.length - 20) : 'Ninguno'}`
+                `Token preview: ${token ? token.substring(0, 30) + '...' : 'N/A'}`,
+                [{ text: 'OK' }]
               );
             } catch (error) {
               console.error('Error en debug:', error);
-              Alert.alert('Error', 'Error al obtener estado de autenticación');
             }
           }}
-          variant="secondary"
-          fullWidth
-          disabled={isLoggingOut}
+          variant="outline"
         />
-
-        {/* Botón para probar decodificación de token específico */}
-        <View style={{ marginTop: spacing.md }}>
-          <Button
-            title="🧪 Probar Token de Ejemplo"
-            onPress={() => {
-              const exampleToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkNsaWVudGUiLCJqdGkiOiI2YzYxNGE0Mi1lYTRjLTQ4YzUtOWIwZS00MGExZmE3NTE2ZmEiLCJpYXQiOjE3NTY3MDI2MjAsImV4cCI6MTc1NjcxNzAyMCwiaXNzIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6NDQzMTgiLCJhdWQiOiJodHRwczovL2xvY2FsaG9zdDo0NDMxOCJ9.t0heqGMX8n95ZR8eECwNdD-EEvWTH7Z9-cac7Zs6-FE";
-              
-              // Importar el decoder para prueba
-              import('../../utils/jwtDecoder').then(({ jwtDecoder }) => {
-                console.log('🧪 Probando token de ejemplo...');
-                jwtDecoder.debugToken(exampleToken);
-                
-                const userData = jwtDecoder.extractUserData(exampleToken);
-                
-                Alert.alert(
-                  'Token de Ejemplo Decodificado',
-                  userData ? 
-                    `User ID: ${userData.userId}\n` +
-                    `Rol: ${userData.role}\n` +
-                    `¿Expirado?: ${userData.isExpired ? 'SÍ' : 'NO'}\n` +
-                    `Expira: ${new Date(userData.expiresAt * 1000).toLocaleString()}`
-                    : 'Error al decodificar token de ejemplo'
-                );
-              });
-            }}
-            variant="outline"
-            fullWidth
-            disabled={isLoggingOut}
-          />
-        </View>
       </View>
     </View>
   );
 
-  // Renderizar el contenido según la tab activa
+  // Renderizar contenido según la tab activa
   const renderContent = () => {
     switch (activeTab) {
       case 'home':
         return renderHomeContent();
+      
+      case 'services':
+        // Solo mostrar servicios si es profesional
+        if (isProfessional) {
+          return (
+            <ServicesScreen 
+              navigation={navigation}
+              onCreateService={handleCreateService}
+            />
+          );
+        } else {
+          // Fallback por si acaso
+          return renderHomeContent();
+        }
+      
       case 'profile':
-        return <ProfileScreen onLogout={handleLogout} isLoggingOut={isLoggingOut} />;
+        return (
+          <ProfileScreen
+            onLogout={handleLogout}
+            isLoggingOut={isLoggingOut}
+          />
+        );
+      
       default:
         return renderHomeContent();
     }
@@ -219,7 +217,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
     <View style={styles.mainContainer}>
       {/* Contenido principal */}
       <View style={styles.contentContainer}>
-        {activeTab === 'home' ? (
+        {activeTab === 'profile' ? (
           <SafeContainer>
             {renderContent()}
           </SafeContainer>
@@ -232,6 +230,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
       <BottomNavigationBar
         activeTab={activeTab}
         onTabPress={handleTabChange}
+        isProfessional={isProfessional}
       />
     </View>
   );
@@ -306,6 +305,7 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textAlign: 'center',
     paddingHorizontal: spacing.xl,
+    marginTop: spacing.lg,
   },
 
   professionalInfo: {
@@ -326,6 +326,6 @@ const styles = StyleSheet.create({
 
   debugSection: {
     paddingVertical: spacing.xl,
-    paddingBottom: spacing['2xl'], // Espacio adicional para el bottom nav
+    paddingBottom: spacing['2xl'],
   },
 });

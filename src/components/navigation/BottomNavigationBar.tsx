@@ -1,6 +1,7 @@
 /**
  * BottomNavigationBar - Booky
  * Componente de navegación inferior para la aplicación
+ * Actualizado para incluir tab de servicios condicionalmente para profesionales
  */
 
 import React from 'react';
@@ -10,26 +11,18 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-// Opción 1: Si usas Expo
-// import { FontAwesome } from '@expo/vector-icons';
-
-// Opción 2: Si usas react-native-vector-icons (después de configurar)
 import Icon from 'react-native-vector-icons/FontAwesome';
-
-// Opción 3: Alternativa con caracteres Unicode (sin dependencias)
-// const ICONS = {
-//   home: '⌂',
-//   user: '👤'
-// };
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 
-export type BottomNavTabType = 'home' | 'profile';
+// Tipo actualizado para incluir servicios
+export type BottomNavTabType = 'home' | 'services' | 'profile';
 
 interface BottomNavigationBarProps {
   activeTab: BottomNavTabType;
   onTabPress: (tab: BottomNavTabType) => void;
+  isProfessional?: boolean; // Prop para determinar si mostrar servicios
 }
 
 interface TabItemProps {
@@ -79,19 +72,35 @@ const TabItem: React.FC<TabItemProps> = ({
 export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   activeTab,
   onTabPress,
+  isProfessional = false,
 }) => {
-  const tabs = [
+  // Configuración base de tabs
+  const baseTabs = [
     {
       key: 'home' as BottomNavTabType,
       iconName: 'home',
       label: 'Inicio',
     },
-    {
-      key: 'profile' as BottomNavTabType,
-      iconName: 'user',
-      label: 'Perfil',
-    },
   ];
+
+  // Tab de servicios solo para profesionales
+  const servicesTab = {
+    key: 'services' as BottomNavTabType,
+    iconName: 'briefcase',
+    label: 'Servicios',
+  };
+
+  // Tab de perfil
+  const profileTab = {
+    key: 'profile' as BottomNavTabType,
+    iconName: 'user',
+    label: 'Perfil',
+  };
+
+  // Construir array de tabs según el rol
+  const tabs = isProfessional 
+    ? [...baseTabs, servicesTab, profileTab] 
+    : [...baseTabs, profileTab];
 
   return (
     <View style={styles.container}>
@@ -99,7 +108,10 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
       <View style={styles.shadow} />
       
       {/* Contenido de navegación */}
-      <View style={styles.content}>
+      <View style={[
+        styles.content,
+        isProfessional ? styles.contentThreeTabs : styles.contentTwoTabs
+      ]}>
         {tabs.map((tab) => (
           <TabItem
             key={tab.key}
@@ -117,9 +129,9 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.primary.main, // Fondo principal morado
+    backgroundColor: colors.primary.main,
     borderTopWidth: 1,
-    borderTopColor: colors.primary.dark, // Borde más oscuro para definición
+    borderTopColor: colors.primary.dark,
   },
 
   shadow: {
@@ -130,17 +142,27 @@ const styles = StyleSheet.create({
 
   content: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     alignItems: 'center',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg, // Espacio adicional para iPhones con home indicator
+    paddingBottom: spacing.lg,
+  },
+
+  // Estilos para dos tabs
+  contentTwoTabs: {
+    justifyContent: 'space-around',
+  },
+
+  // Estilos para tres tabs
+  contentThreeTabs: {
+    justifyContent: 'space-between',
   },
 
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: spacing.xs,
   },
 
   tabContent: {
@@ -160,11 +182,11 @@ const styles = StyleSheet.create({
   },
 
   iconContainerActive: {
-    backgroundColor: colors.primary.contrast + '20', // Fondo blanco con opacidad para el activo
+    backgroundColor: colors.primary.contrast + '20',
   },
 
   icon: {
-    opacity: 0.7, // Un poco más visible sobre fondo morado
+    opacity: 0.7,
   },
 
   iconActive: {
@@ -173,13 +195,15 @@ const styles = StyleSheet.create({
 
   tabLabel: {
     ...typography.styles.caption,
-    color: colors.primary.contrast, // Texto blanco sobre fondo morado
+    color: colors.primary.contrast,
     fontWeight: typography.fontWeight.medium,
     opacity: 0.8,
+    textAlign: 'center',
+    fontSize: 11, // Texto ligeramente más pequeño para 3 tabs
   },
 
   tabLabelActive: {
-    color: colors.primary.contrast, // Texto blanco para el activo
+    color: colors.primary.contrast,
     fontWeight: typography.fontWeight.semibold,
     opacity: 1,
   },
@@ -190,6 +214,6 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.primary.contrast, // Indicador blanco sobre fondo morado
+    backgroundColor: colors.primary.contrast,
   },
 });

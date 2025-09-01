@@ -21,9 +21,9 @@ class UserService {
         throw new Error('No se encontró token de autenticación');
       }
 
-      const response = await apiService.post<ApiProfileResponse>(
+      // Usar GET en lugar de POST según la documentación de la API
+      const response = await apiService.get<ApiProfileResponse>(
         API_CONFIG.ENDPOINTS.PROFILE,
-        {}, // Body vacío como especifica tu API
         token
       );
 

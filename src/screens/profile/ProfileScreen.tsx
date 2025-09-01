@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 
 // Importaciones locales
@@ -520,9 +521,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           refreshControl={
-            <TouchableOpacity onPress={loadUserProfile}>
-              <Text>Desliza para actualizar</Text>
-            </TouchableOpacity>
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={loadUserProfile}
+              colors={[colors.primary.main]}
+              tintColor={colors.primary.main}
+            />
           }
         >
           {renderHeader()}

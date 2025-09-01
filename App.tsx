@@ -1,7 +1,7 @@
 /**
- * FrontBooky - App de Gestión de Citas - ACTUALIZADO
+ * FrontBooky - App de Gestión de Citas
  * Sistema de reservas para profesionales independientes
- * Actualizado con pantalla de registro y verificación de correo
+ * Actualizado con parámetro opcional para EmailVerification
  *
  * @format
  */
@@ -13,7 +13,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { LoginScreen } from "./src/screens/auth/LoginScreen";
 import { RegisterScreen } from "./src/screens/user/RegisterScreen";
-import { EmailVerificationScreen } from "./src/screens/user/EmailVerificationScreen"; // NUEVO
+import { EmailVerificationScreen } from "./src/screens/user/EmailVerificationScreen";
 import { HomeScreen } from "./src/screens/main/HomeScreen";
 import { ForgotPasswordScreen } from "./src/screens/auth/ForgotPasswordScreen";
 import { ResetPasswordScreen } from "./src/screens/auth/ResetPasswordScreen";
@@ -23,11 +23,11 @@ import { SafeContainer } from "./src/components/ui/SafeContainer";
 import { colors } from "./src/styles/colors";
 import { typography } from "./src/styles/typography";
 
-// ACTUALIZADO: Añadida la pantalla EmailVerification
+// Email ahora es opcional para EmailVerification
 export type RootStackParamList = {
   Login: { email?: string; verified?: boolean } | undefined;
   Register: undefined;
-  EmailVerification: { email: string; fromRegister?: boolean }; // NUEVO
+  EmailVerification: { email?: string; fromRegister?: boolean } | undefined;
   ForgotPassword: undefined;
   ResetPassword: undefined;
   Home: undefined;
@@ -90,7 +90,7 @@ function App(): React.JSX.Element {
               )}
             </Stack.Screen>
             
-            {/* PANTALLA DE REGISTRO */}
+            {/* Pantalla de registro */}
             <Stack.Screen 
               name="Register" 
               options={{ 
@@ -116,7 +116,7 @@ function App(): React.JSX.Element {
               )}
             </Stack.Screen>
 
-            {/* NUEVA PANTALLA DE VERIFICACIÓN DE CORREO */}
+            {/* Pantalla de verificación de correo - ahora flexible */}
             <Stack.Screen 
               name="EmailVerification" 
               options={{ 

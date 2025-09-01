@@ -192,7 +192,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       setIsSaving(true);
       console.log('📱 ProfileScreen: Datos a guardar:', editData);
 
-      // NOTA: Aquí deberías llamar a tu endpoint real de actualización cuando lo tengas
+      // NOTA: Aquí llamamos el futuro endpoint de actualización
       // Por ejemplo: await userService.updateProfile(editData);
       
       // Por ahora, solo simulamos el guardado y actualizamos el estado local

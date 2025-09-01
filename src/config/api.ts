@@ -10,7 +10,8 @@ export const API_CONFIG = {
     LOGOUT: '/cerrarsesion',
     REGISTER: '/Register',
     FORGOT_PASSWORD: '/generarNuevoCodigoRecuperacion',
-    RESET_PASSWORD: '/CambiarContrasena'
+    RESET_PASSWORD: '/CambiarContrasena',
+    PROFILE: '/MiPerfil',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

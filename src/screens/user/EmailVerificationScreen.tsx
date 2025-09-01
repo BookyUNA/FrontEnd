@@ -1,10 +1,7 @@
 /**
  * Pantalla de Verificación de Correo Electrónico - Booky
  * Sistema de reservas para profesionales independientes
- * Solicita al usuario ingresar el código enviado por correo
- * 
- * NOTA: Esta pantalla aún no tiene funcionalidad real del backend.
- * TODO: Implementar la verificación real cuando se desarrolle el servicio
+ * Funciona tanto con correo por parámetro como sin él
  */
 
 import React, { useState, useEffect } from 'react';
@@ -28,17 +25,15 @@ import { ErrorMessage } from '../../components/ui/ErrorMessage';
 import { useForm } from '../../hooks/useForm';
 import { sanitizeFormData } from '../../utils/validation';
 import { AuthScreenProps } from '../../types/auth';
+import { userService } from '../../services/user/userService';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 
 interface EmailVerificationFormData {
+  email: string;
   code: string;
 }
-
-const initialFormValues: EmailVerificationFormData = {
-  code: '',
-};
 
 interface EmailVerificationScreenProps extends AuthScreenProps {
   route?: {
@@ -60,14 +55,33 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
   const [resendCooldown, setResendCooldown] = useState<number>(0);
   const [isResending, setIsResending] = useState<boolean>(false);
 
-  // Obtener email de los parámetros de navegación
-  const userEmail = route?.params?.email || '';
+  // Obtener email de los parámetros de navegación (puede ser vacío)
+  const emailFromParams = route?.params?.email || '';
   const fromRegister = route?.params?.fromRegister || false;
+  
+  // Determinar si hay email por parámetro
+  const hasEmailParam = emailFromParams.trim().length > 0;
+
+  // Valores iniciales del formulario
+  const initialFormValues: EmailVerificationFormData = {
+    email: emailFromParams,
+    code: '',
+  };
 
   // Validación del formulario
   function validateForm(data: EmailVerificationFormData) {
     const errors: any = {};
 
+    // Validar email solo si no viene por parámetro
+    if (!hasEmailParam) {
+      if (!data.email) {
+        errors.email = { errorMessage: 'El correo electrónico es obligatorio' };
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+        errors.email = { errorMessage: 'Ingresa un correo electrónico válido' };
+      }
+    }
+
+    // Validar código siempre
     if (!data.code) {
       errors.code = { errorMessage: 'El código de verificación es obligatorio' };
     } else if (data.code.length !== 6) {
@@ -107,7 +121,12 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
     handleChange(field)(value);
   };
 
-  // Función para manejar la verificación del código
+  // Obtener el email a usar (del parámetro o del formulario)
+  const getActiveEmail = (): string => {
+    return hasEmailParam ? emailFromParams : values.email;
+  };
+
+  // Verificación de código
   async function handleVerification(formData: EmailVerificationFormData) {
     try {
       setGeneralError('');
@@ -121,27 +140,31 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
         return;
       }
 
-      console.log('Verificando código:', {
-        email: userEmail,
+      const emailToUse = getActiveEmail();
+      if (!emailToUse) {
+        setGeneralError('Error: No se encontró el correo electrónico');
+        setShowError(true);
+        return;
+      }
+
+      console.log('📧 Iniciando verificación:', {
+        email: emailToUse,
         code: sanitizedData.code,
-        fromRegister
+        fromRegister,
+        hasEmailParam
       });
 
-      // TODO: Implementar llamada real al servicio de verificación
-      // const result = await emailService.verifyCode(userEmail, sanitizedData.code);
-      
-      // Simulación temporal - siempre será exitosa para desarrollo
-      const mockResult = {
-        success: true,
-        error: null
-      };
+      // Llamada al servicio de verificación
+      const result = await userService.verifyEmailCode(emailToUse, sanitizedData.code);
 
-      if (mockResult.success) {
-        console.log('Verificación exitosa (simulada)');
+      console.log('📧 Resultado de verificación:', result);
+
+      if (result.success) {
+        console.log('📧 Verificación exitosa');
         
         // Mostrar mensaje de éxito
         Alert.alert(
-          '¡Correo Verificado! 🎉',
+          'Correo Verificado',
           fromRegister 
             ? 'Tu cuenta ha sido verificada exitosamente. Ya puedes iniciar sesión.'
             : 'Tu correo electrónico ha sido verificado correctamente.',
@@ -160,7 +183,7 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
                   if (fromRegister) {
                     // Si viene del registro, ir al login con email pre-llenado
                     navigation.navigate('Login', {
-                      email: userEmail,
+                      email: emailToUse,
                       verified: true
                     });
                   } else {
@@ -175,49 +198,74 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
         );
         
       } else {
-        console.error('Error en verificación:', mockResult.error);
-        setGeneralError('Código de verificación incorrecto. Intenta nuevamente.');
+        console.error('📧 Error en verificación:', result.error);
+        
+        // Mostrar error específico del servidor o genérico
+        const errorMessage = result.error || 'Código de verificación incorrecto. Intenta nuevamente.';
+        setGeneralError(errorMessage);
         setShowError(true);
         
-        // Limpiar el campo del código para reintento
-        resetForm();
+        // Limpiar solo el campo del código para reintento
+        handleChange('code')('');
       }
       
     } catch (error) {
-      console.error('Error inesperado en verificación:', error);
+      console.error('📧 Error inesperado en verificación:', error);
       setGeneralError('Ha ocurrido un error inesperado. Por favor, intenta nuevamente.');
       setShowError(true);
     }
   }
 
-  // Función para reenviar código
+  // Reenvío de código
   const handleResendCode = async () => {
     if (resendCooldown > 0 || isResending) return;
+
+    const emailToUse = getActiveEmail();
+    
+    // Validar que hay email válido
+    if (!emailToUse || emailToUse.trim() === '') {
+      setGeneralError('Ingresa tu correo electrónico antes de reenviar el código');
+      setShowError(true);
+      return;
+    }
+
+    // Validar formato del email
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailToUse)) {
+      setGeneralError('Ingresa un correo electrónico válido antes de reenviar el código');
+      setShowError(true);
+      return;
+    }
 
     try {
       setIsResending(true);
       setGeneralError('');
       setShowError(false);
 
-      console.log('Reenviando código a:', userEmail);
+      console.log('📧 Reenviando código a:', emailToUse);
 
-      // TODO: Implementar llamada real al servicio de reenvío
-      // const result = await emailService.resendVerificationCode(userEmail);
+      // Llamada al servicio de reenvío
+      const result = await userService.resendEmailVerificationCode(emailToUse);
       
-      // Simulación temporal
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      Alert.alert(
-        'Código Reenviado 📧',
-        `Se ha enviado un nuevo código de verificación a ${userEmail}`,
-        [{ text: 'Entendido' }]
-      );
+      console.log('📧 Resultado de reenvío:', result);
 
-      // Iniciar cooldown de 60 segundos
-      setResendCooldown(60);
+      if (result.success) {
+        Alert.alert(
+          'Código Reenviado',
+          `Se ha enviado un nuevo código de verificación a ${userService.formatEmailForDisplay(emailToUse)}`,
+          [{ text: 'Entendido' }]
+        );
+
+        // Iniciar cooldown de 60 segundos
+        setResendCooldown(60);
+      } else {
+        console.error('📧 Error en reenvío:', result.error);
+        const errorMessage = result.error || 'No se pudo reenviar el código. Intenta nuevamente.';
+        setGeneralError(errorMessage);
+        setShowError(true);
+      }
       
     } catch (error) {
-      console.error('Error al reenviar código:', error);
+      console.error('📧 Error inesperado en reenvío:', error);
       setGeneralError('No se pudo reenviar el código. Intenta nuevamente.');
       setShowError(true);
     } finally {
@@ -230,7 +278,7 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
     console.log('Navegando a login...');
     if (navigation?.navigate) {
       navigation.navigate('Login', {
-        email: userEmail
+        email: getActiveEmail()
       });
     } else {
       console.warn('Navigation no disponible para Login');
@@ -248,18 +296,13 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
-  // Función para formatear el email (ocultar parte del dominio)
+  // Función para formatear el email
   const formatEmailForDisplay = (email: string) => {
-    if (!email) return '';
-    const [localPart, domain] = email.split('@');
-    if (!domain) return email;
-    
-    const maskedLocal = localPart.length > 2 
-      ? localPart.substring(0, 2) + '***' + localPart.slice(-1)
-      : localPart;
-    
-    return `${maskedLocal}@${domain}`;
+    return userService.formatEmailForDisplay(email);
   };
+
+  // Determinar si el botón de reenvío debe estar habilitado
+  const isResendDisabled = resendCooldown > 0 || isResending || isSubmitting || !getActiveEmail() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(getActiveEmail());
 
   return (
     <SafeContainer>
@@ -278,12 +321,21 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
             <Text style={styles.welcomeText}>
               Verifica tu correo
             </Text>
-            <Text style={styles.subtitleText}>
-              Hemos enviado un código de 6 dígitos a
-            </Text>
-            <Text style={styles.emailText}>
-              {formatEmailForDisplay(userEmail)}
-            </Text>
+            
+            {hasEmailParam ? (
+              <>
+                <Text style={styles.subtitleText}>
+                  Hemos enviado un código de 6 dígitos a
+                </Text>
+                <Text style={styles.emailText}>
+                  {formatEmailForDisplay(emailFromParams)}
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.subtitleText}>
+                Ingresa tu correo y el código de verificación que recibiste
+              </Text>
+            )}
           </View>
 
           {/* Formulario */}
@@ -298,6 +350,21 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
                     style={styles.errorMessage}
                   />
                 </View>
+              )}
+
+              {/* Campo Email - Solo mostrar si no viene por parámetro */}
+              {!hasEmailParam && (
+                <Input
+                  label="Correo electrónico"
+                  value={values.email}
+                  onChangeText={handleFieldChange('email')}
+                  placeholder="ejemplo@correo.com"
+                  error={errors.email?.errorMessage}
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  required
+                />
               )}
 
               {/* Campo Código de Verificación */}
@@ -346,12 +413,12 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
                 <TouchableOpacity
                   onPress={handleResendCode}
                   activeOpacity={0.7}
-                  disabled={resendCooldown > 0 || isResending || isSubmitting}
+                  disabled={isResendDisabled}
                   style={styles.resendButton}
                 >
                   <Text style={[
                     styles.resendLink,
-                    (resendCooldown > 0 || isResending || isSubmitting) && styles.disabledText
+                    isResendDisabled && styles.disabledText
                   ]}>
                     {isResending 
                       ? 'Enviando...' 
@@ -361,6 +428,13 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
                     }
                   </Text>
                 </TouchableOpacity>
+                
+                {/* Texto adicional cuando no hay email por parámetro */}
+                {!hasEmailParam && !getActiveEmail().trim() && (
+                  <Text style={styles.emailRequiredText}>
+                    Primero ingresa tu correo electrónico
+                  </Text>
+                )}
               </View>
             </View>
           </View>
@@ -496,6 +570,14 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 
+  emailRequiredText: {
+    ...typography.styles.bodySmall,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    width: '100%',
+    fontStyle: 'italic',
+  },
   // Estilo para elementos deshabilitados
   disabledText: {
     opacity: 0.5,

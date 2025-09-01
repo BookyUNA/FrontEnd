@@ -11,6 +11,7 @@ export const API_CONFIG = {
     REGISTER: '/Register',
     FORGOT_PASSWORD: '/generarNuevoCodigoRecuperacion',
     RESET_PASSWORD: '/CambiarContrasena',
+    PROFILE: '/MiPerfil',
     VERIFY_EMAIL: '/VerificarEmail',  
     REGISTER_USER: '/RegistrarUsuario',
     RESEND_VERIFICATION_CODE: '/GenerarNuevoCodigoVerificacion',

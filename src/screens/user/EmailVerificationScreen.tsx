@@ -428,6 +428,13 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
                     }
                   </Text>
                 </TouchableOpacity>
+                
+                {/* Texto adicional cuando no hay email por parámetro */}
+                {!hasEmailParam && !getActiveEmail().trim() && (
+                  <Text style={styles.emailRequiredText}>
+                    Primero ingresa tu correo electrónico
+                  </Text>
+                )}
               </View>
             </View>
           </View>
@@ -563,6 +570,14 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 
+  emailRequiredText: {
+    ...typography.styles.bodySmall,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    width: '100%',
+    fontStyle: 'italic',
+  },
   // Estilo para elementos deshabilitados
   disabledText: {
     opacity: 0.5,

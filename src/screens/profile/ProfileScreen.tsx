@@ -26,7 +26,7 @@ import { authService } from '../../services/auth/authService';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
-import { userService, ApiProfileResponse, EditProfileRequest } from '../../services/user/UserService';
+import { userService, ApiProfileResponse, EditProfileRequest } from '../../services/user/userService';
 
 
 // =============================================

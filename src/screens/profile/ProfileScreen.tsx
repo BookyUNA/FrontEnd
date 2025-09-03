@@ -26,7 +26,8 @@ import { authService } from '../../services/auth/authService';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
-import { userService, ApiProfileResponse } from '../../services/user/userService';
+import { userService, ApiProfileResponse, EditProfileRequest } from '../../services/user/UserService';
+
 
 // =============================================
 // INTERFACES Y MODELOS
@@ -128,30 +129,29 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // VALIDACIONES
   // =============================================
 
-  const validateForm = (): boolean => {
-    const newErrors: ValidationErrors = {};
+const validateForm = (): boolean => {
+  const newErrors: ValidationErrors = {};
 
-    // Validar nombre
-    if (!editData.nombre.trim()) {
-      newErrors.nombre = 'El nombre es obligatorio';
-    } else if (editData.nombre.trim().length < 2) {
-      newErrors.nombre = 'El nombre debe tener al menos 2 caracteres';
-    } else if (editData.nombre.trim().length > 100) {
-      newErrors.nombre = 'El nombre no puede exceder 100 caracteres';
+  // Validar nombre
+  if (!editData.nombre.trim()) {
+    newErrors.nombre = 'El nombre es obligatorio';
+  } else if (editData.nombre.trim().length < 2) {
+    newErrors.nombre = 'El nombre debe tener al menos 2 caracteres';
+  } else if (editData.nombre.trim().length > 100) {
+    newErrors.nombre = 'El nombre no puede exceder 100 caracteres';
+  }
+
+  // Validar teléfono
+  if (editData.telefono.trim()) {
+    // Usar la validación específica de teléfonos costarricenses
+    if (!userService.validateCostaRicanPhone(editData.telefono.trim())) {
+      newErrors.telefono = 'El teléfono debe tener exactamente 8 dígitos y empezar con 2, 6, 7 u 8';
     }
+  }
 
-    // Validar teléfono
-    if (editData.telefono.trim()) {
-      // Regex más permisivo para teléfonos costarricenses
-      const phoneRegex = /^[0-9\s\-\(\)\+]{8,15}$/;
-      if (!phoneRegex.test(editData.telefono.trim())) {
-        newErrors.telefono = 'Formato de teléfono inválido. Use solo números, espacios, guiones y paréntesis';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
 
   // =============================================
   // HANDLERS
@@ -192,34 +192,60 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       setIsSaving(true);
       console.log('📱 ProfileScreen: Datos a guardar:', editData);
 
-      // NOTA: Aquí llamamos el futuro endpoint de actualización
-      // Por ejemplo: await userService.updateProfile(editData);
+      // Preparar datos para la API
+      const updateData: EditProfileRequest = {
+        nombreCompleto: editData.nombre.trim(),
+        telefono: editData.telefono.trim(),
+      };
+
+      // Llamar al endpoint de actualización
+      const result = await userService.updateProfile(updateData);
       
-      // Por ahora, solo simulamos el guardado y actualizamos el estado local
-      console.log('📱 ProfileScreen: Guardando cambios localmente (endpoint de actualización no implementado)');
-      
-      setUserProfile(prev => prev ? {
-        ...prev,
-        nombre: editData.nombre.trim(),
-        telefono: editData.telefono.trim() || null
-      } : prev);
+      if (result.success) {
+        console.log('📱 ProfileScreen: Perfil actualizado exitosamente');
+        
+        // Actualizar el estado local del perfil
+        setUserProfile(prev => prev ? {
+          ...prev,
+          nombre: editData.nombre.trim(),
+          telefono: editData.telefono.trim() || null
+        } : prev);
 
-      setIsEditing(false);
-      setErrors({});
+        setIsEditing(false);
+        setErrors({});
 
-      Alert.alert(
-        'Éxito',
-        'Los cambios se guardaron correctamente.',
-        [{ text: 'Entendido' }]
-      );
-
-      console.log('📱 ProfileScreen: Cambios guardados exitosamente');
+        Alert.alert(
+          'Éxito',
+          'Los cambios se guardaron correctamente.',
+          [{ text: 'Entendido' }]
+        );
+        
+        // Recargar el perfil desde el servidor para asegurar consistencia
+        await loadUserProfile();
+        
+      } else {
+        console.error('📱 ProfileScreen: Error guardando perfil:', result.error);
+        
+        if (result.isNetworkError) {
+          Alert.alert(
+            'Error de Conexión',
+            result.error || 'Hubo un problema de conexión. Verifica tu conexión a internet e intenta de nuevo.',
+            [{ text: 'Entendido' }]
+          );
+        } else {
+          Alert.alert(
+            'Error',
+            result.error || 'Hubo un problema al guardar los cambios. Intenta de nuevo.',
+            [{ text: 'Entendido' }]
+          );
+        }
+      }
       
     } catch (error: any) {
-      console.error('📱 ProfileScreen: Error guardando perfil:', error);
+      console.error('📱 ProfileScreen: Error inesperado guardando perfil:', error);
       Alert.alert(
         'Error',
-        error.message || 'Hubo un problema al guardar los cambios. Verifica tu conexión e intenta de nuevo.',
+        'Ha ocurrido un error inesperado. Por favor, intenta de nuevo.',
         [{ text: 'Entendido' }]
       );
     } finally {
@@ -418,9 +444,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           editData.telefono,
           (text) => setEditData(prev => ({ ...prev, telefono: text })),
           errors.telefono,
-          'Ej: 61423881 o +506 6142-3881',
+          'Ej: 61234567 (8 dígitos, inicia con 2,6,7 u 8)',
           'phone-pad',
-          20
+          8
         )}
       </View>
     );

@@ -83,14 +83,37 @@ export interface ResendCodeResult {
   isNetworkError?: boolean;
 }
 
-  export interface ApiProfileResponse {
-    Nombre: string;
-    Correo: string;
-    Cedula: string;
-    Telefono: string;
-    error?: { ErrorCode: number; Message: string }[];
-    resultado: boolean;
-  }
+export interface ApiProfileResponse {
+  Nombre: string;
+  Correo: string;
+  Cedula: string;
+  Telefono: string;
+  error?: { ErrorCode: number; Message: string }[];
+  resultado: boolean;
+}
+
+export interface EditProfileRequest {
+  nombreCompleto: string;
+  telefono: string;
+}
+
+export interface EditProfileResponse {
+  error: Array<{
+    ErrorCode: number;
+    Message: string;
+  }>;
+  resultado: boolean;
+}
+
+export interface EditProfileResult {
+  success: boolean;
+  error?: string;
+  errors?: Array<{
+    ErrorCode: number;
+    Message: string;
+  }>;
+  isNetworkError?: boolean;
+}
 
 class UserService {
   /**
@@ -452,10 +475,117 @@ class UserService {
     }
   }
 
+  /**
+ * Actualizar información del perfil de usuario
+ * Solo permite editar nombreCompleto y telefono
+ */
+  async updateProfile(profileData: EditProfileRequest): Promise<EditProfileResult> {
+    try {
+      console.log('✏️ UserService: Iniciando actualización de perfil...');
+      
+      const token = await authService.getToken();
+      if (!token) {
+        return {
+          success: false,
+          error: 'No se encontró token de autenticación',
+        };
+      }
+
+      // Validar datos requeridos
+      if (!profileData.nombreCompleto || profileData.nombreCompleto.trim().length < 2) {
+        return {
+          success: false,
+          error: 'El nombre completo debe tener al menos 2 caracteres',
+        };
+      }
+
+      // Preparar datos para el endpoint
+      const updateData: EditProfileRequest = {
+        nombreCompleto: profileData.nombreCompleto.trim(),
+        telefono: profileData.telefono.trim(),
+      };
+
+      console.log('✏️ UserService: Enviando datos de actualización:', {
+        nombreCompleto: updateData.nombreCompleto,
+        telefono: updateData.telefono,
+      });
+
+      // Realizar petición al endpoint
+      const response = await apiService.post<EditProfileResponse>(
+        API_CONFIG.ENDPOINTS.EDIT_PROFILE,
+        updateData,
+        token
+      );
+
+      console.log('✏️ UserService: Respuesta del servidor:', response);
+
+      // Verificar errores de red/conexión
+      if (!response.success && response.status === 0) {
+        console.error('✏️ UserService: Error de red en actualización');
+        return {
+          success: false,
+          error: response.error || 'Error de conexión. Verifica tu conexión a internet.',
+          isNetworkError: true,
+        };
+      }
+
+      // Verificar si llegaron datos del servidor
+      const data = response.data;
+      
+      if (!data) {
+        console.error('✏️ UserService: Respuesta vacía del servidor');
+        return {
+          success: false,
+          error: 'Respuesta inválida del servidor',
+        };
+      }
+
+      // Verificar si la actualización fue exitosa según la API
+      if (data.resultado === true) {
+        console.log('✏️ UserService: ✅ Actualización exitosa según la API');
+        return {
+          success: true,
+        };
+      }
+
+      // Si resultado es false, es un error de negocio de la API
+      console.log('✏️ UserService: ❌ Actualización falló según la API (resultado: false)');
+      
+      // Extraer y mostrar errores específicos
+      if (data.error && data.error.length > 0) {
+        const firstError = data.error[0];
+        const errorMessage = firstError.Message || 'Error al actualizar el perfil';
+        
+        console.log('✏️ UserService: Mensaje de error para mostrar al usuario:', errorMessage);
+        
+        return {
+          success: false,
+          error: errorMessage,
+          errors: data.error,
+        };
+      }
+
+      // Caso donde resultado es false pero no hay errores específicos
+      console.error('✏️ UserService: Actualización falló sin errores específicos en la respuesta');
+      return {
+        success: false,
+        error: 'No se pudo actualizar el perfil. Por favor, intenta nuevamente.',
+      };
+
+    } catch (error: any) {
+      console.error('✏️ UserService: Error inesperado en actualización:', error);
+      return {
+        success: false,
+        error: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
+        isNetworkError: true,
+      };
+    }
+  }
+
   // UTILIDADES PARA EMAIL
   /**
    * Validar formato de código de verificación
-   */
+   */ 
   validateVerificationCode(code: string): boolean {
     if (!code) return false;
     
@@ -513,6 +643,30 @@ class UserService {
 
   /**
    * Validar formato de teléfono costarricense
+   * Formato esperado: 8 dígitos (puede tener guión después del 4to dígito)
+   */
+/**
+   * Validar formato de teléfono costarricense
+   * Debe tener exactamente 8 dígitos y empezar con 2, 6, 7 u 8
+   */
+  validateCostaRicanPhone(phone: string): boolean {
+    if (!phone) return true; // Teléfono es opcional
+    
+    // Remover espacios, guiones y paréntesis
+    const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
+    
+    // Verificar que sean exactamente 8 dígitos
+    if (!/^\d{8}$/.test(cleanPhone)) {
+      return false;
+    }
+    
+    // Verificar que empiece con 2, 6, 7 u 8
+    const firstDigit = cleanPhone.charAt(0);
+    return ['2', '6', '7', '8'].includes(firstDigit);
+  }
+
+  /**
+   * Validar formato de teléfono costarricense (versión anterior - mantener por compatibilidad)
    * Formato esperado: 8 dígitos (puede tener guión después del 4to dígito)
    */
   validatePhone(phone: string): boolean {

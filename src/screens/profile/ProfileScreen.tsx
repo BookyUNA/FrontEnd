@@ -26,7 +26,7 @@ import { authService } from '../../services/auth/authService';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
-import { userService, ApiProfileResponse } from '../../services/services/UserService';
+import { userService, ApiProfileResponse } from '../../services/user/userService';
 
 // =============================================
 // INTERFACES Y MODELOS

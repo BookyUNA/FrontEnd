@@ -4,7 +4,7 @@
 
 // Base URL para todas las peticiones API
 export const API_CONFIG = {
-  BASE_URL: 'http://10.0.2.2:61288/api',
+  BASE_URL: 'https://backendbooky-apis-b8b9fzgxfadrdch7.canadacentral-01.azurewebsites.net/api',
   ENDPOINTS: {
     LOGIN: '/Login',
     LOGOUT: '/cerrarsesion',

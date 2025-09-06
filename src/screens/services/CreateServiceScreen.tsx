@@ -125,8 +125,8 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
       newErrors.duracion = 'La duración es obligatoria';
     } else if (duracionNum <= 0) {
       newErrors.duracion = 'La duración debe ser mayor a 0';
-    } else if (duracionNum > 480) { // 8 horas máximo
-      newErrors.duracion = 'La duración no puede ser mayor a 480 minutos (8 horas)';
+    } else if (duracionNum > 720) { // 12 horas máximo
+      newErrors.duracion = 'La duración no puede ser mayor a 720 minutos (12 horas)';
     }
 
     // Validar precio

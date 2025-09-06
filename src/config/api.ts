@@ -24,6 +24,7 @@ export const API_CONFIG = {
     RESEND_VERIFICATION_CODE: '/GenerarNuevoCodigoVerificacion',
     LISTAR_SERVICIOS_PROFESIONAL: '/Servicios/ListarServiciosProfesional',
     CREAR_SERVICIO: '/Servicios/CrearServicio',
+    ACTUALIZAR_SERVICIO: '/Servicios/ActualizarServicio',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

@@ -21,6 +21,9 @@ import { Button } from '../../components/forms/Button';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
+import { apiService } from '../../services/api/apiService';
+import { authService } from '../../services/auth/authService';
+import { API_CONFIG } from '../../config/api';
 
 interface EditServiceScreenProps {
   navigation?: any;
@@ -37,6 +40,28 @@ interface Servicio {
   PorcentajeDescuento: number;
   FechaCreacion: string;
   Estado: boolean;
+}
+
+interface ApiError {
+  ErrorCode: number;
+  Message: string;
+}
+
+interface ApiResponse {
+  error: ApiError[];
+  resultado: boolean;
+}
+
+// Request para actualizar servicio
+interface ReqActualizarServicio {
+  idServicio: number;
+  nombre: string;
+  descripcion: string;
+  duracionMinutos: number;
+  precio: number;
+  permiteDescuento: boolean;
+  porcentajeDescuento: number;
+  estado: boolean;
 }
 
 export const EditServiceScreen: React.FC<EditServiceScreenProps> = ({ 
@@ -129,8 +154,8 @@ export const EditServiceScreen: React.FC<EditServiceScreenProps> = ({
       newErrors.duracion = 'La duración es obligatoria';
     } else if (duracionNum <= 0) {
       newErrors.duracion = 'La duración debe ser mayor a 0';
-    } else if (duracionNum > 480) {
-      newErrors.duracion = 'La duración no puede ser mayor a 480 minutos (8 horas)';
+    } else if (duracionNum > 720) {
+      newErrors.duracion = 'La duración no puede ser mayor a 720 minutos (12 horas)';
     }
 
     // Validar precio
@@ -156,7 +181,7 @@ export const EditServiceScreen: React.FC<EditServiceScreenProps> = ({
   };
 
   /**
-   * Actualizar servicio
+   * Actualizar servicio mediante API
    */
   const handleUpdateService = async () => {
     if (!validateForm()) {
@@ -167,11 +192,22 @@ export const EditServiceScreen: React.FC<EditServiceScreenProps> = ({
     setIsLoading(true);
 
     try {
-      // Simular delay de petición
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Verificar autenticación
+      const isAuthenticated = await authService.isAuthenticated();
+      if (!isAuthenticated) {
+        Alert.alert('Error', 'Debes iniciar sesión para editar un servicio');
+        return;
+      }
 
-      // Datos actualizados del servicio
-      const updatedServiceData = {
+      // Obtener token
+      const token = await authService.getToken();
+      if (!token) {
+        Alert.alert('Error', 'Token de acceso no disponible');
+        return;
+      }
+
+      // Preparar datos para enviar al API
+      const requestData: ReqActualizarServicio = {
         idServicio: service.IdServicio,
         nombre: nombre.trim(),
         descripcion: descripcion.trim(),
@@ -179,27 +215,53 @@ export const EditServiceScreen: React.FC<EditServiceScreenProps> = ({
         precio: getPriceValue(),
         permiteDescuento: activarDescuento,
         porcentajeDescuento: activarDescuento ? parseFloat(porcentajeDescuento) : 0,
+        estado: true
       };
 
-      console.log('Actualizando servicio:', updatedServiceData);
+      console.log('📋 Actualizando servicio:', requestData);
 
-      Alert.alert(
-        'Éxito',
-        'El servicio ha sido actualizado exitosamente',
-        [
-          {
-            text: 'Continuar',
-            onPress: handleGoBack,
-          },
-        ]
+      // Realizar petición al endpoint usando apiService
+      const response = await apiService.post<ApiResponse>(
+        API_CONFIG.ENDPOINTS.ACTUALIZAR_SERVICIO || '/Servicios/ActualizarServicio',
+        requestData,
+        token
       );
 
+      console.log('📋 Respuesta:', response);
+
+      if (!response.success) {
+        throw new Error(response.error || 'Error de conexión');
+      }
+
+      const data = response.data;
+
+      // Verificar el resultado de la operación
+      if (data?.resultado) {
+        Alert.alert(
+          'Éxito',
+          'El servicio ha sido actualizado exitosamente',
+          [
+            {
+              text: 'Continuar',
+              onPress: handleGoBack,
+            },
+          ]
+        );
+      } else {
+        // Manejar errores del servidor
+        const errorMessage = data?.error && data.error.length > 0 
+          ? data.error.map(err => err.Message).join('\n')
+          : 'Error al actualizar el servicio';
+        
+        Alert.alert('Error', errorMessage);
+      }
+
     } catch (error: any) {
-      console.error('Error actualizando servicio:', error);
+      console.error('📋 Error actualizando servicio:', error);
       
       Alert.alert(
         'Error',
-        'Error al actualizar el servicio. Verifica tu conexión e intenta nuevamente.'
+        error.message || 'Error al actualizar el servicio. Verifica tu conexión e intenta nuevamente.'
       );
     } finally {
       setIsLoading(false);

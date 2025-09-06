@@ -23,6 +23,7 @@ export const API_CONFIG = {
     REGISTER_USER: '/RegistrarUsuario',
     RESEND_VERIFICATION_CODE: '/GenerarNuevoCodigoVerificacion',
     LISTAR_SERVICIOS_PROFESIONAL: '/Servicios/ListarServiciosProfesional',
+    CREAR_SERVICIO: '/Servicios/CrearServicio',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

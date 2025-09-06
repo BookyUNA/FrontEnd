@@ -1,36 +1,243 @@
 /**
  * Pantalla de Crear Servicio - Booky
- * Pantalla placeholder para la creación de servicios
- * Esta pantalla será desarrollada completamente más adelante
+ * Formulario completo para la creación de servicios profesionales
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Alert,
+  TouchableOpacity,
+  Switch,
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { SafeContainer } from '../../components/ui/SafeContainer';
+import { Input } from '../../components/forms/Input';
 import { Button } from '../../components/forms/Button';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
+import { apiService } from '../../services/api/apiService';
+import { authService } from '../../services/auth/authService';
+import { API_CONFIG } from '../../config/api';
 
 interface CreateServiceScreenProps {
   navigation?: any;
   route?: any;
 }
 
+// Request para crear servicio
+interface ReqCrearServicio {
+  nombre: string;
+  descripcion: string;
+  duracionMinutos: number;
+  precio: number;
+  permiteDescuento: boolean;
+  porcentajeDescuento: number;
+}
+
+// Response de crear servicio
+interface ResCrearServicio {
+  idServicio: number;
+  error: Array<{
+    ErrorCode: number;
+    Message: string;
+  }>;
+  resultado: boolean;
+}
+
 export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({ 
   navigation 
 }) => {
+  // Estados del formulario
+  const [nombre, setNombre] = useState('');
+  const [descripcion, setDescripcion] = useState('');
+  const [duracion, setDuracion] = useState('');
+  const [precio, setPrecio] = useState('');
+  const [activarDescuento, setActivarDescuento] = useState(false);
+  const [porcentajeDescuento, setPorcentajeDescuento] = useState('');
+  
+  // Estados de control
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
 
   /**
-   * Navegar de regreso a servicios
+   * Formatear precio con máscara de moneda
+   */
+  const formatPrice = (value: string) => {
+    // Remover todos los caracteres que no sean números
+    const numericValue = value.replace(/[^0-9]/g, '');
+    
+    if (numericValue === '') return '';
+    
+    // Convertir a número y formatear con separadores de miles
+    const number = parseInt(numericValue, 10);
+    return number.toLocaleString('es-CR');
+  };
+
+  /**
+   * Manejar cambio en el precio
+   */
+  const handlePriceChange = (value: string) => {
+    const formatted = formatPrice(value);
+    setPrecio(formatted);
+    
+    // Limpiar error si existe
+    if (errors.precio) {
+      setErrors(prev => ({ ...prev, precio: '' }));
+    }
+  };
+
+  /**
+   * Obtener valor numérico del precio
+   */
+  const getPriceValue = () => {
+    return parseInt(precio.replace(/[^0-9]/g, '') || '0', 10);
+  };
+
+  /**
+   * Validar formulario
+   */
+  const validateForm = (): boolean => {
+    const newErrors: {[key: string]: string} = {};
+
+    // Validar nombre
+    if (!nombre.trim()) {
+      newErrors.nombre = 'El nombre del servicio es obligatorio';
+    } else if (nombre.trim().length < 3) {
+      newErrors.nombre = 'El nombre debe tener al menos 3 caracteres';
+    }
+
+    // Validar descripción
+    if (!descripcion.trim()) {
+      newErrors.descripcion = 'La descripción es obligatoria';
+    } else if (descripcion.trim().length < 10) {
+      newErrors.descripcion = 'La descripción debe tener al menos 10 caracteres';
+    }
+
+    // Validar duración
+    const duracionNum = parseInt(duracion);
+    if (!duracion || isNaN(duracionNum)) {
+      newErrors.duracion = 'La duración es obligatoria';
+    } else if (duracionNum <= 0) {
+      newErrors.duracion = 'La duración debe ser mayor a 0';
+    } else if (duracionNum > 480) { // 8 horas máximo
+      newErrors.duracion = 'La duración no puede ser mayor a 480 minutos (8 horas)';
+    }
+
+    // Validar precio
+    const precioNum = getPriceValue();
+    if (precioNum <= 0) {
+      newErrors.precio = 'El precio debe ser mayor a 0';
+    }
+
+    // Validar descuento si está activado
+    if (activarDescuento) {
+      const descuentoNum = parseFloat(porcentajeDescuento);
+      if (!porcentajeDescuento || isNaN(descuentoNum)) {
+        newErrors.porcentajeDescuento = 'El porcentaje de descuento es obligatorio';
+      } else if (descuentoNum <= 0) {
+        newErrors.porcentajeDescuento = 'El descuento debe ser mayor a 0%';
+      } else if (descuentoNum >= 100) {
+        newErrors.porcentajeDescuento = 'El descuento debe ser menor a 100%';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  /**
+   * Crear servicio
+   */
+  const handleCreateService = async () => {
+    if (!validateForm()) {
+      Alert.alert('Error', 'Por favor corrige los errores en el formulario');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Verificar autenticación
+      const isAuthenticated = await authService.isAuthenticated();
+      if (!isAuthenticated) {
+        Alert.alert('Error', 'Debes iniciar sesión para crear un servicio');
+        return;
+      }
+
+      // Obtener token
+      const token = await authService.getToken();
+      if (!token) {
+        Alert.alert('Error', 'Token de acceso no disponible');
+        return;
+      }
+
+      // Preparar datos del servicio
+      const serviceData: ReqCrearServicio = {
+        nombre: nombre.trim(),
+        descripcion: descripcion.trim(),
+        duracionMinutos: parseInt(duracion),
+        precio: getPriceValue(),
+        permiteDescuento: activarDescuento,
+        porcentajeDescuento: activarDescuento ? parseFloat(porcentajeDescuento) : 0,
+      };
+
+      console.log('📋 Creando servicio:', serviceData);
+
+      // Realizar petición
+      const response = await apiService.post<ResCrearServicio>(
+        API_CONFIG.ENDPOINTS.CREAR_SERVICIO,
+        serviceData,
+        token
+      );
+
+      console.log('📋 Respuesta:', response);
+
+      if (!response.success) {
+        throw new Error(response.error || 'Error de conexión');
+      }
+
+      const data = response.data;
+      
+      if (data?.resultado) {
+        Alert.alert(
+          'Éxito',
+          'El servicio ha sido creado exitosamente',
+          [
+            {
+              text: 'Continuar',
+              onPress: handleGoBack,
+            },
+          ]
+        );
+      } else {
+        // Manejar errores del servidor
+        const errorMessage = data?.error && data.error.length > 0 
+          ? data.error.map(e => e.Message).join('\n')
+          : 'Error al crear el servicio';
+        
+        Alert.alert('Error', errorMessage);
+      }
+
+    } catch (error: any) {
+      console.error('📋 Error creando servicio:', error);
+      
+      Alert.alert(
+        'Error',
+        error.message || 'Error al crear el servicio. Verifica tu conexión e intenta nuevamente.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Navegar de regreso
    */
   const handleGoBack = () => {
     if (navigation?.goBack) {
@@ -41,20 +248,17 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
   };
 
   /**
-   * Mostrar que la funcionalidad estará disponible próximamente
+   * Manejar cambio en el switch de descuento
    */
-  const handleShowComingSoon = () => {
-    Alert.alert(
-      'Funcionalidad en Desarrollo',
-      'La creación de servicios estará disponible en una próxima actualización. ' +
-      'Por ahora, esta pantalla sirve como placeholder para la navegación.',
-      [
-        {
-          text: 'Entendido',
-          onPress: handleGoBack,
-        },
-      ]
-    );
+  const handleDiscountToggle = (value: boolean) => {
+    setActivarDescuento(value);
+    if (!value) {
+      setPorcentajeDescuento('');
+      // Limpiar error de descuento si existe
+      if (errors.porcentajeDescuento) {
+        setErrors(prev => ({ ...prev, porcentajeDescuento: '' }));
+      }
+    }
   };
 
   return (
@@ -63,89 +267,195 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
         <View style={styles.header}>
-          <Icon 
-            name="plus-circle" 
-            size={64} 
-            color={colors.primary.main} 
-            style={styles.headerIcon}
-          />
-          <Text style={styles.title}>Crear Nuevo Servicio</Text>
-          <Text style={styles.subtitle}>
-            Agrega un nuevo servicio que tus clientes puedan reservar
-          </Text>
-        </View>
-
-        {/* Contenido Principal */}
-        <View style={styles.content}>
-          <View style={styles.placeholderCard}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handleGoBack}
+            disabled={isLoading}
+          >
+            <Icon name="arrow-left" size={20} color={colors.primary.main} />
+          </TouchableOpacity>
+          
+          <View style={styles.headerContent}>
             <Icon 
-              name="hammer" 
-              size={48} 
-              color={colors.states.warning} 
-              style={styles.placeholderIcon}
+              name="plus-circle" 
+              size={32} 
+              color={colors.primary.main} 
+              style={styles.headerIcon}
             />
-            
-            <Text style={styles.placeholderTitle}>
-              🚧 En Construcción
+            <Text style={styles.title}>Crear Nuevo Servicio</Text>
+            <Text style={styles.subtitle}>
+              Complete la información del servicio que desea ofrecer
             </Text>
-            
-            <Text style={styles.placeholderDescription}>
-              Esta funcionalidad está siendo desarrollada y estará disponible próximamente.
-            </Text>
-            
-            <View style={styles.featuresList}>
-              <Text style={styles.featuresTitle}>Funcionalidades que incluirá:</Text>
-              
-              <View style={styles.featureItem}>
-                <Icon name="check" size={14} color={colors.states.success} />
-                <Text style={styles.featureText}>Nombre y descripción del servicio</Text>
-              </View>
-              
-              <View style={styles.featureItem}>
-                <Icon name="check" size={14} color={colors.states.success} />
-                <Text style={styles.featureText}>Duración y precio personalizables</Text>
-              </View>
-              
-              <View style={styles.featureItem}>
-                <Icon name="check" size={14} color={colors.states.success} />
-                <Text style={styles.featureText}>Opciones de descuento</Text>
-              </View>
-              
-              <View style={styles.featureItem}>
-                <Icon name="check" size={14} color={colors.states.success} />
-                <Text style={styles.featureText}>Configuración de disponibilidad</Text>
-              </View>
-              
-              <View style={styles.featureItem}>
-                <Icon name="check" size={14} color={colors.states.success} />
-                <Text style={styles.featureText}>Activación/desactivación de servicios</Text>
-              </View>
-            </View>
-
-            <Button
-              title="Más Información"
-              onPress={handleShowComingSoon}
-              variant="outline"
-              icon="info-circle"
-            />
           </View>
         </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
+        {/* Formulario */}
+        <View style={styles.form}>
+          {/* Nombre del servicio */}
+          <View style={styles.field}>
+            <Text style={styles.label}>
+              Nombre del servicio <Text style={styles.required}>*</Text>
+            </Text>
+            <Input
+              value={nombre}
+              onChangeText={(text) => {
+                setNombre(text);
+                if (errors.nombre) {
+                  setErrors(prev => ({ ...prev, nombre: '' }));
+                }
+              }}
+              placeholder="Ej: Corte de cabello"
+              autoCapitalize="words"
+              disabled={isLoading}
+            />
+            {errors.nombre && <Text style={styles.errorText}>{errors.nombre}</Text>}
+          </View>
+
+          {/* Descripción */}
+          <View style={styles.field}>
+            <Text style={styles.label}>
+              Descripción <Text style={styles.required}>*</Text>
+            </Text>
+            <Input
+              value={descripcion}
+              onChangeText={(text) => {
+                setDescripcion(text);
+                if (errors.descripcion) {
+                  setErrors(prev => ({ ...prev, descripcion: '' }));
+                }
+              }}
+              placeholder="Describe tu servicio en detalle..."
+              autoCapitalize="sentences"
+              disabled={isLoading}
+            />
+            {errors.descripcion && <Text style={styles.errorText}>{errors.descripcion}</Text>}
+          </View>
+
+          {/* Duración */}
+          <View style={styles.field}>
+            <Text style={styles.label}>
+              Duración (minutos) <Text style={styles.required}>*</Text>
+            </Text>
+            <Input
+              value={duracion}
+              onChangeText={(text) => {
+                setDuracion(text.replace(/[^0-9]/g, ''));
+                if (errors.duracion) {
+                  setErrors(prev => ({ ...prev, duracion: '' }));
+                }
+              }}
+              placeholder="60"
+              keyboardType="numeric"
+              disabled={isLoading}
+            />
+            {errors.duracion && <Text style={styles.errorText}>{errors.duracion}</Text>}
+          </View>
+
+          {/* Precio */}
+          <View style={styles.field}>
+            <Text style={styles.label}>
+              Precio <Text style={styles.required}>*</Text>
+            </Text>
+            <View style={styles.priceContainer}>
+              <Text style={styles.currencySymbol}>₡</Text>
+              <View style={styles.inputWrapper}>
+                <Input
+                  value={precio}
+                  onChangeText={handlePriceChange}
+                  placeholder="0"
+                  keyboardType="numeric"
+                  disabled={isLoading}
+                />
+              </View>
+            </View>
+            {errors.precio && <Text style={styles.errorText}>{errors.precio}</Text>}
+          </View>
+
+          {/* Activar descuento */}
+          <View style={styles.field}>
+            <View style={styles.switchContainer}>
+              <View style={styles.switchLabel}>
+                <Icon 
+                  name="percentage" 
+                  size={16} 
+                  color={colors.text.primary} 
+                  style={styles.switchIcon}
+                />
+                <Text style={styles.label}>Activar descuento</Text>
+              </View>
+              <Switch
+                value={activarDescuento}
+                onValueChange={handleDiscountToggle}
+                trackColor={{ 
+                  false: colors.background.tertiary, 
+                  true: colors.primary.light 
+                }}
+                thumbColor={activarDescuento ? colors.primary.main : colors.text.tertiary}
+                disabled={isLoading}
+              />
+            </View>
+          </View>
+
+          {/* Porcentaje de descuento (solo si está activado) */}
+          {activarDescuento && (
+            <View style={styles.field}>
+              <Text style={styles.label}>
+                Porcentaje de descuento <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.percentageContainer}>
+                <View style={styles.inputWrapper}>
+                  <Input
+                    value={porcentajeDescuento}
+                    onChangeText={(text) => {
+                      // Solo permitir números y un punto decimal
+                      const cleanText = text.replace(/[^0-9.]/g, '');
+                      // Evitar múltiples puntos
+                      const parts = cleanText.split('.');
+                      if (parts.length > 2) {
+                        return;
+                      }
+                      setPorcentajeDescuento(cleanText);
+                      if (errors.porcentajeDescuento) {
+                        setErrors(prev => ({ ...prev, porcentajeDescuento: '' }));
+                      }
+                    }}
+                    placeholder="15"
+                    keyboardType="numeric"
+                    disabled={isLoading}
+                  />
+                </View>
+                <Text style={styles.percentageSymbol}>%</Text>
+              </View>
+              {errors.porcentajeDescuento && (
+                <Text style={styles.errorText}>{errors.porcentajeDescuento}</Text>
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* Botones */}
+        <View style={styles.buttonContainer}>
           <Button
-            title="Volver a Servicios"
-            onPress={handleGoBack}
+            title="Crear Servicio"
+            onPress={handleCreateService}
             variant="primary"
-            icon="arrow-left"
+            icon="check"
+            loading={isLoading}
+            disabled={isLoading}
           />
           
-          <Text style={styles.footerNote}>
-            Mientras tanto, puedes gestionar tus servicios existentes desde la pantalla anterior.
-          </Text>
+          <View style={styles.cancelButtonContainer}>
+            <Button
+              title="Cancelar"
+              onPress={handleGoBack}
+              variant="outline"
+              disabled={isLoading}
+            />
+          </View>
         </View>
       </ScrollView>
     </SafeContainer>
@@ -161,105 +471,124 @@ const styles = StyleSheet.create({
   contentContainer: {
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.md,
   },
 
   header: {
-    alignItems: 'center',
     marginBottom: spacing.xl,
   },
 
+  backButton: {
+    alignSelf: 'flex-start',
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+
+  headerContent: {
+    alignItems: 'center',
+  },
+
   headerIcon: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     opacity: 0.8,
   },
 
   title: {
-    ...typography.styles.h1,
+    ...typography.styles.h2,
     color: colors.text.primary,
     textAlign: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
 
   subtitle: {
     ...typography.styles.body,
     color: colors.text.secondary,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
   },
 
-  content: {
+  form: {
     flex: 1,
-    justifyContent: 'center',
   },
 
-  placeholderCard: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: 16,
-    padding: spacing.xl,
-    alignItems: 'center',
-    shadowColor: colors.text.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 2,
-  },
-
-  placeholderIcon: {
+  field: {
     marginBottom: spacing.lg,
-    opacity: 0.7,
   },
 
-  placeholderTitle: {
-    ...typography.styles.h2,
-    color: colors.text.primary,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-
-  placeholderDescription: {
+  label: {
     ...typography.styles.body,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.xl,
-  },
-
-  featuresList: {
-    width: '100%',
-    marginBottom: spacing.xl,
-  },
-
-  featuresTitle: {
-    ...typography.styles.h3,
     color: colors.text.primary,
-    marginBottom: spacing.md,
-  },
-
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontWeight: '600',
     marginBottom: spacing.sm,
   },
 
-  featureText: {
+  required: {
+    color: colors.states.error,
+  },
+
+  errorText: {
+    ...typography.styles.caption,
+    color: colors.states.error,
+    marginTop: spacing.xs,
+  },
+
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.secondary,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.background.tertiary,
+  },
+
+  currencySymbol: {
     ...typography.styles.body,
     color: colors.text.secondary,
-    marginLeft: spacing.md,
+    paddingHorizontal: spacing.md,
+    fontWeight: '600',
+  },
+
+  inputWrapper: {
     flex: 1,
   },
 
-  footer: {
-    marginTop: spacing.xl,
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+  },
+
+  switchLabel: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
 
-  footerNote: {
-    ...typography.styles.caption,
+  switchIcon: {
+    marginRight: spacing.sm,
+  },
+
+  percentageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.secondary,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.background.tertiary,
+  },
+
+  percentageSymbol: {
+    ...typography.styles.body,
     color: colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 18,
-    fontStyle: 'italic',
-    marginTop: spacing.lg,
+    paddingHorizontal: spacing.md,
+    fontWeight: '600',
+  },
+
+  buttonContainer: {
+    marginTop: spacing.xl,
+  },
+
+  cancelButtonContainer: {
+    marginTop: spacing.md,
   },
 });

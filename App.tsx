@@ -17,6 +17,7 @@ import { HomeScreen } from "./src/screens/main/HomeScreen";
 import { ForgotPasswordScreen } from "./src/screens/auth/ForgotPasswordScreen";
 import { ResetPasswordScreen } from "./src/screens/auth/ResetPasswordScreen";
 import { CreateServiceScreen } from "./src/screens/services/CreateServiceScreen";
+import { EditServiceScreen } from "./src/screens/services/EditServiceScreen";
 
 import { authService } from "./src/services/auth/authService";
 import { SafeContainer } from "./src/components/ui/SafeContainer";
@@ -32,6 +33,7 @@ export type RootStackParamList = {
   ResetPassword: undefined;
   Home: undefined;
   CreateService: undefined;
+  EditService: { service: any } | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -86,12 +88,29 @@ function App(): React.JSX.Element {
               )}
             </Stack.Screen>
 
-            {/* Pantalla de crear servicio - solo accesible desde navegación */}
+            {/* Pantalla de crear servicio */}
             <Stack.Screen 
               name="CreateService" 
               component={CreateServiceScreen}
               options={{ 
                 title: "Crear Servicio",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
+            />
+
+            {/* Pantalla de editar servicio */}
+            <Stack.Screen 
+              name="EditService" 
+              component={EditServiceScreen}
+              options={{ 
+                title: "Editar Servicio",
                 headerStyle: {
                   backgroundColor: colors.background.primary,
                 },

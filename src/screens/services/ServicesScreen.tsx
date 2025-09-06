@@ -15,6 +15,8 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Modal,
+  TouchableWithoutFeedback,
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/FontAwesome5';
@@ -52,6 +54,15 @@ interface ServicesScreenProps {
   onCreateService?: () => void;
 }
 
+// Interfaz para opciones del menú contextual
+interface MenuOption {
+  id: string;
+  title: string;
+  icon: string;
+  color?: string;
+  onPress: () => void;
+}
+
 export const ServicesScreen: React.FC<ServicesScreenProps> = ({ 
   navigation,
   onCreateService 
@@ -66,6 +77,10 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
 
   // Estados filtrados para el buscador
   const [filteredServices, setFilteredServices] = useState<Servicio[]>([]);
+
+  // Estados para el menú contextual
+  const [showContextMenu, setShowContextMenu] = useState<boolean>(false);
+  const [selectedService, setSelectedService] = useState<Servicio | null>(null);
 
   /**
    * Hook para recargar datos cuando la pantalla recibe el foco
@@ -187,6 +202,52 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
   };
 
   /**
+   * Manejar presión larga en servicio
+   */
+  const handleLongPress = (service: Servicio) => {
+    setSelectedService(service);
+    setShowContextMenu(true);
+  };
+
+  /**
+   * Cerrar menú contextual
+   */
+  const closeContextMenu = () => {
+    setShowContextMenu(false);
+    setSelectedService(null);
+  };
+
+  /**
+   * Manejar edición de servicio
+   */
+  const handleEditService = () => {
+    if (selectedService && navigation?.navigate) {
+      console.log('Editando servicio:', selectedService.Nombre);
+      navigation.navigate('EditService', { service: selectedService });
+    } else if (selectedService) {
+      Alert.alert(
+        'Editar Servicio',
+        `Funcionalidad para editar "${selectedService.Nombre}" en desarrollo.`,
+        [{ text: 'OK' }]
+      );
+    }
+    closeContextMenu();
+  };
+
+  /**
+   * Obtener opciones del menú contextual
+   */
+  const getMenuOptions = (): MenuOption[] => [
+    {
+      id: 'edit',
+      title: 'Editar Servicio',
+      icon: 'edit',
+      color: colors.primary.main,
+      onPress: handleEditService,
+    },
+  ];
+
+  /**
    * Formatear precio para mostrar
    */
   const formatPrice = (price: number): string => {
@@ -253,6 +314,7 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
         onPress={() => {
           console.log('Servicio seleccionado:', service.Nombre);
         }}
+        onLongPress={() => handleLongPress(service)}
       >
         {/* Indicador de disponibilidad */}
         <View style={[
@@ -348,6 +410,84 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
       />
     </View>
   );
+
+  /**
+   * Renderizar menú contextual
+   */
+  const renderContextMenu = () => {
+    if (!selectedService) return null;
+
+    const menuOptions = getMenuOptions();
+
+    return (
+      <Modal
+        visible={showContextMenu}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeContextMenu}
+      >
+        <TouchableWithoutFeedback onPress={closeContextMenu}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.contextMenu}>
+                {/* Header del menú */}
+                <View style={styles.menuHeader}>
+                  <Text style={styles.menuTitle} numberOfLines={1}>
+                    {selectedService.Nombre}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={closeContextMenu}
+                    style={styles.closeButton}
+                  >
+                    <Icon name="times" size={16} color={colors.text.secondary} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Lista de opciones */}
+                <View style={styles.menuOptions}>
+                  {menuOptions.map((option, index) => (
+                    <TouchableOpacity
+                      key={option.id}
+                      style={[
+                        styles.menuOption,
+                        index < menuOptions.length - 1 && styles.menuOptionWithBorder
+                      ]}
+                      onPress={option.onPress}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.optionContent}>
+                        <View style={[
+                          styles.optionIcon,
+                          { backgroundColor: (option.color || colors.text.secondary) + '15' }
+                        ]}>
+                          <Icon 
+                            name={option.icon} 
+                            size={16} 
+                            color={option.color || colors.text.secondary} 
+                          />
+                        </View>
+                        <Text style={[
+                          styles.optionText,
+                          { color: option.color || colors.text.primary }
+                        ]}>
+                          {option.title}
+                        </Text>
+                      </View>
+                      <Icon 
+                        name="chevron-right" 
+                        size={12} 
+                        color={colors.text.tertiary} 
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
+  };
 
   return (
     <SafeContainer>
@@ -446,6 +586,9 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
             <Icon name="plus" size={20} color="white" />
           </TouchableOpacity>
         )}
+
+        {/* Menú contextual */}
+        {renderContextMenu()}
       </View>
     </SafeContainer>
   );
@@ -688,5 +831,91 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 8,
+  },
+
+  // Estilos para el menú contextual
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+
+  contextMenu: {
+    backgroundColor: colors.background.secondary,
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 300,
+    shadowColor: colors.text.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+
+  menuHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.background.tertiary,
+  },
+
+  menuTitle: {
+    ...typography.styles.h3,
+    color: colors.text.primary,
+    flex: 1,
+    marginRight: spacing.md,
+  },
+
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.background.tertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  menuOptions: {
+    paddingVertical: spacing.sm,
+  },
+
+  menuOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+
+  menuOptionWithBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.background.tertiary,
+  },
+
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+
+  optionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+
+  optionText: {
+    ...typography.styles.body,
+    fontWeight: typography.fontWeight.medium,
+    flex: 1,
   },
 });

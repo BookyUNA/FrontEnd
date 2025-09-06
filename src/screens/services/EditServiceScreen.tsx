@@ -263,17 +263,9 @@ export const EditServiceScreen: React.FC<EditServiceScreenProps> = ({
             onPress={handleGoBack}
             disabled={isLoading}
           >
-            <Icon name="arrow-left" size={20} color={colors.primary.main} />
           </TouchableOpacity>
           
           <View style={styles.headerContent}>
-            <Icon 
-              name="edit" 
-              size={32} 
-              color={colors.primary.main} 
-              style={styles.headerIcon}
-            />
-            <Text style={styles.title}>Editar Servicio</Text>
             <Text style={styles.subtitle}>
               Modifica la información de tu servicio
             </Text>

@@ -276,17 +276,9 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
             onPress={handleGoBack}
             disabled={isLoading}
           >
-            <Icon name="arrow-left" size={20} color={colors.primary.main} />
           </TouchableOpacity>
           
           <View style={styles.headerContent}>
-            <Icon 
-              name="plus-circle" 
-              size={32} 
-              color={colors.primary.main} 
-              style={styles.headerIcon}
-            />
-            <Text style={styles.title}>Crear Nuevo Servicio</Text>
             <Text style={styles.subtitle}>
               Complete la información del servicio que desea ofrecer
             </Text>

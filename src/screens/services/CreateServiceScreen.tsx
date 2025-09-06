@@ -271,12 +271,7 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleGoBack}
-            disabled={isLoading}
-          >
-          </TouchableOpacity>
+          
           
           <View style={styles.headerContent}>
             <Text style={styles.subtitle}>

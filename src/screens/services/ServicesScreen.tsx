@@ -4,7 +4,7 @@
  * Incluye buscador, listado y opción para crear servicios
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/FontAwesome5';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeContainer } from '../../components/ui/SafeContainer';
 import { Input } from '../../components/forms/Input';
 import { Button } from '../../components/forms/Button';
@@ -67,6 +68,16 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
   const [filteredServices, setFilteredServices] = useState<Servicio[]>([]);
 
   /**
+   * Hook para recargar datos cuando la pantalla recibe el foco
+   * Se ejecuta cada vez que el usuario regresa a esta pantalla
+   */
+  useFocusEffect(
+    useCallback(() => {
+      loadServices();
+    }, [])
+  );
+
+  /**
    * Preparar datos para el grid - agregar elemento vacío si es impar
    */
   const prepareGridData = (data: Servicio[]) => {
@@ -87,11 +98,6 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
     }
     return gridData;
   };
-
-  // Cargar servicios al montar el componente
-  useEffect(() => {
-    loadServices();
-  }, []);
 
   // Filtrar servicios cuando cambia la búsqueda
   useEffect(() => {

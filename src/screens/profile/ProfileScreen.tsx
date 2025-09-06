@@ -27,7 +27,7 @@ import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 import { userService, ApiProfileResponse, EditProfileRequest } from '../../services/user/userService';
-
+import { jwtDecoder } from '../../utils/jwtDecoder';
 
 // =============================================
 // INTERFACES Y MODELOS
@@ -38,6 +38,7 @@ interface UserProfile {
   email: string;
   cedula: string;
   telefono: string | null;
+  role?: string;
 }
 
 interface EditableUserData {
@@ -73,6 +74,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   
   // Estados principales
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userRole, setUserRole] = useState<string>('Cliente');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -92,7 +94,29 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   useEffect(() => {
     loadUserProfile();
+    loadUserRoleFromToken();
   }, []);
+
+  const loadUserRoleFromToken = async () => {
+    try {
+      console.log('📱 ProfileScreen: Extrayendo rol del token...');
+      const token = await authService.getToken();
+      
+      if (token) {
+        const role = jwtDecoder.getUserRole(token);
+        if (role) {
+          console.log('📱 ProfileScreen: Rol extraído del token:', role);
+          setUserRole(role);
+        } else {
+          console.warn('📱 ProfileScreen: No se pudo extraer el rol del token');
+        }
+      } else {
+        console.warn('📱 ProfileScreen: No hay token disponible');
+      }
+    } catch (error) {
+      console.error('📱 ProfileScreen: Error extrayendo rol del token:', error);
+    }
+  };
 
   const loadUserProfile = async () => {
     try {
@@ -402,7 +426,7 @@ const validateForm = (): boolean => {
             <Text style={styles.userName}>{userProfile.nombre}</Text>
             <View style={styles.roleContainer}>
               <Icon name="tag" size={12} color={colors.primary.main} />
-              <Text style={styles.userRole}>Cliente</Text>
+              <Text style={styles.userRole}>{userRole}</Text>
             </View>
           </View>
         </View>

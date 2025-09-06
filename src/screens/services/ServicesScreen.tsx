@@ -30,6 +30,9 @@ import { servicesService } from '../../services/services/servicesService';
 const { width } = Dimensions.get('window');
 const cardWidth = (width - (spacing.lg * 2) - spacing.md) / 2;
 
+// Color unificado para todos los servicios
+const SERVICE_COLOR = '#8676F3';
+
 // Tipos para servicios
 export interface Servicio {
   IdServicio: number;
@@ -207,35 +210,24 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
   };
 
   /**
-   * Obtener emoji por categoría basado en el nombre
+   * Obtener iniciales del nombre del servicio
    */
-  const getServiceEmoji = (serviceName: string): string => {
-    const name = serviceName.toLowerCase();
-    if (name.includes('maquillaje') || name.includes('belleza') || name.includes('nail')) return '💄';
-    if (name.includes('entrena') || name.includes('fitness') || name.includes('gym')) return '🏋';
-    if (name.includes('limpieza') || name.includes('hogar') || name.includes('casa')) return '🏠';
-    if (name.includes('reparar') || name.includes('pc') || name.includes('tech')) return '💻';
-    if (name.includes('clase') || name.includes('inglés') || name.includes('educación')) return '📚';
-    if (name.includes('masaje') || name.includes('salud') || name.includes('terapia')) return '💆';
-    if (name.includes('chef') || name.includes('cocina') || name.includes('comida')) return '🍳';
-    if (name.includes('conductor') || name.includes('transporte') || name.includes('uber')) return '🚗';
-    return '⭐'; // Default
-  };
-
-  /**
-   * Obtener color de fondo del icono
-   */
-  const getServiceColor = (serviceName: string): string => {
-    const name = serviceName.toLowerCase();
-    if (name.includes('maquillaje') || name.includes('belleza') || name.includes('nail')) return '#ff9a9e';
-    if (name.includes('entrena') || name.includes('fitness') || name.includes('gym')) return '#a8edea';
-    if (name.includes('limpieza') || name.includes('hogar') || name.includes('casa')) return '#ffecd2';
-    if (name.includes('reparar') || name.includes('pc') || name.includes('tech')) return '#a8caba';
-    if (name.includes('clase') || name.includes('inglés') || name.includes('educación')) return '#fbc2eb';
-    if (name.includes('masaje') || name.includes('salud') || name.includes('terapia')) return '#fdcbf1';
-    if (name.includes('chef') || name.includes('cocina') || name.includes('comida')) return '#ff9a56';
-    if (name.includes('conductor') || name.includes('transporte') || name.includes('uber')) return '#4ecdc4';
-    return colors.primary.light; // Default
+  const getServiceInitials = (serviceName: string): string => {
+    if (!serviceName) return 'S';
+    
+    const words = serviceName.trim().split(' ');
+    
+    if (words.length === 1) {
+      // Si es una sola palabra, tomar las primeras 2 letras
+      return words[0].substring(0, 2).toUpperCase();
+    } else {
+      // Si son múltiples palabras, tomar la primera letra de cada una (máximo 2)
+      return words
+        .slice(0, 2)
+        .map(word => word.charAt(0))
+        .join('')
+        .toUpperCase();
+    }
   };
 
   /**
@@ -263,18 +255,12 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
         ]} />
         
         {/* Indicador de categoría inferior */}
-        <View style={[
-          styles.categoryIndicator,
-          { backgroundColor: getServiceColor(service.Nombre) }
-        ]} />
+        <View style={styles.categoryIndicator} />
         
-        {/* Icono del servicio */}
-        <View style={[
-          styles.serviceIcon,
-          { backgroundColor: getServiceColor(service.Nombre) + '40' }
-        ]}>
-          <Text style={styles.serviceEmoji}>
-            {getServiceEmoji(service.Nombre)}
+        {/* Icono con iniciales del servicio */}
+        <View style={styles.serviceIcon}>
+          <Text style={styles.serviceInitials}>
+            {getServiceInitials(service.Nombre)}
           </Text>
         </View>
         
@@ -590,25 +576,33 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
+    backgroundColor: SERVICE_COLOR,
     opacity: 0.7,
   },
 
   serviceIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 20,
+    backgroundColor: SERVICE_COLOR + '20',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     alignSelf: 'flex-start',
+    borderWidth: 2,
+    borderColor: SERVICE_COLOR + '40',
   },
 
-  serviceEmoji: {
-    fontSize: 20,
+  serviceInitials: {
+    fontSize: 12,
+    fontWeight: typography.fontWeight.bold,
+    color: SERVICE_COLOR,
+    letterSpacing: 0.5,
   },
 
   cardContent: {
     flex: 1,
+    marginTop: 0,
   },
 
   serviceName: {
@@ -626,27 +620,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginBottom: spacing.sm,
     lineHeight: 15,
-  },
-
-  ratingContainer: {
-    marginBottom: spacing.md,
-  },
-
-  starsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-
-  stars: {
-    color: '#ffc107',
-    fontSize: 11,
-  },
-
-  ratingNumber: {
-    fontSize: 11,
-    color: colors.text.secondary,
-    fontWeight: typography.fontWeight.medium,
   },
 
   cardFooter: {

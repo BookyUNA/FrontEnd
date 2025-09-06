@@ -221,9 +221,10 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
    * Manejar edición de servicio
    */
   const handleEditService = () => {
-    if (selectedService) {
+    if (selectedService && navigation?.navigate) {
       console.log('Editando servicio:', selectedService.Nombre);
-      // Aquí irá la navegación a la pantalla de edición
+      navigation.navigate('EditService', { service: selectedService });
+    } else if (selectedService) {
       Alert.alert(
         'Editar Servicio',
         `Funcionalidad para editar "${selectedService.Nombre}" en desarrollo.`,

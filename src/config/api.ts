@@ -12,7 +12,7 @@ export const API_CONFIG = {
     FORGOT_PASSWORD: '/generarNuevoCodigoRecuperacion',
     RESET_PASSWORD: '/CambiarContrasena',
     PROFILE: '/MiPerfil',
-    EDIT_PROFILE: '/editarInfoMiPerfil',
+    EDIT_PROFILE: '/EditarMiPerfil',
     VERIFY_EMAIL: '/VerificarEmail',  
     REGISTER_USER: '/RegistrarUsuario',
     RESEND_VERIFICATION_CODE: '/GenerarNuevoCodigoVerificacion',

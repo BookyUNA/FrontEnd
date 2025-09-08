@@ -64,7 +64,7 @@ const mapApiProfileToUserProfile = (api: ApiProfileResponse): UserProfile => ({
   Nombre: api.Nombre,
   email: api.Correo,
   cedula: api.Cedula,
-  Telefono: api.Telefono || null,
+  telefono: api.Telefono || null,
 });
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
@@ -132,7 +132,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       // Inicializar datos editables
       setEditData({
         Nombre: profile.Nombre,
-        Telefono: profile.Telefono || '',
+        Telefono: profile.telefono || '',
       });
 
       console.log('📱 ProfileScreen: Perfil procesado y establecido correctamente');
@@ -193,7 +193,7 @@ const validateForm = (): boolean => {
     if (userProfile) {
       setEditData({
         Nombre: userProfile.Nombre,
-        Telefono: userProfile.Telefono || '',
+        Telefono: userProfile.telefono || '',
       });
     }
     setIsEditing(false);

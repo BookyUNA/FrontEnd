@@ -513,7 +513,7 @@ class UserService {
       });
 
       // Realizar petición al endpoint
-      const response = await apiService.post<EditProfileResponse>(
+      const response = await apiService.put<EditProfileResponse>(
         API_CONFIG.ENDPOINTS.EDIT_PROFILE,
         updateData,
         token

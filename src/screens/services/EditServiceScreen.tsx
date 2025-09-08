@@ -1,9 +1,9 @@
 /**
- * Pantalla de Crear Servicio - Booky
- * Formulario completo para la creación de servicios profesionales
+ * Pantalla de Editar Servicio - Booky
+ * Formulario para la edición de servicios profesionales existentes
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -25,34 +25,52 @@ import { apiService } from '../../services/api/apiService';
 import { authService } from '../../services/auth/authService';
 import { API_CONFIG } from '../../config/api';
 
-interface CreateServiceScreenProps {
+interface EditServiceScreenProps {
   navigation?: any;
   route?: any;
 }
 
-// Request para crear servicio
-interface ReqCrearServicio {
+interface Servicio {
+  IdServicio: number;
+  Nombre: string;
+  Descripcion: string;
+  DuracionMinutos: number;
+  Precio: number;
+  PermiteDescuento: boolean;
+  PorcentajeDescuento: number;
+  FechaCreacion: string;
+  Estado: boolean;
+}
+
+interface ApiError {
+  ErrorCode: number;
+  Message: string;
+}
+
+interface ApiResponse {
+  error: ApiError[];
+  resultado: boolean;
+}
+
+// Request para actualizar servicio
+interface ReqActualizarServicio {
+  idServicio: number;
   nombre: string;
   descripcion: string;
   duracionMinutos: number;
   precio: number;
   permiteDescuento: boolean;
   porcentajeDescuento: number;
+  estado: boolean;
 }
 
-// Response de crear servicio
-interface ResCrearServicio {
-  idServicio: number;
-  error: Array<{
-    ErrorCode: number;
-    Message: string;
-  }>;
-  resultado: boolean;
-}
-
-export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({ 
-  navigation 
+export const EditServiceScreen: React.FC<EditServiceScreenProps> = ({ 
+  navigation,
+  route 
 }) => {
+  // Obtener servicio de los parámetros de navegación
+  const service: Servicio = route?.params?.service;
+
   // Estados del formulario
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -66,15 +84,27 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
   const [errors, setErrors] = useState<{[key: string]: string}>({});
 
   /**
+   * Cargar datos del servicio al inicializar el componente
+   */
+  useEffect(() => {
+    if (service) {
+      setNombre(service.Nombre);
+      setDescripcion(service.Descripcion);
+      setDuracion(service.DuracionMinutos.toString());
+      setPrecio(service.Precio.toLocaleString('es-CR'));
+      setActivarDescuento(service.PermiteDescuento);
+      setPorcentajeDescuento(service.PorcentajeDescuento > 0 ? service.PorcentajeDescuento.toString() : '');
+    }
+  }, [service]);
+
+  /**
    * Formatear precio con máscara de moneda
    */
   const formatPrice = (value: string) => {
-    // Remover todos los caracteres que no sean números
     const numericValue = value.replace(/[^0-9]/g, '');
     
     if (numericValue === '') return '';
     
-    // Convertir a número y formatear con separadores de miles
     const number = parseInt(numericValue, 10);
     return number.toLocaleString('es-CR');
   };
@@ -86,7 +116,6 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
     const formatted = formatPrice(value);
     setPrecio(formatted);
     
-    // Limpiar error si existe
     if (errors.precio) {
       setErrors(prev => ({ ...prev, precio: '' }));
     }
@@ -125,7 +154,7 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
       newErrors.duracion = 'La duración es obligatoria';
     } else if (duracionNum <= 0) {
       newErrors.duracion = 'La duración debe ser mayor a 0';
-    } else if (duracionNum > 720) { // 12 horas máximo
+    } else if (duracionNum > 720) {
       newErrors.duracion = 'La duración no puede ser mayor a 720 minutos (12 horas)';
     }
 
@@ -152,9 +181,9 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
   };
 
   /**
-   * Crear servicio
+   * Actualizar servicio mediante API
    */
-  const handleCreateService = async () => {
+  const handleUpdateService = async () => {
     if (!validateForm()) {
       Alert.alert('Error', 'Por favor corrige los errores en el formulario');
       return;
@@ -166,7 +195,7 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
       // Verificar autenticación
       const isAuthenticated = await authService.isAuthenticated();
       if (!isAuthenticated) {
-        Alert.alert('Error', 'Debes iniciar sesión para crear un servicio');
+        Alert.alert('Error', 'Debes iniciar sesión para editar un servicio');
         return;
       }
 
@@ -177,22 +206,24 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
         return;
       }
 
-      // Preparar datos del servicio
-      const serviceData: ReqCrearServicio = {
+      // Preparar datos para enviar al API
+      const requestData: ReqActualizarServicio = {
+        idServicio: service.IdServicio,
         nombre: nombre.trim(),
         descripcion: descripcion.trim(),
         duracionMinutos: parseInt(duracion),
         precio: getPriceValue(),
         permiteDescuento: activarDescuento,
         porcentajeDescuento: activarDescuento ? parseFloat(porcentajeDescuento) : 0,
+        estado: true
       };
 
-      console.log('📋 Creando servicio:', serviceData);
+      console.log('📋 Actualizando servicio:', requestData);
 
-      // Realizar petición
-      const response = await apiService.post<ResCrearServicio>(
-        API_CONFIG.ENDPOINTS.CREAR_SERVICIO,
-        serviceData,
+      // Realizar petición al endpoint usando apiService
+      const response = await apiService.post<ApiResponse>(
+        API_CONFIG.ENDPOINTS.ACTUALIZAR_SERVICIO || '/Servicios/ActualizarServicio',
+        requestData,
         token
       );
 
@@ -203,11 +234,12 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
       }
 
       const data = response.data;
-      
+
+      // Verificar el resultado de la operación
       if (data?.resultado) {
         Alert.alert(
           'Éxito',
-          'El servicio ha sido creado exitosamente',
+          'El servicio ha sido actualizado exitosamente',
           [
             {
               text: 'Continuar',
@@ -218,18 +250,18 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
       } else {
         // Manejar errores del servidor
         const errorMessage = data?.error && data.error.length > 0 
-          ? data.error.map(e => e.Message).join('\n')
-          : 'Error al crear el servicio';
+          ? data.error.map(err => err.Message).join('\n')
+          : 'Error al actualizar el servicio';
         
         Alert.alert('Error', errorMessage);
       }
 
     } catch (error: any) {
-      console.error('📋 Error creando servicio:', error);
+      console.error('📋 Error actualizando servicio:', error);
       
       Alert.alert(
         'Error',
-        error.message || 'Error al crear el servicio. Verifica tu conexión e intenta nuevamente.'
+        error.message || 'Error al actualizar el servicio. Verifica tu conexión e intenta nuevamente.'
       );
     } finally {
       setIsLoading(false);
@@ -242,8 +274,6 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
   const handleGoBack = () => {
     if (navigation?.goBack) {
       navigation.goBack();
-    } else if (navigation?.navigate) {
-      navigation.navigate('Services');
     }
   };
 
@@ -254,12 +284,31 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
     setActivarDescuento(value);
     if (!value) {
       setPorcentajeDescuento('');
-      // Limpiar error de descuento si existe
       if (errors.porcentajeDescuento) {
         setErrors(prev => ({ ...prev, porcentajeDescuento: '' }));
       }
     }
   };
+
+  // Verificar que se haya pasado un servicio
+  if (!service) {
+    return (
+      <SafeContainer>
+        <View style={styles.errorContainer}>
+          <Icon name="exclamation-triangle" size={48} color={colors.states.error} />
+          <Text style={styles.errorTitle}>Error</Text>
+          <Text style={styles.errorMessage}>
+            No se pudo cargar la información del servicio
+          </Text>
+          <Button
+            title="Volver"
+            onPress={handleGoBack}
+            variant="primary"
+          />
+        </View>
+      </SafeContainer>
+    );
+  }
 
   return (
     <SafeContainer>
@@ -272,10 +321,9 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
         {/* Header */}
         <View style={styles.header}>
           
-          
           <View style={styles.headerContent}>
             <Text style={styles.subtitle}>
-              Complete la información del servicio que desea ofrecer
+              Modifica la información de tu servicio
             </Text>
           </View>
         </View>
@@ -387,7 +435,7 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
             </View>
           </View>
 
-          {/* Porcentaje de descuento (solo si está activado) */}
+          {/* Porcentaje de descuento */}
           {activarDescuento && (
             <View style={styles.field}>
               <Text style={styles.label}>
@@ -398,9 +446,7 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
                   <Input
                     value={porcentajeDescuento}
                     onChangeText={(text) => {
-                      // Solo permitir números y un punto decimal
                       const cleanText = text.replace(/[^0-9.]/g, '');
-                      // Evitar múltiples puntos
                       const parts = cleanText.split('.');
                       if (parts.length > 2) {
                         return;
@@ -427,8 +473,8 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
         {/* Botones */}
         <View style={styles.buttonContainer}>
           <Button
-            title="Crear Servicio"
-            onPress={handleCreateService}
+            title="Actualizar Servicio"
+            onPress={handleUpdateService}
             variant="primary"
             icon="check"
             loading={isLoading}
@@ -577,5 +623,26 @@ const styles = StyleSheet.create({
 
   cancelButtonContainer: {
     marginTop: spacing.md,
+  },
+
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+
+  errorTitle: {
+    ...typography.styles.h2,
+    color: colors.states.error,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+
+  errorMessage: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
   },
 });

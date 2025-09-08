@@ -37,7 +37,7 @@ interface UserProfile {
   Nombre: string;
   email: string;
   cedula: string;
-  Telefono: string | null;
+  telefono: string | null;
   role?: string;
 }
 

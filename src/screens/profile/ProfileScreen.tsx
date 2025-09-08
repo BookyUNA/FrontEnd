@@ -34,7 +34,7 @@ import { jwtDecoder } from '../../utils/jwtDecoder';
 // =============================================
 
 interface UserProfile {
-  nombre: string;
+  Nombre: string;
   email: string;
   cedula: string;
   telefono: string | null;
@@ -42,13 +42,13 @@ interface UserProfile {
 }
 
 interface EditableUserData {
-  nombre: string;
-  telefono: string;
+  Nombre: string;
+  Telefono: string;
 }
 
 interface ValidationErrors {
-  nombre?: string;
-  telefono?: string;
+  Nombre?: string;
+  Telefono?: string;
 }
 
 // =============================================
@@ -61,10 +61,10 @@ interface ProfileScreenProps {
 }
 
 const mapApiProfileToUserProfile = (api: ApiProfileResponse): UserProfile => ({
-  nombre: api.Nombre,
+  Nombre: api.Nombre,
   email: api.Correo,
   cedula: api.Cedula,
-  telefono: api.Telefono || null,
+  Telefono: api.Telefono || null,
 });
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
@@ -81,8 +81,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   
   // Estados de edición (solo para campos editables reales)
   const [editData, setEditData] = useState<EditableUserData>({
-    nombre: '',
-    telefono: '',
+    Nombre: '',
+    Telefono: '',
   });
   
   // Estados de validación
@@ -131,8 +131,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       // Inicializar datos editables
       setEditData({
-        nombre: profile.nombre,
-        telefono: profile.telefono || '',
+        Nombre: profile.Nombre,
+        Telefono: profile.Telefono || '',
       });
 
       console.log('📱 ProfileScreen: Perfil procesado y establecido correctamente');
@@ -156,20 +156,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 const validateForm = (): boolean => {
   const newErrors: ValidationErrors = {};
 
-  // Validar nombre
-  if (!editData.nombre.trim()) {
-    newErrors.nombre = 'El nombre es obligatorio';
-  } else if (editData.nombre.trim().length < 2) {
-    newErrors.nombre = 'El nombre debe tener al menos 2 caracteres';
-  } else if (editData.nombre.trim().length > 100) {
-    newErrors.nombre = 'El nombre no puede exceder 100 caracteres';
+  // Validar Nombre
+  if (!editData.Nombre.trim()) {
+    newErrors.Nombre = 'El Nombre es obligatorio';
+  } else if (editData.Nombre.trim().length < 2) {
+    newErrors.Nombre = 'El Nombre debe tener al menos 2 caracteres';
+  } else if (editData.Nombre.trim().length > 100) {
+    newErrors.Nombre = 'El Nombre no puede exceder 100 caracteres';
   }
 
   // Validar teléfono
-  if (editData.telefono.trim()) {
+  if (editData.Telefono.trim()) {
     // Usar la validación específica de teléfonos costarricenses
-    if (!userService.validateCostaRicanPhone(editData.telefono.trim())) {
-      newErrors.telefono = 'El teléfono debe tener exactamente 8 dígitos y empezar con 2, 6, 7 u 8';
+    if (!userService.validateCostaRicanPhone(editData.Telefono.trim())) {
+      newErrors.Telefono = 'El teléfono debe tener exactamente 8 dígitos y empezar con 2, 6, 7 u 8';
     }
   }
 
@@ -192,8 +192,8 @@ const validateForm = (): boolean => {
     // Restaurar datos originales
     if (userProfile) {
       setEditData({
-        nombre: userProfile.nombre,
-        telefono: userProfile.telefono || '',
+        Nombre: userProfile.Nombre,
+        Telefono: userProfile.Telefono || '',
       });
     }
     setIsEditing(false);
@@ -218,8 +218,8 @@ const validateForm = (): boolean => {
 
       // Preparar datos para la API
       const updateData: EditProfileRequest = {
-        nombreCompleto: editData.nombre.trim(),
-        telefono: editData.telefono.trim(),
+        Nombre: editData.Nombre.trim(),
+        Telefono: editData.Telefono.trim(),
       };
 
       // Llamar al endpoint de actualización
@@ -231,8 +231,8 @@ const validateForm = (): boolean => {
         // Actualizar el estado local del perfil
         setUserProfile(prev => prev ? {
           ...prev,
-          nombre: editData.nombre.trim(),
-          telefono: editData.telefono.trim() || null
+          Nombre: editData.Nombre.trim(),
+          Telefono: editData.Telefono.trim() || null
         } : prev);
 
         setIsEditing(false);
@@ -423,7 +423,7 @@ const validateForm = (): boolean => {
             </View>
           </View>
           <View style={styles.basicInfo}>
-            <Text style={styles.userName}>{userProfile.nombre}</Text>
+            <Text style={styles.userName}>{userProfile.Nombre}</Text>
             <View style={styles.roleContainer}>
               <Icon name="tag" size={12} color={colors.primary.main} />
               <Text style={styles.userRole}>{userRole}</Text>
@@ -455,19 +455,19 @@ const validateForm = (): boolean => {
 
         {renderEditableField(
           'Nombre completo *',
-          editData.nombre,
-          (text) => setEditData(prev => ({ ...prev, nombre: text })),
-          errors.nombre,
-          'Ingresa tu nombre completo',
+          editData.Nombre,
+          (text) => setEditData(prev => ({ ...prev, Nombre: text })),
+          errors.Nombre,
+          'Ingresa tu Nombre completo',
           'default',
           100
         )}
 
         {renderEditableField(
           'Teléfono',
-          editData.telefono,
-          (text) => setEditData(prev => ({ ...prev, telefono: text })),
-          errors.telefono,
+          editData.Telefono,
+          (text) => setEditData(prev => ({ ...prev, Telefono: text })),
+          errors.Telefono,
           'Ej: 61234567 (8 dígitos, inicia con 2,6,7 u 8)',
           'phone-pad',
           8

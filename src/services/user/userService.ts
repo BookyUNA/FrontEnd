@@ -10,10 +10,10 @@ import { authService } from '../auth/authService';
 
 // Tipos para el servicio de usuario
 export interface RegisterUserRequest {
-  nombreCompleto: string;
+  Nombre: string;
   cedula: string;
   email: string;
-  telefono: string;
+  Telefono: string;
   rol: string;
   password: string;
 }
@@ -93,11 +93,13 @@ export interface ApiProfileResponse {
 }
 
 export interface EditProfileRequest {
-  nombreCompleto: string;
-  telefono: string;
+  Nombre: string;
+  Telefono: string;
 }
 
 export interface EditProfileResponse {
+  Nombre: string;
+  Telefono: string;
   error: Array<{
     ErrorCode: number;
     Message: string;
@@ -125,7 +127,7 @@ class UserService {
       console.log('👤 Iniciando proceso de registro de usuario...');
       
       // Validar que los datos estén presentes
-      const requiredFields = ['nombreCompleto', 'cedula', 'email', 'telefono', 'rol', 'password'];
+      const requiredFields = ['Nombre', 'cedula', 'email', 'Telefono', 'rol', 'password'];
       const missingFields = requiredFields.filter(field => !userData[field as keyof RegisterUserRequest]);
       
       if (missingFields.length > 0) {
@@ -140,10 +142,10 @@ class UserService {
 
       // Preparar datos para el endpoint
       const registerData = {
-        nombreCompleto: userData.nombreCompleto.trim(),
+        Nombre: userData.Nombre.trim(),
         cedula: userData.cedula.trim(),
         email: userData.email.toLowerCase().trim(),
-        telefono: userData.telefono.trim(),
+        Telefono: userData.Telefono.trim(),
         rol: userData.rol,
         password: hashedPassword,
       };
@@ -477,7 +479,7 @@ class UserService {
 
   /**
  * Actualizar información del perfil de usuario
- * Solo permite editar nombreCompleto y telefono
+ * Solo permite editar Nombre y Telefono
  */
   async updateProfile(profileData: EditProfileRequest): Promise<EditProfileResult> {
     try {
@@ -492,7 +494,7 @@ class UserService {
       }
 
       // Validar datos requeridos
-      if (!profileData.nombreCompleto || profileData.nombreCompleto.trim().length < 2) {
+      if (!profileData.Nombre || profileData.Nombre.trim().length < 2) {
         return {
           success: false,
           error: 'El nombre completo debe tener al menos 2 caracteres',
@@ -501,13 +503,13 @@ class UserService {
 
       // Preparar datos para el endpoint
       const updateData: EditProfileRequest = {
-        nombreCompleto: profileData.nombreCompleto.trim(),
-        telefono: profileData.telefono.trim(),
+        Nombre: profileData.Nombre.trim(),
+        Telefono: profileData.Telefono.trim(),
       };
 
       console.log('✏️ UserService: Enviando datos de actualización:', {
-        nombreCompleto: updateData.nombreCompleto,
-        telefono: updateData.telefono,
+        Nombre: updateData.Nombre,
+        Telefono: updateData.Telefono,
       });
 
       // Realizar petición al endpoint

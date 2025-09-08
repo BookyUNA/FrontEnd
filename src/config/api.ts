@@ -4,13 +4,7 @@
 
 // Base URL para todas las peticiones API
 export const API_CONFIG = {
-  //Localhost para emulador Android:
-  BASE_URL: 'http://10.0.2.2:61288/api',
-
-  //Servidor:
-  //BASE_URL: 'https://backendbooky-apis-b8b9fzgxfadrdch7.canadacentral-01.azurewebsites.net/api',
-
-  
+  BASE_URL: 'https://backendbooky-apis-b8b9fzgxfadrdch7.canadacentral-01.azurewebsites.net/api',
   ENDPOINTS: {
     LOGIN: '/Login',
     LOGOUT: '/cerrarsesion',
@@ -18,7 +12,7 @@ export const API_CONFIG = {
     FORGOT_PASSWORD: '/generarNuevoCodigoRecuperacion',
     RESET_PASSWORD: '/CambiarContrasena',
     PROFILE: '/MiPerfil',
-    EDIT_PROFILE: '/editarInfoMiPerfil',
+    EDIT_PROFILE: '/EditarMiPerfil',
     VERIFY_EMAIL: '/VerificarEmail',  
     REGISTER_USER: '/RegistrarUsuario',
     RESEND_VERIFICATION_CODE: '/GenerarNuevoCodigoVerificacion',

@@ -46,6 +46,27 @@ export interface ServicesResult {
   isNetworkError?: boolean;
 }
 
+// Request para cambiar estado de servicio
+export interface ReqCambiarEstadoServicio {
+  IdServicio: number;
+}
+
+// Response de cambiar estado de servicio
+export interface ResCambiarEstadoServicio {
+  EstadoServicio: boolean;
+  error: Error[];
+  resultado: boolean;
+}
+
+// Resultado procesado para cambiar estado
+export interface ChangeServiceStateResult {
+  success: boolean;
+  newState?: boolean;
+  error?: string;
+  errors?: Error[];
+  isNetworkError?: boolean;
+}
+
 class ServicesService {
   /**
    * Obtener servicios del profesional
@@ -335,6 +356,161 @@ class ServicesService {
     
     console.log('🔍 === FIN DEBUG SERVICES SERVICE ===');
   }
+
+  /**
+ * Cambiar estado de un servicio (activar/desactivar)
+ * @param serviceId - ID del servicio a cambiar estado
+ */
+  async changeServiceState(serviceId: number): Promise<ChangeServiceStateResult> {
+    try {
+      console.log('🔄 Cambiando estado de servicio...', { serviceId });
+
+      // Verificar autenticación
+      const isAuthenticated = await authService.isAuthenticated();
+      if (!isAuthenticated) {
+        return {
+          success: false,
+          error: 'Usuario no autenticado',
+        };
+      }
+
+      // Verificar que sea profesional
+      const isProfessional = await authService.isProfessional();
+      if (!isProfessional) {
+        return {
+          success: false,
+          error: 'Solo los profesionales pueden cambiar el estado de servicios',
+        };
+      }
+
+      // Obtener token
+      const token = await authService.getToken();
+      if (!token) {
+        return {
+          success: false,
+          error: 'Token de acceso no disponible',
+        };
+      }
+
+      // Preparar request
+      const requestBody: ReqCambiarEstadoServicio = {
+        IdServicio: serviceId,
+      };
+
+      console.log('🔄 Request a API:', {
+        endpoint: API_CONFIG.ENDPOINTS.CAMBIAR_ESTADO_SERVICIO,
+        body: requestBody,
+        hasToken: !!token,
+      });
+
+      // Realizar llamada a la API usando el método post
+      const response = await apiService.post<ResCambiarEstadoServicio>(
+        API_CONFIG.ENDPOINTS.CAMBIAR_ESTADO_SERVICIO,
+        requestBody,
+        token
+      );
+
+      console.log('🔄 Response de API:', {
+        success: response.success,
+        status: response.status,
+        hasData: !!response.data,
+      });
+
+      // Verificar errores de red
+      if (!response.success && response.status === 0) {
+        return {
+          success: false,
+          error: response.error || 'Error de conexión. Revisa tu internet e intenta nuevamente.',
+          isNetworkError: true,
+        };
+      }
+
+      // Verificar si hay datos
+      if (!response.data) {
+        return {
+          success: false,
+          error: 'No se recibieron datos del servidor',
+        };
+      }
+
+      // Procesar response
+      if (response.data.resultado) {
+        // Éxito
+        console.log('🔄 Estado de servicio cambiado exitosamente:', {
+          serviceId,
+          newState: response.data.EstadoServicio,
+        });
+
+        return {
+          success: true,
+          newState: response.data.EstadoServicio,
+        };
+      } else {
+        // Error del servidor
+        const errorMessage = this.processErrors(response.data.error);
+        console.warn('🔄 Error del servidor:', errorMessage);
+
+        return {
+          success: false,
+          error: errorMessage,
+          errors: response.data.error,
+        };
+      }
+
+    } catch (error: any) {
+      console.error('🔄 Error al cambiar estado de servicio:', error);
+
+      // Determinar tipo de error
+      if (error?.response?.status) {
+        const statusCode = error.response.status;
+        
+        if (statusCode === 401) {
+          return {
+            success: false,
+            error: 'Sesión expirada. Por favor, inicia sesión nuevamente.',
+          };
+        }
+        
+        if (statusCode === 403) {
+          return {
+            success: false,
+            error: 'No tienes permisos para cambiar el estado de este servicio.',
+          };
+        }
+        
+        if (statusCode === 404) {
+          return {
+            success: false,
+            error: 'Servicio no encontrado.',
+          };
+        }
+        
+        if (statusCode >= 500) {
+          return {
+            success: false,
+            error: 'Error interno del servidor. Intenta más tarde.',
+            isNetworkError: true,
+          };
+        }
+      }
+
+      // Error de red o conexión
+      if (error?.message?.includes('Network') || error?.code === 'NETWORK_ERROR') {
+        return {
+          success: false,
+          error: 'Error de conexión. Revisa tu internet e intenta nuevamente.',
+          isNetworkError: true,
+        };
+      }
+
+      // Error genérico
+      return {
+        success: false,
+        error: 'Error inesperado al cambiar estado del servicio. Intenta nuevamente.',
+      };
+    }
+  }
+  
 }
 
 // Exportar instancia única del servicio

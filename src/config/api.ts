@@ -23,6 +23,7 @@ export const API_CONFIG = {
     LISTAR_SERVICIOS_PROFESIONAL: '/Servicios/ListarServiciosProfesional',
     CREAR_SERVICIO: '/Servicios/CrearServicio',
     ACTUALIZAR_SERVICIO: '/Servicios/ActualizarServicio',
+    CAMBIAR_ESTADO_SERVICIO: '/CambiarEstadoServicio',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

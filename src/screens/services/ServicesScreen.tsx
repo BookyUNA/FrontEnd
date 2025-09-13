@@ -82,6 +82,9 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
   const [showContextMenu, setShowContextMenu] = useState<boolean>(false);
   const [selectedService, setSelectedService] = useState<Servicio | null>(null);
 
+  // Estados para el manejo de Activar / Desactivar servicio
+  const [isTogglingState, setIsTogglingState] = useState<boolean>(false);
+
   /**
    * Hook para recargar datos cuando la pantalla recibe el foco
    * Se ejecuta cada vez que el usuario regresa a esta pantalla
@@ -235,17 +238,34 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
   };
 
   /**
-   * Obtener opciones del menú contextual
-   */
-  const getMenuOptions = (): MenuOption[] => [
-    {
-      id: 'edit',
-      title: 'Editar Servicio',
-      icon: 'edit',
-      color: colors.primary.main,
-      onPress: handleEditService,
-    },
-  ];
+  * Obtener opciones del menú contextual
+  */
+  const getMenuOptions = (): MenuOption[] => {
+    const baseOptions: MenuOption[] = [
+      {
+        id: 'edit',
+        title: 'Editar Servicio',
+        icon: 'edit',
+        color: colors.primary.main,
+        onPress: handleEditService,
+      },
+    ];
+
+    // Agregar opción de activar/desactivar
+    if (selectedService) {
+      const toggleOption: MenuOption = {
+        id: 'toggle-state',
+        title: selectedService.Estado ? 'Desactivar Servicio' : 'Activar Servicio',
+        icon: selectedService.Estado ? 'toggle-off' : 'toggle-on',
+        color: selectedService.Estado ? colors.states.error : colors.states.success,
+        onPress: handleToggleServiceState,
+      };
+
+      baseOptions.push(toggleOption);
+    }
+
+    return baseOptions;
+  };
 
   /**
    * Formatear precio para mostrar
@@ -489,6 +509,100 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
     );
   };
 
+  /**
+  * Cambiar estado del servicio (activar/desactivar)
+  */
+  const handleToggleServiceState = () => {
+    if (!selectedService) return;
+
+    const action = selectedService.Estado ? 'desactivar' : 'activar';
+    const actionPast = selectedService.Estado ? 'desactivado' : 'activado';
+    const actionTitle = selectedService.Estado ? 'Desactivar' : 'Activar';
+
+    Alert.alert(
+      `${actionTitle} Servicio`,
+      `¿Estás seguro que deseas ${action} "${selectedService.Nombre}"?`,
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+          onPress: closeContextMenu,
+        },
+        {
+          text: actionTitle,
+          style: selectedService.Estado ? 'destructive' : 'default',
+          onPress: async () => {
+            closeContextMenu();
+            await performToggleServiceState(selectedService.IdServicio, actionPast);
+          },
+        },
+      ]
+    );
+  };
+
+  /**
+  * Ejecutar el cambio de estado del servicio
+  */
+  const performToggleServiceState = async (serviceId: number, actionPast: string) => {
+    try {
+      setIsTogglingState(true);
+      setError('');
+      setShowError(false);
+
+      console.log('🔄 Cambiando estado de servicio...', { serviceId });
+      const result = await servicesService.changeServiceState(serviceId);
+
+      if (result.success) {
+        // Actualizar el estado local del servicio
+        setServices(prevServices => 
+          prevServices.map(service => 
+            service.IdServicio === serviceId 
+              ? { ...service, Estado: result.newState ?? !service.Estado }
+              : service
+          )
+        );
+
+        // Mostrar mensaje de éxito
+        Alert.alert(
+          'Éxito',
+          `El servicio ha sido ${actionPast} correctamente.`,
+          [{ text: 'OK' }]
+        );
+
+        console.log('🔄 Estado de servicio cambiado exitosamente');
+      } else {
+        // Mostrar error específico del servidor
+        const errorMessage = result.error || 'Error al cambiar el estado del servicio';
+        setError(errorMessage);
+        setShowError(true);
+
+        // También mostrar alert para mayor visibilidad
+        Alert.alert(
+          'Error',
+          errorMessage,
+          [{ text: 'OK' }]
+        );
+
+        console.error('🔄 Error del servidor:', errorMessage);
+      }
+
+    } catch (error: any) {
+      console.error('🔄 Error al cambiar estado de servicio:', error);
+      
+      const errorMessage = 'Error inesperado al cambiar el estado del servicio. Intenta nuevamente.';
+      setError(errorMessage);
+      setShowError(true);
+
+      Alert.alert(
+        'Error',
+        errorMessage,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsTogglingState(false);
+    }
+  };
+
   return (
     <SafeContainer>
       <View style={styles.container}>
@@ -517,10 +631,12 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
         )}
 
         {/* Contenido principal */}
-        {isLoading ? (
+        {(isLoading || isTogglingState) ? (
           // Estado de carga
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Cargando servicios...</Text>
+            <Text style={styles.loadingText}>
+              {isLoading ? 'Cargando servicios...' : 'Actualizando servicio...'}
+            </Text>
           </View>
         ) : services.length === 0 ? (
           // Estado sin servicios

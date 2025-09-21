@@ -24,6 +24,7 @@ export const API_CONFIG = {
     CREAR_SERVICIO: '/Servicios/CrearServicio',
     ACTUALIZAR_SERVICIO: '/Servicios/ActualizarServicio',
     CAMBIAR_ESTADO_SERVICIO: '/CambiarEstadoServicio',
+    LISTAR_SERVICIOS_FILTROS: '/ListarServiciosFiltros',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

@@ -32,7 +32,7 @@ class JWTDecoder {
   static decodeToken(token: string): JWTPayload | null {
     try {
       if (!token || typeof token !== 'string') {
-        console.error('🔍 Token inválido o vacío');
+        //console.error('🔍 Token inválido o vacío');
         return null;
       }
 
@@ -40,7 +40,7 @@ class JWTDecoder {
       const parts = token.split('.');
       
       if (parts.length !== 3) {
-        console.error('🔍 Formato de JWT inválido - debe tener 3 partes');
+        //console.error('🔍 Formato de JWT inválido - debe tener 3 partes');
         return null;
       }
 
@@ -50,7 +50,7 @@ class JWTDecoder {
       const decodedPayload = this.base64UrlDecode(payload);
       
       if (!decodedPayload) {
-        console.error('🔍 Error al decodificar payload');
+        //console.error('🔍 Error al decodificar payload');
         return null;
       }
 
@@ -66,7 +66,7 @@ class JWTDecoder {
       return parsedPayload;
 
     } catch (error) {
-      console.error('🔍 Error al decodificar JWT:', error);
+      //console.error('🔍 Error al decodificar JWT:', error);
       return null;
     }
   }
@@ -97,7 +97,7 @@ class JWTDecoder {
       return userData;
 
     } catch (error) {
-      console.error('🔍 Error al extraer datos del usuario:', error);
+      //console.error('🔍 Error al extraer datos del usuario:', error);
       return null;
     }
   }
@@ -112,7 +112,7 @@ class JWTDecoder {
       const userData = this.extractUserData(token);
       return userData ? userData.isExpired : true;
     } catch (error) {
-      console.error('🔍 Error al verificar expiración:', error);
+      //console.error('🔍 Error al verificar expiración:', error);
       return true;
     }
   }
@@ -127,7 +127,7 @@ class JWTDecoder {
       const userData = this.extractUserData(token);
       return userData ? userData.role : null;
     } catch (error) {
-      console.error('🔍 Error al obtener rol:', error);
+      //console.error('🔍 Error al obtener rol:', error);
       return null;
     }
   }
@@ -154,7 +154,7 @@ class JWTDecoder {
       return decoded;
 
     } catch (error) {
-      console.error('🔍 Error en base64UrlDecode:', error);
+      //console.error('🔍 Error en base64UrlDecode:', error);
       return null;
     }
   }

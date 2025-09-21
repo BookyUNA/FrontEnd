@@ -56,7 +56,7 @@ function App(): React.JSX.Element {
         isUserAuthenticated ? "Autenticado" : "No autenticado"
       );
     } catch (error) {
-      console.error("Error al verificar autenticación:", error);
+      //console.error("Error al verificar autenticación:", error);
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);

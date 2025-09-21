@@ -165,7 +165,7 @@ class UserService {
 
       // Verificar primero errores de red/conexión
       if (!response.success && response.status === 0) {
-        console.error('👤 Error de red en registro');
+        //console.error('👤 Error de red en registro');
         return {
           success: false,
           error: response.error || 'Error de conexión. Verifica tu conexión a internet.',
@@ -177,7 +177,7 @@ class UserService {
       const data = response.data;
       
       if (!data) {
-        console.error('👤 Respuesta vacía del servidor');
+        //console.error('👤 Respuesta vacía del servidor');
         return {
           success: false,
           error: 'Respuesta inválida del servidor',
@@ -213,14 +213,14 @@ class UserService {
       }
 
       // Caso donde resultado es false pero no hay errores específicos
-      console.error('👤 Registro falló sin errores específicos en la respuesta');
+      //console.error('👤 Registro falló sin errores específicos en la respuesta');
       return {
         success: false,
         error: 'No se pudo completar el registro. Por favor, intenta nuevamente.',
       };
 
     } catch (error: any) {
-      console.error('👤 Error inesperado en registro:', error);
+      //console.error('👤 Error inesperado en registro:', error);
       return {
         success: false,
         error: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
@@ -282,7 +282,7 @@ class UserService {
 
       // Verificar errores de red/conexión
       if (!response.success && response.status === 0) {
-        console.error('👤📧 Error de red en verificación');
+        //console.error('👤📧 Error de red en verificación');
         return {
           success: false,
           error: response.error || 'Error de conexión. Verifica tu conexión a internet.',
@@ -294,7 +294,7 @@ class UserService {
       const data = response.data;
       
       if (!data) {
-        console.error('👤📧 Respuesta vacía del servidor');
+        //console.error('👤📧 Respuesta vacía del servidor');
         return {
           success: false,
           error: 'Respuesta inválida del servidor',
@@ -330,14 +330,14 @@ class UserService {
       }
 
       // Caso donde resultado es false pero no hay errores específicos
-      console.error('👤📧 Verificación falló sin errores específicos en la respuesta');
+      //console.error('👤📧 Verificación falló sin errores específicos en la respuesta');
       return {
         success: false,
         error: 'Código de verificación incorrecto. Por favor, intenta nuevamente.',
       };
 
     } catch (error: any) {
-      console.error('👤📧 Error inesperado en verificación:', error);
+      //console.error('👤📧 Error inesperado en verificación:', error);
       return {
         success: false,
         error: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
@@ -382,7 +382,7 @@ class UserService {
 
       // Verificar errores de red/conexión
       if (!response.success && response.status === 0) {
-        console.error('👤📧 Error de red en reenvío');
+        //console.error('👤📧 Error de red en reenvío');
         return {
           success: false,
           error: response.error || 'Error de conexión. Verifica tu conexión a internet.',
@@ -393,7 +393,7 @@ class UserService {
       const data = response.data;
 
       if (!data) {
-        console.error('👤📧 Respuesta vacía del servidor para reenvío');
+        //console.error('👤📧 Respuesta vacía del servidor para reenvío');
         return {
           success: false,
           error: 'Respuesta inválida del servidor',
@@ -426,14 +426,14 @@ class UserService {
       }
 
       // Caso donde resultado es false pero no hay errores específicos
-      console.error('👤📧 Reenvío falló sin errores específicos');
+      //console.error('👤📧 Reenvío falló sin errores específicos');
       return {
         success: false,
         error: 'No se pudo reenviar el código de verificación.',
       };
 
     } catch (error: any) {
-      console.error('👤📧 Error inesperado en reenvío:', error);
+      //console.error('👤📧 Error inesperado en reenvío:', error);
       return {
         success: false,
         error: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
@@ -472,7 +472,7 @@ class UserService {
       return response.data;
       
     } catch (error) {
-      console.error('🔍 UserService: Error obteniendo perfil:', error);
+      //console.error('🔍 UserService: Error obteniendo perfil:', error);
       throw error;
     }
   }
@@ -523,7 +523,7 @@ class UserService {
 
       // Verificar errores de red/conexión
       if (!response.success && response.status === 0) {
-        console.error('✏️ UserService: Error de red en actualización');
+        //console.error('✏️ UserService: Error de red en actualización');
         return {
           success: false,
           error: response.error || 'Error de conexión. Verifica tu conexión a internet.',
@@ -535,7 +535,7 @@ class UserService {
       const data = response.data;
       
       if (!data) {
-        console.error('✏️ UserService: Respuesta vacía del servidor');
+        //console.error('✏️ UserService: Respuesta vacía del servidor');
         return {
           success: false,
           error: 'Respuesta inválida del servidor',
@@ -568,14 +568,14 @@ class UserService {
       }
 
       // Caso donde resultado es false pero no hay errores específicos
-      console.error('✏️ UserService: Actualización falló sin errores específicos en la respuesta');
+      //console.error('✏️ UserService: Actualización falló sin errores específicos en la respuesta');
       return {
         success: false,
         error: 'No se pudo actualizar el perfil. Por favor, intenta nuevamente.',
       };
 
     } catch (error: any) {
-      console.error('✏️ UserService: Error inesperado en actualización:', error);
+      //console.error('✏️ UserService: Error inesperado en actualización:', error);
       return {
         success: false,
         error: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',

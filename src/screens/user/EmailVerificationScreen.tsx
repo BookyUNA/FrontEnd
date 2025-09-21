@@ -198,7 +198,7 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
         );
         
       } else {
-        console.error('📧 Error en verificación:', result.error);
+        //console.error('📧 Error en verificación:', result.error);
         
         // Mostrar error específico del servidor o genérico
         const errorMessage = result.error || 'Código de verificación incorrecto. Intenta nuevamente.';
@@ -210,7 +210,7 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
       }
       
     } catch (error) {
-      console.error('📧 Error inesperado en verificación:', error);
+      //console.error('📧 Error inesperado en verificación:', error);
       setGeneralError('Ha ocurrido un error inesperado. Por favor, intenta nuevamente.');
       setShowError(true);
     }
@@ -258,14 +258,14 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
         // Iniciar cooldown de 60 segundos
         setResendCooldown(60);
       } else {
-        console.error('📧 Error en reenvío:', result.error);
+        //console.error('📧 Error en reenvío:', result.error);
         const errorMessage = result.error || 'No se pudo reenviar el código. Intenta nuevamente.';
         setGeneralError(errorMessage);
         setShowError(true);
       }
       
     } catch (error) {
-      console.error('📧 Error inesperado en reenvío:', error);
+      //console.error('📧 Error inesperado en reenvío:', error);
       setGeneralError('No se pudo reenviar el código. Intenta nuevamente.');
       setShowError(true);
     } finally {

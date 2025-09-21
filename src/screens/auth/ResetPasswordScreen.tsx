@@ -140,7 +140,7 @@ export const ResetPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) =
         setShowError(true);
       }
     } catch (err) {
-      console.error('Error inesperado en reset password:', err);
+      //console.error('Error inesperado en reset password:', err);
       setGeneralError('Ha ocurrido un error inesperado. Intenta nuevamente.');
       setShowError(true);
     }

@@ -307,7 +307,7 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
       <View style={styles.serviceHeader}>
         <Text style={styles.serviceName}>{item.nombreServicio}</Text>
         <Text style={styles.servicePrice}>
-          ${item.precio.toFixed(2)}
+          	₡{item.precio.toFixed(2)}
         </Text>
       </View>
       
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    ...typography.styles.h2,
+    ...typography.styles.h1,
     color: colors.text.primary,
     marginBottom: spacing.lg,
     textAlign: 'center',

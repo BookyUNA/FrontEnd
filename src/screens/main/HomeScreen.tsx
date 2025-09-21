@@ -214,19 +214,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
   // Renderizar el contenido de la pantalla de Inicio para Clientes
   const renderClientHomeContent = () => (
     <View style={styles.clientContainer}>
-      {/* Header */}
-      <View style={styles.clientHeader}>
-        <Logo size="small" />
-        <Text style={styles.clientWelcomeTitle}>
-          Encuentra el servicio perfecto
-        </Text>
-        <Text style={styles.clientSubtitle}>
-          Busca entre cientos de profesionales
-        </Text>
+      {/* Componente de búsqueda de servicios con espaciado correcto */}
+      <View style={styles.searchWrapper}>
+        <ServiceSearch onServiceSelect={handleServiceSelect} />
       </View>
-
-      {/* Componente de búsqueda de servicios */}
-      <ServiceSearch onServiceSelect={handleServiceSelect} />
     </View>
   );
 
@@ -354,27 +345,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.primary,
   },
 
-  clientHeader: {
-    alignItems: 'center',
-    paddingTop: spacing['4xl'],
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    backgroundColor: colors.background.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-  },
-
-  clientWelcomeTitle: {
-    ...typography.styles.h2,
-    color: colors.text.primary,
-    textAlign: 'center',
-    marginTop: spacing.md,
-  },
-
-  clientSubtitle: {
-    ...typography.styles.body,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
+  searchWrapper: {
+    flex: 1,
+    paddingTop: spacing['8xl'], // Mismo espaciado que ProfileScreen header
   },
 });

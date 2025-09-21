@@ -1,9 +1,9 @@
 /**
  * Componente de Búsqueda de Servicios - Booky
- * Permite a los clientes buscar servicios de profesionales
+ * Permite a los clientes buscar servicios con campos dinámicos según filtros seleccionados
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,9 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
+  TouchableOpacity,
+  Modal,
+  Pressable,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 
@@ -30,13 +33,55 @@ interface ServiceSearchProps {
   onServiceSelect?: (service: ServicioCliente) => void;
 }
 
+interface FilterOption {
+  id: string;
+  label: string;
+  field: string;
+  placeholder: string;
+  selected: boolean;
+}
+
+interface SearchValues {
+  [key: string]: string;
+}
+
 export const ServiceSearch: React.FC<ServiceSearchProps> = ({ 
   onServiceSelect 
 }) => {
-  // Estados para los filtros de búsqueda
-  const [nombreServicio, setNombreServicio] = useState<string>('');
-  const [nombreProfesional, setNombreProfesional] = useState<string>('');
-  const [profesion, setProfesion] = useState<string>('');
+  // Estados para los filtros
+  const [filterOptions, setFilterOptions] = useState<FilterOption[]>([
+    { 
+      id: 'nombre', 
+      label: 'Nombre del servicio', 
+      field: 'nombreServicio', 
+      placeholder: 'Ej: Terapia, Masaje, Consulta...',
+      selected: true 
+    },
+    { 
+      id: 'profesional', 
+      label: 'Nombre profesional', 
+      field: 'nombreProfesional', 
+      placeholder: 'Ej: Alberto, María, Carlos...',
+      selected: false 
+    },
+    { 
+      id: 'profesion', 
+      label: 'Profesión', 
+      field: 'profesion', 
+      placeholder: 'Ej: Fisioterapeuta, Psicólogo...',
+      selected: false 
+    },
+  ]);
+
+  // Estados para los valores de búsqueda
+  const [searchValues, setSearchValues] = useState<SearchValues>({
+    nombre: '',
+    profesional: '',
+    profesion: '',
+  });
+
+  // Estados para el dropdown
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
 
   // Estados para los resultados
   const [servicios, setServicios] = useState<ServicioCliente[]>([]);
@@ -84,18 +129,86 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
   };
 
   /**
-   * Realizar búsqueda con filtros
+   * Manejar cambio de selección en los filtros
+   */
+  const handleFilterToggle = (filterId: string) => {
+    setFilterOptions(prev => prev.map(filter => 
+      filter.id === filterId 
+        ? { ...filter, selected: !filter.selected }
+        : filter
+    ));
+  };
+
+  /**
+   * Manejar cambio en los valores de búsqueda
+   */
+  const handleSearchValueChange = (filterId: string, value: string) => {
+    setSearchValues(prev => ({
+      ...prev,
+      [filterId]: value
+    }));
+  };
+
+  /**
+   * Obtener los filtros seleccionados
+   */
+  const getSelectedFilters = () => {
+    return filterOptions.filter(filter => filter.selected);
+  };
+
+  /**
+   * Construir los filtros para la búsqueda
+   */
+  const buildSearchFilters = () => {
+    const selectedFilters = getSelectedFilters();
+    const filters: any = {};
+    
+    selectedFilters.forEach(filter => {
+      const value = searchValues[filter.id]?.trim();
+      if (value) {
+        filters[filter.field] = value;
+      }
+    });
+    
+    return filters;
+  };
+
+  /**
+   * Verificar si hay valores de búsqueda
+   */
+  const hasSearchValues = () => {
+    const selectedFilters = getSelectedFilters();
+    return selectedFilters.some(filter => searchValues[filter.id]?.trim());
+  };
+
+  /**
+   * Realizar búsqueda
    */
   const handleSearch = async () => {
+    const selectedFilters = getSelectedFilters();
+    
+    if (selectedFilters.length === 0) {
+      Alert.alert(
+        'Filtros Requeridos',
+        'Selecciona al menos un campo donde buscar',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    if (!hasSearchValues()) {
+      Alert.alert(
+        'Búsqueda Vacía',
+        'Ingresa al menos un valor para buscar',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     try {
       setIsLoading(true);
       
-      const filters = {
-        nombreServicio: nombreServicio.trim() || undefined,
-        nombreProfesional: nombreProfesional.trim() || undefined,
-        profesion: profesion.trim() || undefined,
-      };
-
+      const filters = buildSearchFilters();
       const result = await clientServicesService.searchServices(filters);
       
       if (result.success && result.servicios) {
@@ -133,13 +246,29 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
   };
 
   /**
-   * Limpiar filtros y mostrar todos los servicios
+   * Limpiar búsqueda y mostrar todos los servicios
    */
-  const handleClearFilters = () => {
-    setNombreServicio('');
-    setNombreProfesional('');
-    setProfesion('');
+  const handleClearSearch = () => {
+    setSearchValues({
+      nombre: '',
+      profesional: '',
+      profesion: '',
+    });
     loadAllServices();
+  };
+
+  /**
+   * Alternar dropdown
+   */
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  /**
+   * Cerrar dropdown
+   */
+  const closeDropdown = () => {
+    setIsDropdownOpen(false);
   };
 
   /**
@@ -158,7 +287,6 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
     if (onServiceSelect) {
       onServiceSelect(service);
     } else {
-      // Mostrar detalles del servicio por defecto
       Alert.alert(
         service.nombreServicio,
         `Profesional: ${service.nombreProfesional}\n` +
@@ -219,37 +347,127 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
   );
 
   /**
-   * Verificar si hay algún filtro activo
+   * Renderizar opción de filtro en el dropdown
    */
-  const hasActiveFilters = () => {
-    return nombreServicio.trim() !== '' || 
-           nombreProfesional.trim() !== '' || 
-           profesion.trim() !== '';
+  const renderFilterOption = (filter: FilterOption) => (
+    <TouchableOpacity
+      key={filter.id}
+      style={styles.filterOption}
+      onPress={() => handleFilterToggle(filter.id)}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.checkbox, filter.selected && styles.checkboxSelected]}>
+        {filter.selected && (
+          <Icon name="check" size={12} color={colors.background.primary} />
+        )}
+      </View>
+      <Text style={styles.filterOptionText}>{filter.label}</Text>
+    </TouchableOpacity>
+  );
+
+  /**
+   * Obtener texto de filtros activos de forma compacta
+   */
+  const getFiltersText = () => {
+    const selected = getSelectedFilters();
+    if (selected.length === 0) return 'Seleccionar';
+    if (selected.length === 1) {
+      const filter = selected[0];
+      if (filter.id === 'nombre') return 'Servicio';
+      if (filter.id === 'profesional') return 'Profesional';
+      if (filter.id === 'profesion') return 'Profesión';
+    }
+    return `${selected.length} campos`;
+  };
+
+  /**
+   * Renderizar campos de búsqueda dinámicos
+   */
+  const renderSearchFields = () => {
+    const selectedFilters = getSelectedFilters();
+    
+    if (selectedFilters.length === 0) {
+      return (
+        <View style={styles.noFiltersContainer}>
+          <Text style={styles.noFiltersText}>
+            Selecciona al menos un campo para buscar
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.searchFieldsContainer}>
+        {selectedFilters.map(filter => (
+          <View key={filter.id} style={styles.searchField}>
+            <Text style={styles.fieldLabel}>{filter.label}</Text>
+            <Input
+              placeholder={filter.placeholder}
+              value={searchValues[filter.id]}
+              onChangeText={(value) => handleSearchValueChange(filter.id, value)}
+            />
+          </View>
+        ))}
+      </View>
+    );
   };
 
   return (
     <View style={styles.container}>
-      {/* Sección de Filtros */}
-      <View style={styles.filtersSection}>
+      {/* Sección de Búsqueda */}
+      <View style={styles.searchSection}>
         <Text style={styles.sectionTitle}>Buscar Servicios</Text>
         
-        <Input
-          placeholder="Nombre del servicio"
-          value={nombreServicio}
-          onChangeText={setNombreServicio}
-        />
+        {/* Selector de filtros */}
+        <View style={styles.filterSelectorContainer}>
+          <Text style={styles.filterSelectorLabel}>Buscar por:</Text>
+          <TouchableOpacity
+            style={styles.dropdownButton}
+            onPress={toggleDropdown}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dropdownButtonText} numberOfLines={1}>
+              {getFiltersText()}
+            </Text>
+            <Icon 
+              name={isDropdownOpen ? "chevron-up" : "chevron-down"} 
+              size={12} 
+              color={colors.text.secondary} 
+            />
+          </TouchableOpacity>
+        </View>
         
-        <Input
-          placeholder="Nombre del profesional"
-          value={nombreProfesional}
-          onChangeText={setNombreProfesional}
-        />
-        
-        <Input
-          placeholder="Profesión"
-          value={profesion}
-          onChangeText={setProfesion}
-        />
+        {/* Dropdown modal */}
+        <Modal
+          visible={isDropdownOpen}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={closeDropdown}
+        >
+          <Pressable 
+            style={styles.modalOverlay}
+            onPress={closeDropdown}
+          >
+            <View style={styles.dropdownModal}>
+              <View style={styles.dropdownHeader}>
+                <Text style={styles.dropdownTitle}>Seleccionar campos de búsqueda</Text>
+                <TouchableOpacity
+                  onPress={closeDropdown}
+                  style={styles.closeButton}
+                >
+                  <Icon name="times" size={14} color={colors.text.secondary} />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.filtersList}>
+                {filterOptions.map(renderFilterOption)}
+              </View>
+            </View>
+          </Pressable>
+        </Modal>
+
+        {/* Campos de búsqueda dinámicos */}
+        {renderSearchFields()}
         
         {/* Botones de acción */}
         <View style={styles.actionButtons}>
@@ -257,18 +475,18 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
             <Button
               title="Buscar"
               onPress={handleSearch}
-              disabled={isLoading}
+              disabled={isLoading || getSelectedFilters().length === 0}
               icon="search"
               iconPosition="left"
               fullWidth
             />
           </View>
           
-          {hasActiveFilters() && (
+          {hasSearchValues() && (
             <View style={styles.clearButton}>
               <Button
                 title="Limpiar"
-                onPress={handleClearFilters}
+                onPress={handleClearSearch}
                 variant="outline"
                 disabled={isLoading}
                 icon="times"
@@ -289,9 +507,9 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
               {servicios.length} servicio{servicios.length !== 1 ? 's' : ''} encontrado{servicios.length !== 1 ? 's' : ''}
             </Text>
             
-            {hasActiveFilters() && (
-              <Text style={styles.filtersActive}>
-                Filtros aplicados
+            {hasSearchValues() && (
+              <Text style={styles.searchActive}>
+                Búsqueda activa
               </Text>
             )}
           </View>
@@ -322,8 +540,8 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
                 <View style={styles.emptyContainer}>
                   <Icon name="search" size={50} color={colors.text.disabled} />
                   <Text style={styles.emptyText}>
-                    {hasActiveFilters() 
-                      ? 'No se encontraron servicios con estos filtros'
+                    {hasSearchValues() 
+                      ? 'No se encontraron servicios con estos criterios'
                       : 'No hay servicios disponibles'
                     }
                   </Text>
@@ -343,7 +561,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.primary,
   },
 
-  filtersSection: {
+  searchSection: {
     padding: spacing.lg,
     backgroundColor: colors.background.secondary,
     borderBottomWidth: 1,
@@ -357,9 +575,152 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  filterSelectorContainer: {
+    marginBottom: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+
+  filterSelectorLabel: {
+    ...typography.styles.caption,
+    color: colors.text.primary,
+    fontWeight: typography.fontWeight.medium,
+  },
+
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.background.primary,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    borderRadius: 8,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+    flex: 1,
+    minHeight: 36,
+  },
+
+  dropdownButtonText: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    fontWeight: typography.fontWeight.medium,
+    flex: 1,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  dropdownModal: {
+    backgroundColor: colors.background.primary,
+    borderRadius: 12,
+    padding: spacing.lg,
+    margin: spacing.lg,
+    minWidth: 280,
+    maxWidth: 320,
+    shadowColor: colors.shadow.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+
+  dropdownTitle: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    fontWeight: typography.fontWeight.bold,
+    flex: 1,
+  },
+
+  closeButton: {
+    padding: spacing.xs,
+  },
+
+  filtersList: {
+    gap: spacing.sm,
+  },
+
+  filterOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    gap: spacing.md,
+  },
+
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: colors.border.light,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background.primary,
+  },
+
+  checkboxSelected: {
+    backgroundColor: colors.primary.main,
+    borderColor: colors.primary.main,
+  },
+
+  filterOptionText: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    flex: 1,
+  },
+
+  searchFieldsContainer: {
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+
+  searchField: {
+    gap: spacing.xs,
+  },
+
+  fieldLabel: {
+    ...typography.styles.caption,
+    color: colors.text.primary,
+    fontWeight: typography.fontWeight.medium,
+  },
+
+  noFiltersContainer: {
+    padding: spacing.lg,
+    backgroundColor: colors.background.primary,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    marginBottom: spacing.lg,
+    alignItems: 'center',
+  },
+
+  noFiltersText: {
+    ...typography.styles.body,
+    color: colors.text.disabled,
+    textAlign: 'center',
+  },
+
   actionButtons: {
     flexDirection: 'row',
-    marginTop: spacing.md,
     gap: spacing.md,
   },
 
@@ -392,7 +753,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
   },
 
-  filtersActive: {
+  searchActive: {
     ...typography.styles.caption,
     color: colors.primary.main,
     fontWeight: typography.fontWeight.medium,

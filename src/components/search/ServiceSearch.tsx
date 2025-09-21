@@ -15,6 +15,8 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
+  Animated,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 
@@ -83,6 +85,10 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
   // Estados para el dropdown
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
 
+  // Estados para el panel de búsqueda colapsable
+  const [isSearchExpanded, setIsSearchExpanded] = useState<boolean>(false);
+  const searchHeight = useRef(new Animated.Value(0)).current;
+
   // Estados para los resultados
   const [servicios, setServicios] = useState<ServicioCliente[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -93,6 +99,24 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
   useEffect(() => {
     loadAllServices();
   }, []);
+
+  // Efecto para recalcular altura cuando cambian los filtros seleccionados
+  useEffect(() => {
+    if (isSearchExpanded) {
+      const selectedFilters = getSelectedFilters();
+      const baseHeight = 200;
+      const fieldHeight = 80;
+      const dynamicHeight = baseHeight + (selectedFilters.length * fieldHeight);
+      const maxHeight = 310;
+      const newHeight = Math.min(dynamicHeight, maxHeight);
+      
+      Animated.timing(searchHeight, {
+        toValue: newHeight,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [filterOptions, isSearchExpanded]);
 
   /**
    * Cargar todos los servicios disponibles
@@ -121,11 +145,33 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error al cargar servicios:', error);
+      //console.error('Error al cargar servicios:', error);
       Alert.alert('Error', 'Error inesperado al cargar servicios');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  /**
+   * Alternar panel de búsqueda
+   */
+  const toggleSearchPanel = () => {
+    // Calcular altura dinámica basada en filtros seleccionados
+    const selectedFilters = getSelectedFilters();
+    const baseHeight = 200; // Altura base (título + selector de filtros + botones)
+    const fieldHeight = 80; // Altura por cada campo de búsqueda
+    const dynamicHeight = baseHeight + (selectedFilters.length * fieldHeight);
+    const maxHeight = 400; // Altura máxima para evitar que tome toda la pantalla
+    
+    const targetHeight = isSearchExpanded ? 0 : Math.min(dynamicHeight, maxHeight);
+    
+    setIsSearchExpanded(!isSearchExpanded);
+    
+    Animated.timing(searchHeight, {
+      toValue: targetHeight,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
   };
 
   /**
@@ -187,15 +233,13 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
   const handleSearch = async () => {
     const selectedFilters = getSelectedFilters();
     
+    // Si no hay filtros seleccionados, mostrar todos los servicios
     if (selectedFilters.length === 0) {
-      Alert.alert(
-        'Filtros Requeridos',
-        'Selecciona al menos un campo donde buscar',
-        [{ text: 'OK' }]
-      );
+      loadAllServices();
       return;
     }
 
+    // Si hay filtros seleccionados pero no hay valores, mostrar alerta
     if (!hasSearchValues()) {
       Alert.alert(
         'Búsqueda Vacía',
@@ -238,7 +282,7 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error en búsqueda:', error);
+      //console.error('Error en búsqueda:', error);
       Alert.alert('Error', 'Error inesperado en la búsqueda');
     } finally {
       setIsLoading(false);
@@ -414,89 +458,120 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Sección de Búsqueda */}
-      <View style={styles.searchSection}>
-        <Text style={styles.sectionTitle}>Buscar Servicios</Text>
-        
-        {/* Selector de filtros */}
-        <View style={styles.filterSelectorContainer}>
-          <Text style={styles.filterSelectorLabel}>Buscar por:</Text>
-          <TouchableOpacity
-            style={styles.dropdownButton}
-            onPress={toggleDropdown}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.dropdownButtonText} numberOfLines={1}>
-              {getFiltersText()}
-            </Text>
-            <Icon 
-              name={isDropdownOpen ? "chevron-up" : "chevron-down"} 
-              size={12} 
-              color={colors.text.secondary} 
-            />
-          </TouchableOpacity>
-        </View>
-        
-        {/* Dropdown modal */}
-        <Modal
-          visible={isDropdownOpen}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={closeDropdown}
+      {/* Botón para expandir/contraer búsqueda */}
+      <View style={styles.searchToggleContainer}>
+        <TouchableOpacity
+          style={styles.searchToggleButton}
+          onPress={toggleSearchPanel}
+          activeOpacity={0.7}
         >
-          <Pressable 
-            style={styles.modalOverlay}
-            onPress={closeDropdown}
-          >
-            <View style={styles.dropdownModal}>
-              <View style={styles.dropdownHeader}>
-                <Text style={styles.dropdownTitle}>Seleccionar campos de búsqueda</Text>
-                <TouchableOpacity
-                  onPress={closeDropdown}
-                  style={styles.closeButton}
-                >
-                  <Icon name="times" size={14} color={colors.text.secondary} />
-                </TouchableOpacity>
+          <Icon 
+            name="search" 
+            size={16} 
+            color={colors.primary.main} 
+          />
+          <Text style={styles.searchToggleText}>
+            {isSearchExpanded ? 'Ocultar búsqueda' : 'Buscar servicios'}
+          </Text>
+          <Icon 
+            name={isSearchExpanded ? "chevron-up" : "chevron-down"} 
+            size={14} 
+            color={colors.primary.main} 
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Panel de búsqueda colapsable */}
+      <Animated.View style={[styles.searchPanel, { height: searchHeight }]}>
+        <ScrollView 
+          style={styles.searchScrollView}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          <View style={styles.searchContent}>
+            <Text style={styles.sectionTitle}>Buscar Servicios</Text>
+            
+            {/* Selector de filtros */}
+            <View style={styles.filterSelectorContainer}>
+              <Text style={styles.filterSelectorLabel}>Buscar por:</Text>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={toggleDropdown}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.dropdownButtonText} numberOfLines={1}>
+                  {getFiltersText()}
+                </Text>
+                <Icon 
+                  name={isDropdownOpen ? "chevron-up" : "chevron-down"} 
+                  size={12} 
+                  color={colors.text.secondary} 
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Campos de búsqueda dinámicos */}
+            {renderSearchFields()}
+            
+            {/* Botones de acción */}
+            <View style={styles.actionButtons}>
+              <View style={styles.searchButton}>
+                <Button
+                  title="Buscar"
+                  onPress={handleSearch}
+                  disabled={isLoading}
+                  icon="search"
+                  iconPosition="left"
+                  fullWidth
+                />
               </View>
               
-              <View style={styles.filtersList}>
-                {filterOptions.map(renderFilterOption)}
-              </View>
+              {hasSearchValues() && (
+                <View style={styles.clearButton}>
+                  <Button
+                    title="Limpiar"
+                    onPress={handleClearSearch}
+                    variant="outline"
+                    disabled={isLoading}
+                    icon="times"
+                    iconPosition="left"
+                    fullWidth
+                  />
+                </View>
+              )}
             </View>
-          </Pressable>
-        </Modal>
-
-        {/* Campos de búsqueda dinámicos */}
-        {renderSearchFields()}
-        
-        {/* Botones de acción */}
-        <View style={styles.actionButtons}>
-          <View style={styles.searchButton}>
-            <Button
-              title="Buscar"
-              onPress={handleSearch}
-              disabled={isLoading || getSelectedFilters().length === 0}
-              icon="search"
-              iconPosition="left"
-              fullWidth
-            />
           </View>
-          
-          {hasSearchValues() && (
-            <View style={styles.clearButton}>
-              <Button
-                title="Limpiar"
-                onPress={handleClearSearch}
-                variant="outline"
-                disabled={isLoading}
-                icon="times"
-                iconPosition="left"
-                fullWidth
-              />
+        </ScrollView>
+      </Animated.View>
+
+      {/* Dropdown modal - fuera del panel para que funcione correctamente */}
+      <Modal
+        visible={isDropdownOpen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeDropdown}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={closeDropdown}
+        >
+          <View style={styles.dropdownModal}>
+            <View style={styles.dropdownHeader}>
+              <Text style={styles.dropdownTitle}>Seleccionar campos de búsqueda</Text>
+              <TouchableOpacity
+                onPress={closeDropdown}
+                style={styles.closeButton}
+              >
+                <Icon name="times" size={14} color={colors.text.secondary} />
+              </TouchableOpacity>
             </View>
-          )}
-        </View>
-      </View>
+            
+            <View style={styles.filtersList}>
+              {filterOptions.map(renderFilterOption)}
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* Sección de Resultados */}
       <View style={styles.resultsSection}>
@@ -561,11 +636,43 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.primary,
   },
 
-  searchSection: {
+  searchToggleContainer: {
     padding: spacing.lg,
     backgroundColor: colors.background.secondary,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+  },
+
+  searchToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background.primary,
+    borderWidth: 1,
+    borderColor: colors.primary.main,
+    borderRadius: 8,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+
+  searchToggleText: {
+    ...typography.styles.body,
+    color: colors.primary.main,
+    fontWeight: typography.fontWeight.medium,
+  },
+
+  searchPanel: {
+    backgroundColor: colors.background.secondary,
+    overflow: 'hidden',
+  },
+
+  searchScrollView: {
+    flex: 1,
+  },
+
+  searchContent: {
+    padding: spacing.lg,
   },
 
   sectionTitle: {

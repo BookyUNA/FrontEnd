@@ -104,7 +104,7 @@ export const ForgotPasswordScreen: React.FC<AuthScreenProps> = ({ navigation }) 
         setShowError(true);
       }
     } catch (err) {
-      console.error('Error en forgot password:', err);
+      //console.error('Error en forgot password:', err);
       setGeneralError('Ha ocurrido un error inesperado. Intenta nuevamente.');
       setShowError(true);
     }

@@ -77,7 +77,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
         }
         
       } catch (error) {
-        console.error('🔍 Error al verificar autenticación:', error);
+        //console.error('🔍 Error al verificar autenticación:', error);
       }
     };
     
@@ -97,7 +97,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
         onLogout();
       }
     } catch (error: unknown) {
-      console.error('🚪 Error en logout:', error);
+      //console.error('🚪 Error en logout:', error);
       // Forzar logout local
       if (onLogout) {
         onLogout();
@@ -202,7 +202,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
                 [{ text: 'OK' }]
               );
             } catch (error) {
-              console.error('Error en debug:', error);
+              //console.error('Error en debug:', error);
             }
           }}
           variant="outline"

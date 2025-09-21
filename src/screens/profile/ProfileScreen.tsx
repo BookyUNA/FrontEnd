@@ -114,7 +114,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         console.warn('📱 ProfileScreen: No hay token disponible');
       }
     } catch (error) {
-      console.error('📱 ProfileScreen: Error extrayendo rol del token:', error);
+      //console.error('📱 ProfileScreen: Error extrayendo rol del token:', error);
     }
   };
 
@@ -138,7 +138,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       console.log('📱 ProfileScreen: Perfil procesado y establecido correctamente');
       
     } catch (error: any) {
-      console.error('📱 ProfileScreen: Error cargando perfil:', error);
+      //console.error('📱 ProfileScreen: Error cargando perfil:', error);
       Alert.alert(
         'Error',
         error.message || 'No se pudo cargar la información del perfil. Intenta de nuevo.',
@@ -248,7 +248,7 @@ const validateForm = (): boolean => {
         await loadUserProfile();
         
       } else {
-        console.error('📱 ProfileScreen: Error guardando perfil:', result.error);
+        //console.error('📱 ProfileScreen: Error guardando perfil:', result.error);
         
         if (result.isNetworkError) {
           Alert.alert(
@@ -266,7 +266,7 @@ const validateForm = (): boolean => {
       }
       
     } catch (error: any) {
-      console.error('📱 ProfileScreen: Error inesperado guardando perfil:', error);
+      //console.error('📱 ProfileScreen: Error inesperado guardando perfil:', error);
       Alert.alert(
         'Error',
         'Ha ocurrido un error inesperado. Por favor, intenta de nuevo.',
@@ -324,7 +324,7 @@ const validateForm = (): boolean => {
               }
               
             } catch (error: unknown) {
-              console.error('🚪 ProfileScreen: Error inesperado en logout:', error);
+              //console.error('🚪 ProfileScreen: Error inesperado en logout:', error);
               
               Alert.alert(
                 'Error',

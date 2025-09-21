@@ -74,7 +74,7 @@ class AuthService {
 
       // Error de red
       if (!response.success && response.status === 0) {
-        console.error('🔐 Error de red en login');
+        //console.error('🔐 Error de red en login');
         return {
           success: false,
           error: response.error || 'Error de conexión. Verifica tu conexión a internet.',
@@ -86,7 +86,7 @@ class AuthService {
       const loginResponse = response.data;
       
       if (!loginResponse) {
-        console.error('🔐 Respuesta inválida del servidor');
+        //console.error('🔐 Respuesta inválida del servidor');
         return {
           success: false,
           error: 'Respuesta inválida del servidor',
@@ -101,7 +101,7 @@ class AuthService {
         const userData = jwtDecoder.extractUserData(loginResponse.token);
         
         if (!userData) {
-          console.error('🔐 Error al decodificar token JWT');
+          //console.error('🔐 Error al decodificar token JWT');
           return {
             success: false,
             error: 'Token recibido inválido',
@@ -110,7 +110,7 @@ class AuthService {
 
         // Verificar si el token ha expirado
         if (userData.isExpired) {
-          console.error('🔐 Token recibido ya ha expirado');
+          //console.error('🔐 Token recibido ya ha expirado');
           return {
             success: false,
             error: 'El token de sesión ha expirado',
@@ -128,7 +128,7 @@ class AuthService {
           await storageService.saveAuthToken(loginResponse.token);
           console.log('🔐 Token guardado en memoria exitosamente');
         } catch (storageError) {
-          console.error('🔐 Error al guardar token:', storageError);
+          //console.error('🔐 Error al guardar token:', storageError);
           // No fallar el login por error de storage
         }
 
@@ -137,7 +137,7 @@ class AuthService {
           await storageService.saveUserRole(userData.role);
           console.log('🔐 Rol guardado en memoria exitosamente:', userData.role);
         } catch (storageError) {
-          console.error('🔐 Error al guardar rol:', storageError);
+          //console.error('🔐 Error al guardar rol:', storageError);
           // No fallar el login por error de storage
         }
         
@@ -160,7 +160,7 @@ class AuthService {
       };
 
     } catch (error: any) {
-      console.error('🔐 Error inesperado en login:', error);
+      //console.error('🔐 Error inesperado en login:', error);
       
       // Verificar si es un error de hash
       if (error.message && error.message.includes('hashear')) {
@@ -238,14 +238,14 @@ class AuthService {
       };
       
     } catch (error: any) {
-      console.error('🚪 Error en proceso de logout:', error);
+      //console.error('🚪 Error en proceso de logout:', error);
       
       // En caso de error, SIEMPRE limpiar datos locales
       try {
         await storageService.clearAll();
         console.log('🚪 Datos limpiados después de error');
       } catch (cleanupError) {
-        console.error('🚪 Error al limpiar datos después de fallo:', cleanupError);
+        //console.error('🚪 Error al limpiar datos después de fallo:', cleanupError);
       }
       
       // Verificar si es error de red
@@ -300,7 +300,7 @@ class AuthService {
       return null;
       
     } catch (error) {
-      console.error('👤 Error al obtener rol del usuario:', error);
+      //console.error('👤 Error al obtener rol del usuario:', error);
       return null;
     }
   }
@@ -314,7 +314,7 @@ class AuthService {
       const role = await this.getUserRole();
       return role === 'Profesional';
     } catch (error) {
-      console.error('👤 Error al verificar si es profesional:', error);
+      //console.error('👤 Error al verificar si es profesional:', error);
       return false;
     }
   }
@@ -328,7 +328,7 @@ class AuthService {
       const role = await this.getUserRole();
       return role === 'Cliente';
     } catch (error) {
-      console.error('👤 Error al verificar si es cliente:', error);
+      //console.error('👤 Error al verificar si es cliente:', error);
       return false;
     }
   }
@@ -359,7 +359,7 @@ class AuthService {
       return userData;
       
     } catch (error) {
-      console.error('👤 Error al obtener datos del usuario:', error);
+      //console.error('👤 Error al obtener datos del usuario:', error);
       return null;
     }
   }
@@ -379,7 +379,7 @@ class AuthService {
       return !jwtDecoder.isTokenExpired(currentToken);
       
     } catch (error) {
-      console.error('🔍 Error al verificar validez del token:', error);
+      //console.error('🔍 Error al verificar validez del token:', error);
       return false;
     }
   }
@@ -482,7 +482,7 @@ class AuthService {
       return { success: false, error: errorMessage };
 
     } catch (error: any) {
-      console.error('🔑 Error inesperado en recuperación de contraseña:', error);
+      //console.error('🔑 Error inesperado en recuperación de contraseña:', error);
 
       if (error.message && (error.message.includes('conexión') || error.message.includes('network'))) {
         return {
@@ -552,7 +552,7 @@ class AuthService {
 
       // Error de red
       if (!response.success && response.status === 0) {
-        console.error('🔒 Error de red en reseteo de contraseña');
+        //console.error('🔒 Error de red en reseteo de contraseña');
         return {
           success: false,
           error: 'Error de conexión. Verifica tu conexión a internet.',
@@ -563,7 +563,7 @@ class AuthService {
       const data = response.data as any;
 
       if (!data) {
-        console.error('🔒 Respuesta inválida del servidor');
+        //console.error('🔒 Respuesta inválida del servidor');
         return {
           success: false,
           error: 'Respuesta inválida del servidor',
@@ -593,7 +593,7 @@ class AuthService {
       };
 
     } catch (error: any) {
-      console.error('🔒 Error inesperado en resetPassword:', error);
+      //console.error('🔒 Error inesperado en resetPassword:', error);
 
       // Verificar si es un error de hash
       if (error.message && error.message.includes('hashear')) {
@@ -650,7 +650,7 @@ class AuthService {
       };
 
     } catch (error: any) {
-      console.error('📝 Error en AuthService.register:', error);
+      //console.error('📝 Error en AuthService.register:', error);
       return {
         success: false,
         error: 'Error al registrar usuario',
@@ -716,7 +716,7 @@ class AuthService {
       };
 
     } catch (error: any) {
-      console.error('🔑 Error en AuthService.changePassword:', error);
+      //console.error('🔑 Error en AuthService.changePassword:', error);
       return {
         success: false,
         error: 'Error al cambiar contraseña',
@@ -744,7 +744,7 @@ class AuthService {
       return isValid;
       
     } catch (error) {
-      console.error('🔍 Error al verificar autenticación:', error);
+      //console.error('🔍 Error al verificar autenticación:', error);
       return false;
     }
   }
@@ -759,7 +759,7 @@ class AuthService {
       return token;
       
     } catch (error) {
-      console.error('🔍 Error al obtener token:', error);
+      //console.error('🔍 Error al obtener token:', error);
       return null;
     }
   }
@@ -772,7 +772,7 @@ class AuthService {
       await storageService.clearAll();
       console.log('🧹 Todos los datos de autenticación limpiados');
     } catch (error) {
-      console.error('🧹 Error al limpiar datos:', error);
+      //console.error('🧹 Error al limpiar datos:', error);
     }
   }
 }

@@ -8,12 +8,12 @@ import { API_CONFIG } from '../../config/api';
 import { hashService } from '../../utils/hashService';
 import { authService } from '../auth/authService';
 
-// Tipos para el servicio de usuario
+// Tipos para el servicio de usuario - Corregidos según la API
 export interface RegisterUserRequest {
-  Nombre: string;
+  nombreCompleto: string;
   cedula: string;
   email: string;
-  Telefono: string;
+  telefono: string;
   rol: string;
   password: string;
 }
@@ -131,8 +131,8 @@ class UserService {
     try {
       console.log('👤 Iniciando proceso de registro de usuario...');
       
-      // Validar que los datos estén presentes
-      const requiredFields = ['Nombre', 'cedula', 'email', 'Telefono', 'rol', 'password'];
+      // Validar que los datos estén presentes usando los nombres correctos
+      const requiredFields = ['nombreCompleto', 'cedula', 'email', 'telefono', 'rol', 'password'];
       const missingFields = requiredFields.filter(field => !userData[field as keyof RegisterUserRequest]);
       
       if (missingFields.length > 0) {
@@ -145,12 +145,12 @@ class UserService {
       // Hashear la contraseña con SHA256
       const hashedPassword = hashService.hashPassword(userData.password);
 
-      // Preparar datos para el endpoint
+      // Preparar datos para el endpoint - usar nombres exactos de la API
       const registerData = {
-        Nombre: userData.Nombre.trim(),
+        nombreCompleto: userData.nombreCompleto.trim(),
         cedula: userData.cedula.trim(),
         email: userData.email.toLowerCase().trim(),
-        Telefono: userData.Telefono.trim(),
+        telefono: userData.telefono.trim(),
         rol: userData.rol,
         password: hashedPassword,
       };

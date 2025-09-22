@@ -39,6 +39,11 @@ interface UserProfile {
   cedula: string;
   telefono: string | null;
   role?: string;
+  profesion?: string | null;
+  descripcion?: string | null;
+  direccion?: string | null;
+  calificacionPromedio?: number | null;
+  totalCalificaciones?: number | null;
 }
 
 interface EditableUserData {
@@ -65,6 +70,11 @@ const mapApiProfileToUserProfile = (api: ApiProfileResponse): UserProfile => ({
   email: api.Correo,
   cedula: api.Cedula,
   telefono: api.Telefono || null,
+  profesion: api.Profesion || null,
+  descripcion: api.Descripcon || null,
+  direccion: api.Direccion || null,
+  calificacionPromedio: api.CalificacionPromedio || null,
+  totalCalificaciones: api.TotalCalificaciones || null,
 });
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
@@ -138,7 +148,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       console.log('📱 ProfileScreen: Perfil procesado y establecido correctamente');
       
     } catch (error: any) {
-      //console.error('📱 ProfileScreen: Error cargando perfil:', error);
       Alert.alert(
         'Error',
         error.message || 'No se pudo cargar la información del perfil. Intenta de nuevo.',
@@ -232,7 +241,7 @@ const validateForm = (): boolean => {
         setUserProfile(prev => prev ? {
           ...prev,
           Nombre: editData.Nombre.trim(),
-          Telefono: editData.Telefono.trim() || null
+          telefono: editData.Telefono.trim() || null
         } : prev);
 
         setIsEditing(false);
@@ -248,7 +257,6 @@ const validateForm = (): boolean => {
         await loadUserProfile();
         
       } else {
-        //console.error('📱 ProfileScreen: Error guardando perfil:', result.error);
         
         if (result.isNetworkError) {
           Alert.alert(
@@ -266,7 +274,6 @@ const validateForm = (): boolean => {
       }
       
     } catch (error: any) {
-      //console.error('📱 ProfileScreen: Error inesperado guardando perfil:', error);
       Alert.alert(
         'Error',
         'Ha ocurrido un error inesperado. Por favor, intenta de nuevo.',
@@ -324,7 +331,6 @@ const validateForm = (): boolean => {
               }
               
             } catch (error: unknown) {
-              //console.error('🚪 ProfileScreen: Error inesperado en logout:', error);
               
               Alert.alert(
                 'Error',
@@ -402,6 +408,37 @@ const validateForm = (): boolean => {
     </View>
   );
 
+  const renderRatingField = (label: string, rating: number | null, totalRatings: number | null) => (
+    <View style={styles.readOnlyFieldContainer}>
+      <View style={styles.readOnlyFieldHeader}>
+        <Icon name="star" size={16} color={colors.text.secondary} />
+        <Text style={styles.readOnlyFieldLabel}>{label}</Text>
+      </View>
+      <View style={styles.ratingContainer}>
+        {rating !== null && rating !== undefined ? (
+          <>
+            <View style={styles.ratingStars}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Icon 
+                  key={star}
+                  name="star" 
+                  size={16} 
+                  color={star <= Math.round(rating) ? colors.states.warning : colors.border.light}
+                  solid={star <= Math.round(rating)}
+                />
+              ))}
+            </View>
+            <Text style={styles.ratingText}>
+              {rating.toFixed(1)} ({totalRatings || 0} calificaciones)
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.ratingText}>Sin calificaciones aún</Text>
+        )}
+      </View>
+    </View>
+  );
+
   const renderHeader = () => (
     <View style={styles.header}>
       <Text style={styles.title}>Mi Perfil</Text>
@@ -435,9 +472,16 @@ const validateForm = (): boolean => {
           <Text style={styles.sectionTitle}>Información de la Cuenta</Text>
           {renderReadOnlyField('Cédula', userProfile.cedula, 'id-card')}
           {renderReadOnlyField('Email', userProfile.email, 'envelope')}
-          <Text style={styles.readOnlyNote}>
-            * Esta información no puede ser modificada. Si necesitas cambiarla, contacta al soporte.
-          </Text>
+          
+          {/* Mostrar datos profesionales solo si existen (profesionales) */}
+          {userProfile.profesion && (
+            <>
+              {renderReadOnlyField('Profesión', userProfile.profesion, 'briefcase')}
+              {userProfile.descripcion && renderReadOnlyField('Descripción', userProfile.descripcion, 'info-circle')}
+              {userProfile.direccion && renderReadOnlyField('Dirección', userProfile.direccion, 'map-marker-alt')}
+              {renderRatingField('Calificación', userProfile.calificacionPromedio ?? null, userProfile.totalCalificaciones ?? null)}
+            </>
+          )}
         </View>
       </View>
     );
@@ -750,6 +794,23 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: spacing.sm,
     textAlign: 'center',
+  },
+
+  // Rating specific styles
+  ratingContainer: {
+    flexDirection: 'column',
+    gap: spacing.xs,
+  },
+
+  ratingStars: {
+    flexDirection: 'row',
+    gap: spacing.xs / 2,
+  },
+
+  ratingText: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    fontWeight: '500',
   },
 
   // Editable section

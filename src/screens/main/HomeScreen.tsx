@@ -1,7 +1,6 @@
 /**
  * Pantalla de Inicio - Booky
  * Sistema de reservas para profesionales independientes
- * Incluye búsqueda de servicios para clientes
  */
 
 import React, { useState } from 'react';
@@ -20,12 +19,10 @@ import { BottomNavigationBar, BottomNavTabType } from '../../components/navigati
 import { ProfileScreen } from '../profile/ProfileScreen';
 import { ServicesScreen } from '../services/ServicesScreen';
 import { ProfessionalServicesScreen } from '../client/ProfessionalServicesScreen';
-import { ServiceSearch } from '../../components/search/ServiceSearch';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 import { authService } from '../../services/auth/authService';
-import { ServicioCliente } from '../../services/services/clientServicesService';
 
 interface HomeScreenProps {
   navigation?: any;
@@ -116,32 +113,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
     }
   };
 
-  const handleServiceSelect = (service: ServicioCliente) => {
-    Alert.alert(
-      'Servicio Seleccionado',
-      `${service.nombreServicio}\n\n` +
-      `Profesional: ${service.nombreProfesional}\n` +
-      `Profesión: ${service.profesion}\n` +
-      `Duración: ${service.duracionMinutos} minutos\n` +
-      `Precio: ${service.precio.toFixed(2)}` +
-      (service.permiteDescuento ? `\nDescuento disponible: ${service.porcentajeDescuento}%` : '') +
-      `\n\nDescripción: ${service.descripcion}`,
-      [
-        { text: 'Cerrar', style: 'cancel' },
-        { 
-          text: 'Reservar', 
-          onPress: () => {
-            Alert.alert(
-              'Próximamente',
-              'La funcionalidad de reservas estará disponible pronto.',
-              [{ text: 'OK' }]
-            );
-          }
-        }
-      ]
-    );
-  };
-
   const renderProfessionalHomeContent = () => (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -196,9 +167,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
   );
 
   const renderClientHomeContent = () => (
-    <View style={styles.clientContainer}>
-      <View style={styles.searchWrapper}>
-        <ServiceSearch onServiceSelect={handleServiceSelect} />
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Logo size="medium" showTagline />
+        <Text style={styles.welcomeTitle}>
+          ¡Bienvenido Cliente!
+        </Text>
+      </View>
+
+      <View style={styles.content}>
+        <Text style={styles.message}>
+          🚧 Aplicación en construcción
+        </Text>
+        <Icon name="search" size={50} color={colors.text.primary} />
+        <Text style={styles.description}>
+          Pronto podrás buscar y reservar servicios profesionales.
+        </Text>
       </View>
     </View>
   );
@@ -319,15 +303,5 @@ const styles = StyleSheet.create({
   debugSection: {
     paddingVertical: spacing.xl,
     paddingBottom: spacing['2xl'],
-  },
-
-  clientContainer: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-
-  searchWrapper: {
-    flex: 1,
-    paddingTop: spacing['8xl'],
   },
 });

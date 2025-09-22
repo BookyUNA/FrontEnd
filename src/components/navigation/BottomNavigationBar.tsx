@@ -89,8 +89,8 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   // Tab de servicios profesionales para clientes
   const professionalServicesTab = {
     key: 'professionalServices' as BottomNavTabType,
-    iconName: 'search',
-    label: 'Profesionales',
+    iconName: 'briefcase',
+    label: 'Servicios',
   };
 
   // Tab de perfil

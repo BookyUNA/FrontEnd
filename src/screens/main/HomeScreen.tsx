@@ -1,7 +1,6 @@
 /**
  * Pantalla de Inicio - Booky
  * Sistema de reservas para profesionales independientes
- * Incluye búsqueda de servicios para clientes
  */
 
 import React, { useState } from 'react';
@@ -19,12 +18,11 @@ import { Button } from '../../components/forms/Button';
 import { BottomNavigationBar, BottomNavTabType } from '../../components/navigation/BottomNavigationBar';
 import { ProfileScreen } from '../profile/ProfileScreen';
 import { ServicesScreen } from '../services/ServicesScreen';
-import { ServiceSearch } from '../../components/search/ServiceSearch';
+import { ProfessionalServicesScreen } from '../client/ProfessionalServicesScreen';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 import { authService } from '../../services/auth/authService';
-import { ServicioCliente } from '../../services/services/clientServicesService';
 
 interface HomeScreenProps {
   navigation?: any;
@@ -32,18 +30,12 @@ interface HomeScreenProps {
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) => {
-  // Estado para manejar la tab activa
   const [activeTab, setActiveTab] = useState<BottomNavTabType>('home');
-  
-  // Estado para controlar el loading del logout
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
-  
-  // Estado para almacenar el rol del usuario
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isProfessional, setIsProfessional] = useState<boolean>(false);
   const [isClient, setIsClient] = useState<boolean>(false);
   
-  // Verificar token y rol al cargar la pantalla
   React.useEffect(() => {
     const checkUserAuth = async () => {
       try {
@@ -61,7 +53,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
           userData: userData
         });
 
-        // Actualizar estados locales
         setUserRole(role);
         setIsProfessional(isProf);
         setIsClient(role === 'Cliente');
@@ -77,14 +68,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
         }
         
       } catch (error) {
-        //console.error('🔍 Error al verificar autenticación:', error);
+        // Error silencioso en verificación de autenticación
       }
     };
     
     checkUserAuth();
   }, []);
   
-  // Función para manejar logout
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
@@ -97,8 +87,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
         onLogout();
       }
     } catch (error: unknown) {
-      //console.error('🚪 Error en logout:', error);
-      // Forzar logout local
+      // Error silencioso, forzar logout local
       if (onLogout) {
         onLogout();
       }
@@ -107,13 +96,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
     }
   };
 
-  // Función para manejar el cambio de tab
   const handleTabChange = (tab: BottomNavTabType) => {
     setActiveTab(tab);
     console.log('📱 Cambiando a tab:', tab);
   };
 
-  // Función para navegar a crear servicio desde ServicesScreen
   const handleCreateService = () => {
     if (navigation?.navigate) {
       navigation.navigate('CreateService');
@@ -126,38 +113,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
     }
   };
 
-  // Función para manejar selección de servicio (para clientes)
-  const handleServiceSelect = (service: ServicioCliente) => {
-    Alert.alert(
-      'Servicio Seleccionado',
-      `${service.nombreServicio}\n\n` +
-      `Profesional: ${service.nombreProfesional}\n` +
-      `Profesión: ${service.profesion}\n` +
-      `Duración: ${service.duracionMinutos} minutos\n` +
-      `Precio: ${service.precio.toFixed(2)}` +
-      (service.permiteDescuento ? `\nDescuento disponible: ${service.porcentajeDescuento}%` : '') +
-      `\n\nDescripción: ${service.descripcion}`,
-      [
-        { text: 'Cerrar', style: 'cancel' },
-        { 
-          text: 'Reservar', 
-          onPress: () => {
-            // Aquí iría la navegación a la pantalla de reserva
-            Alert.alert(
-              'Próximamente',
-              'La funcionalidad de reservas estará disponible pronto.',
-              [{ text: 'OK' }]
-            );
-          }
-        }
-      ]
-    );
-  };
-
-  // Renderizar el contenido de la pantalla de Inicio para Profesionales
   const renderProfessionalHomeContent = () => (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Logo size="medium" showTagline />
         <Text style={styles.welcomeTitle}>
@@ -165,7 +122,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
         </Text>
       </View>
 
-      {/* Contenido Principal */}
       <View style={styles.content}>
         <Text style={styles.message}>
           🚧 Aplicación en construcción
@@ -176,7 +132,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
         </Text>
       </View>
 
-      {/* Botones de Debug */}
       <View style={styles.debugSection}>
         <Button
           title="🔍 Verificar Estado Completo"
@@ -202,7 +157,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
                 [{ text: 'OK' }]
               );
             } catch (error) {
-              //console.error('Error en debug:', error);
+              // Error silencioso en debug
             }
           }}
           variant="outline"
@@ -211,32 +166,39 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
     </View>
   );
 
-  // Renderizar el contenido de la pantalla de Inicio para Clientes
   const renderClientHomeContent = () => (
-    <View style={styles.clientContainer}>
-      {/* Componente de búsqueda de servicios con espaciado correcto */}
-      <View style={styles.searchWrapper}>
-        <ServiceSearch onServiceSelect={handleServiceSelect} />
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Logo size="medium" showTagline />
+        <Text style={styles.welcomeTitle}>
+          ¡Bienvenido Cliente!
+        </Text>
+      </View>
+
+      <View style={styles.content}>
+        <Text style={styles.message}>
+          🚧 Aplicación en construcción
+        </Text>
+        <Icon name="search" size={50} color={colors.text.primary} />
+        <Text style={styles.description}>
+          Pronto podrás buscar y reservar servicios profesionales.
+        </Text>
       </View>
     </View>
   );
 
-  // Renderizar contenido según la tab activa
   const renderContent = () => {
     switch (activeTab) {
       case 'home':
-        // Mostrar contenido diferente según el rol del usuario
         if (isClient) {
           return renderClientHomeContent();
         } else if (isProfessional) {
           return renderProfessionalHomeContent();
         } else {
-          // Fallback para usuarios sin rol definido
           return renderProfessionalHomeContent();
         }
       
       case 'services':
-        // Solo mostrar servicios si es profesional
         if (isProfessional) {
           return (
             <ServicesScreen 
@@ -245,9 +207,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
             />
           );
         } else {
-          // Fallback para clientes
           return renderClientHomeContent();
         }
+
+      case 'professionalServices':
+        return (
+          <ProfessionalServicesScreen 
+            navigation={navigation}
+          />
+        );
       
       case 'profile':
         return (
@@ -264,7 +232,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
 
   return (
     <View style={styles.mainContainer}>
-      {/* Contenido principal */}
       <View style={styles.contentContainer}>
         {activeTab === 'profile' ? (
           <SafeContainer>
@@ -275,7 +242,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
         )}
       </View>
 
-      {/* Bottom Navigation */}
       <BottomNavigationBar
         activeTab={activeTab}
         onTabPress={handleTabChange}
@@ -337,16 +303,5 @@ const styles = StyleSheet.create({
   debugSection: {
     paddingVertical: spacing.xl,
     paddingBottom: spacing['2xl'],
-  },
-
-  // Estilos específicos para clientes
-  clientContainer: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-
-  searchWrapper: {
-    flex: 1,
-    paddingTop: spacing['8xl'], // Mismo espaciado que ProfileScreen header
   },
 });

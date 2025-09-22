@@ -88,6 +88,11 @@ export interface ApiProfileResponse {
   Correo: string;
   Cedula: string;
   Telefono: string;
+  Profesion: string | null;
+  Descripcon: string | null;
+  Direccion: string | null;
+  CalificacionPromedio: number | null;
+  TotalCalificaciones: number | null;
   error?: { ErrorCode: number; Message: string }[];
   resultado: boolean;
 }
@@ -165,7 +170,6 @@ class UserService {
 
       // Verificar primero errores de red/conexión
       if (!response.success && response.status === 0) {
-        //console.error('👤 Error de red en registro');
         return {
           success: false,
           error: response.error || 'Error de conexión. Verifica tu conexión a internet.',
@@ -177,15 +181,13 @@ class UserService {
       const data = response.data;
       
       if (!data) {
-        //console.error('👤 Respuesta vacía del servidor');
         return {
           success: false,
           error: 'Respuesta inválida del servidor',
         };
       }
 
-      // Verificar PRIMERO si el registro fue exitoso según la API
-      // La API devuelve resultado: true para éxito, false para error
+      // Verificar si el registro fue exitoso según la API
       if (data.resultado === true) {
         console.log('👤 ✅ Registro exitoso según la API');
         return {
@@ -213,14 +215,12 @@ class UserService {
       }
 
       // Caso donde resultado es false pero no hay errores específicos
-      //console.error('👤 Registro falló sin errores específicos en la respuesta');
       return {
         success: false,
         error: 'No se pudo completar el registro. Por favor, intenta nuevamente.',
       };
 
     } catch (error: any) {
-      //console.error('👤 Error inesperado en registro:', error);
       return {
         success: false,
         error: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
@@ -282,7 +282,6 @@ class UserService {
 
       // Verificar errores de red/conexión
       if (!response.success && response.status === 0) {
-        //console.error('👤📧 Error de red en verificación');
         return {
           success: false,
           error: response.error || 'Error de conexión. Verifica tu conexión a internet.',
@@ -294,7 +293,6 @@ class UserService {
       const data = response.data;
       
       if (!data) {
-        //console.error('👤📧 Respuesta vacía del servidor');
         return {
           success: false,
           error: 'Respuesta inválida del servidor',
@@ -302,7 +300,6 @@ class UserService {
       }
 
       // Verificar si la verificación fue exitosa según la API
-      // La API devuelve resultado: true para éxito, false para error
       if (data.resultado === true) {
         console.log('👤📧 ✅ Verificación exitosa según la API');
         return {
@@ -330,14 +327,12 @@ class UserService {
       }
 
       // Caso donde resultado es false pero no hay errores específicos
-      //console.error('👤📧 Verificación falló sin errores específicos en la respuesta');
       return {
         success: false,
         error: 'Código de verificación incorrecto. Por favor, intenta nuevamente.',
       };
 
     } catch (error: any) {
-      //console.error('👤📧 Error inesperado en verificación:', error);
       return {
         success: false,
         error: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
@@ -382,7 +377,6 @@ class UserService {
 
       // Verificar errores de red/conexión
       if (!response.success && response.status === 0) {
-        //console.error('👤📧 Error de red en reenvío');
         return {
           success: false,
           error: response.error || 'Error de conexión. Verifica tu conexión a internet.',
@@ -393,7 +387,6 @@ class UserService {
       const data = response.data;
 
       if (!data) {
-        //console.error('👤📧 Respuesta vacía del servidor para reenvío');
         return {
           success: false,
           error: 'Respuesta inválida del servidor',
@@ -426,14 +419,12 @@ class UserService {
       }
 
       // Caso donde resultado es false pero no hay errores específicos
-      //console.error('👤📧 Reenvío falló sin errores específicos');
       return {
         success: false,
         error: 'No se pudo reenviar el código de verificación.',
       };
 
     } catch (error: any) {
-      //console.error('👤📧 Error inesperado en reenvío:', error);
       return {
         success: false,
         error: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
@@ -472,7 +463,6 @@ class UserService {
       return response.data;
       
     } catch (error) {
-      //console.error('🔍 UserService: Error obteniendo perfil:', error);
       throw error;
     }
   }
@@ -523,7 +513,6 @@ class UserService {
 
       // Verificar errores de red/conexión
       if (!response.success && response.status === 0) {
-        //console.error('✏️ UserService: Error de red en actualización');
         return {
           success: false,
           error: response.error || 'Error de conexión. Verifica tu conexión a internet.',
@@ -535,7 +524,6 @@ class UserService {
       const data = response.data;
       
       if (!data) {
-        //console.error('✏️ UserService: Respuesta vacía del servidor');
         return {
           success: false,
           error: 'Respuesta inválida del servidor',
@@ -568,14 +556,12 @@ class UserService {
       }
 
       // Caso donde resultado es false pero no hay errores específicos
-      //console.error('✏️ UserService: Actualización falló sin errores específicos en la respuesta');
       return {
         success: false,
         error: 'No se pudo actualizar el perfil. Por favor, intenta nuevamente.',
       };
 
     } catch (error: any) {
-      //console.error('✏️ UserService: Error inesperado en actualización:', error);
       return {
         success: false,
         error: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
@@ -644,10 +630,6 @@ class UserService {
   }
 
   /**
-   * Validar formato de teléfono costarricense
-   * Formato esperado: 8 dígitos (puede tener guión después del 4to dígito)
-   */
-/**
    * Validar formato de teléfono costarricense
    * Debe tener exactamente 8 dígitos y empezar con 2, 6, 7 u 8
    */

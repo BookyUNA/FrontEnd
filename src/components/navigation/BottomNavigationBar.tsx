@@ -1,7 +1,7 @@
 /**
  * BottomNavigationBar - Booky
  * Componente de navegación inferior para la aplicación
- * Actualizado para incluir tab de servicios condicionalmente para profesionales
+ * Incluye diferentes tabs según el tipo de usuario
  */
 
 import React from 'react';
@@ -16,13 +16,12 @@ import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 
-// Tipo actualizado para incluir servicios
-export type BottomNavTabType = 'home' | 'services' | 'profile';
+export type BottomNavTabType = 'home' | 'services' | 'professionalServices' | 'profile';
 
 interface BottomNavigationBarProps {
   activeTab: BottomNavTabType;
   onTabPress: (tab: BottomNavTabType) => void;
-  isProfessional?: boolean; // Prop para determinar si mostrar servicios
+  isProfessional?: boolean;
 }
 
 interface TabItemProps {
@@ -47,7 +46,6 @@ const TabItem: React.FC<TabItemProps> = ({
       activeOpacity={0.7}
     >
       <View style={styles.tabContent}>
-        {/* Icono */}
         <View style={[styles.iconContainer, isActive && styles.iconContainerActive]}>
           <Icon 
             name={iconName}
@@ -57,12 +55,10 @@ const TabItem: React.FC<TabItemProps> = ({
           />
         </View>
         
-        {/* Label */}
         <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
           {label}
         </Text>
         
-        {/* Indicador activo */}
         {isActive && <View style={styles.activeIndicator} />}
       </View>
     </TouchableOpacity>
@@ -83,11 +79,18 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
     },
   ];
 
-  // Tab de servicios solo para profesionales
+  // Tab de servicios para profesionales
   const servicesTab = {
     key: 'services' as BottomNavTabType,
     iconName: 'briefcase',
-    label: 'Servicios',
+    label: 'Mis Servicios',
+  };
+
+  // Tab de servicios profesionales para clientes
+  const professionalServicesTab = {
+    key: 'professionalServices' as BottomNavTabType,
+    iconName: 'search',
+    label: 'Profesionales',
   };
 
   // Tab de perfil
@@ -100,18 +103,13 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   // Construir array de tabs según el rol
   const tabs = isProfessional 
     ? [...baseTabs, servicesTab, profileTab] 
-    : [...baseTabs, profileTab];
+    : [...baseTabs, professionalServicesTab, profileTab];
 
   return (
     <View style={styles.container}>
-      {/* Sombra superior */}
       <View style={styles.shadow} />
       
-      {/* Contenido de navegación */}
-      <View style={[
-        styles.content,
-        isProfessional ? styles.contentThreeTabs : styles.contentTwoTabs
-      ]}>
+      <View style={styles.content}>
         {tabs.map((tab) => (
           <TabItem
             key={tab.key}
@@ -143,19 +141,10 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
-  },
-
-  // Estilos para dos tabs
-  contentTwoTabs: {
-    justifyContent: 'space-around',
-  },
-
-  // Estilos para tres tabs
-  contentThreeTabs: {
-    justifyContent: 'space-between',
   },
 
   tabItem: {
@@ -199,7 +188,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
     opacity: 0.8,
     textAlign: 'center',
-    fontSize: 11, // Texto ligeramente más pequeño para 3 tabs
+    fontSize: 10,
   },
 
   tabLabelActive: {

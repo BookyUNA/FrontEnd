@@ -18,13 +18,13 @@ import { ForgotPasswordScreen } from "./src/screens/auth/ForgotPasswordScreen";
 import { ResetPasswordScreen } from "./src/screens/auth/ResetPasswordScreen";
 import { CreateServiceScreen } from "./src/screens/services/CreateServiceScreen";
 import { EditServiceScreen } from "./src/screens/services/EditServiceScreen";
+import { ProfessionalServicesScreen } from "./src/screens/client/ProfessionalServicesScreen";
 
 import { authService } from "./src/services/auth/authService";
 import { SafeContainer } from "./src/components/ui/SafeContainer";
 import { colors } from "./src/styles/colors";
 import { typography } from "./src/styles/typography";
 
-// Tipos de navegación actualizados
 export type RootStackParamList = {
   Login: { email?: string; verified?: boolean } | undefined;
   Register: undefined;
@@ -34,6 +34,7 @@ export type RootStackParamList = {
   Home: undefined;
   CreateService: undefined;
   EditService: { service: any } | undefined;
+  ProfessionalServices: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -56,7 +57,7 @@ function App(): React.JSX.Element {
         isUserAuthenticated ? "Autenticado" : "No autenticado"
       );
     } catch (error) {
-      //console.error("Error al verificar autenticación:", error);
+      // Error silencioso
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
@@ -78,7 +79,6 @@ function App(): React.JSX.Element {
       <Stack.Navigator>
         {isAuthenticated ? (
           <>
-            {/* Pantalla principal - Home con navegación bottom tabs */}
             <Stack.Screen name="Home" options={{ headerShown: false }}>
               {(props) => (
                 <HomeScreen 
@@ -88,7 +88,6 @@ function App(): React.JSX.Element {
               )}
             </Stack.Screen>
 
-            {/* Pantalla de crear servicio */}
             <Stack.Screen 
               name="CreateService" 
               component={CreateServiceScreen}
@@ -105,7 +104,6 @@ function App(): React.JSX.Element {
               }}
             />
 
-            {/* Pantalla de editar servicio */}
             <Stack.Screen 
               name="EditService" 
               component={EditServiceScreen}
@@ -121,10 +119,25 @@ function App(): React.JSX.Element {
                 },
               }}
             />
+
+            <Stack.Screen 
+              name="ProfessionalServices" 
+              component={ProfessionalServicesScreen}
+              options={{ 
+                title: "Servicios Profesionales",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
+            />
           </>
         ) : (
           <>
-            {/* Pantalla de login */}
             <Stack.Screen name="Login" options={{ headerShown: false }}>
               {(props) => (
                 <LoginScreen
@@ -134,7 +147,6 @@ function App(): React.JSX.Element {
               )}
             </Stack.Screen>
             
-            {/* Pantalla de registro */}
             <Stack.Screen 
               name="Register" 
               options={{ 
@@ -160,7 +172,6 @@ function App(): React.JSX.Element {
               )}
             </Stack.Screen>
 
-            {/* Pantalla de verificación de correo */}
             <Stack.Screen 
               name="EmailVerification" 
               options={{ 
@@ -186,7 +197,6 @@ function App(): React.JSX.Element {
               )}
             </Stack.Screen>
             
-            {/* Pantalla de recuperar contraseña */}
             <Stack.Screen
               name="ForgotPassword"
               component={ForgotPasswordScreen}
@@ -203,7 +213,6 @@ function App(): React.JSX.Element {
               }}
             />
             
-            {/* Pantalla de resetear contraseña */}
             <Stack.Screen
               name="ResetPassword"
               component={ResetPasswordScreen}

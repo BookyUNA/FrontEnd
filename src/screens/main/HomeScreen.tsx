@@ -222,6 +222,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
           <ProfileScreen
             onLogout={handleLogout}
             isLoggingOut={isLoggingOut}
+            navigation={navigation} 
           />
         );
       

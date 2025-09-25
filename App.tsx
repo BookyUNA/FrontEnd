@@ -19,6 +19,7 @@ import { ResetPasswordScreen } from "./src/screens/auth/ResetPasswordScreen";
 import { CreateServiceScreen } from "./src/screens/services/CreateServiceScreen";
 import { EditServiceScreen } from "./src/screens/services/EditServiceScreen";
 import { ProfessionalServicesScreen } from "./src/screens/client/ProfessionalServicesScreen";
+import { PlanSelectionScreen } from "./src/screens/subscription/PlanSelectionScreen";
 
 import { authService } from "./src/services/auth/authService";
 import { SafeContainer } from "./src/components/ui/SafeContainer";
@@ -35,6 +36,7 @@ export type RootStackParamList = {
   CreateService: undefined;
   EditService: { service: any } | undefined;
   ProfessionalServices: undefined;
+  PlanSelection: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -57,7 +59,6 @@ function App(): React.JSX.Element {
         isUserAuthenticated ? "Autenticado" : "No autenticado"
       );
     } catch (error) {
-      // Error silencioso
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
@@ -125,6 +126,22 @@ function App(): React.JSX.Element {
               component={ProfessionalServicesScreen}
               options={{ 
                 title: "Servicios Profesionales",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
+            />
+
+            <Stack.Screen 
+              name="PlanSelection" 
+              component={PlanSelectionScreen}
+              options={{ 
+                title: "Planes de Suscripción",
                 headerStyle: {
                   backgroundColor: colors.background.primary,
                 },

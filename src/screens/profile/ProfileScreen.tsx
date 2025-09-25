@@ -61,9 +61,10 @@ interface ValidationErrors {
 // =============================================
 
 interface ProfileScreenProps {
-  onLogout?: () => void;
-  isLoggingOut?: boolean;
-}
+    onLogout?: () => void;
+    isLoggingOut?: boolean;
+    navigation?: any; 
+  }
 
 const mapApiProfileToUserProfile = (api: ApiProfileResponse): UserProfile => ({
   Nombre: api.Nombre,
@@ -79,7 +80,8 @@ const mapApiProfileToUserProfile = (api: ApiProfileResponse): UserProfile => ({
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
   onLogout, 
-  isLoggingOut = false 
+  isLoggingOut = false,
+  navigation
 }) => {
   
   // Estados principales
@@ -556,6 +558,21 @@ const validateForm = (): boolean => {
         />
       )}
 
+      {/* Botón de Planes - solo para profesionales */}
+      {userRole === 'Profesional' && (
+        <View style={styles.planButtonContainer}>
+          <Button
+            title="Gestionar Plan"
+            onPress={() => navigation?.navigate('PlanSelection')}
+            variant="outline"
+            fullWidth
+            icon="credit-card"
+            iconPosition="left"
+            disabled={isLoggingOut || isSaving}
+          />
+        </View>
+      )}
+
       <View style={styles.logoutContainer}>
         <Button
           title={isLoggingOut ? "Cerrando Sesión..." : "Cerrar Sesión"}
@@ -896,4 +913,8 @@ const styles = StyleSheet.create({
   logoutContainer: {
     marginTop: spacing.lg,
   },
+  planButtonContainer: {
+    marginTop: spacing.lg,
+  },
+
 });

@@ -25,6 +25,7 @@ export const API_CONFIG = {
     ACTUALIZAR_SERVICIO: '/Servicios/ActualizarServicio',
     CAMBIAR_ESTADO_SERVICIO: '/CambiarEstadoServicio',
     LISTAR_SERVICIOS_FILTROS: '/ListarServiciosFiltros',
+    SOLICITAR_CITA: '/SolicitarCita',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

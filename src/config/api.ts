@@ -26,6 +26,7 @@ export const API_CONFIG = {
     CAMBIAR_ESTADO_SERVICIO: '/CambiarEstadoServicio',
     LISTAR_SERVICIOS_FILTROS: '/ListarServiciosFiltros',
     SOLICITAR_CITA: '/SolicitarCita',
+    LISTAR_CITAS_CLIENTE: '/ListarCitasCliente',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

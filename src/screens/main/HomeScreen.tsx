@@ -23,6 +23,7 @@ import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 import { authService } from '../../services/auth/authService';
+import { ClientAppointmentsScreen } from '../client/ClientAppointmentsScreen';
 
 interface HomeScreenProps {
   navigation?: any;
@@ -216,7 +217,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
             navigation={navigation}
           />
         );
-      
+        
+      case 'appointments':
+      return (
+        <ClientAppointmentsScreen 
+          navigation={navigation}
+        />
+      );  
+
       case 'profile':
         return (
           <ProfileScreen

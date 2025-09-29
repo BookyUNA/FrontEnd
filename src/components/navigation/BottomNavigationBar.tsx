@@ -2,6 +2,7 @@
  * BottomNavigationBar - Booky
  * Componente de navegación inferior para la aplicación
  * Incluye diferentes tabs según el tipo de usuario
+ * ACTUALIZADO: Incluye tab de "Mis Citas" para clientes
  */
 
 import React from 'react';
@@ -16,7 +17,12 @@ import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 
-export type BottomNavTabType = 'home' | 'services' | 'professionalServices' | 'profile';
+export type BottomNavTabType = 
+  | 'home' 
+  | 'services' 
+  | 'professionalServices' 
+  | 'appointments' 
+  | 'profile';
 
 interface BottomNavigationBarProps {
   activeTab: BottomNavTabType;
@@ -93,6 +99,13 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
     label: 'Servicios',
   };
 
+  // Tab de citas para clientes
+  const appointmentsTab = {
+    key: 'appointments' as BottomNavTabType,
+    iconName: 'calendar',
+    label: 'Mis Citas',
+  };
+
   // Tab de perfil
   const profileTab = {
     key: 'profile' as BottomNavTabType,
@@ -103,7 +116,7 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   // Construir array de tabs según el rol
   const tabs = isProfessional 
     ? [...baseTabs, servicesTab, profileTab] 
-    : [...baseTabs, professionalServicesTab, profileTab];
+    : [...baseTabs, professionalServicesTab, appointmentsTab, profileTab];
 
   return (
     <View style={styles.container}>

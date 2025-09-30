@@ -1,6 +1,7 @@
 /**
  * Pantalla de Reprogramación de Cita - Booky
  * Permite al cliente reprogramar una cita existente
+ * Solución sin librerías externas para Android
  */
 
 import React, { useState } from 'react';
@@ -10,9 +11,10 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  Platform,
+  Modal,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { SafeContainer } from '../../components/ui/SafeContainer';
 import { Button } from '../../components/forms/Button';
@@ -20,7 +22,6 @@ import { Appointment, appointmentService } from '../../services/Appointment/Appo
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
-
 interface RescheduleAppointmentScreenProps {
   route?: {
     params?: {
@@ -42,6 +43,13 @@ export const RescheduleAppointmentScreen: React.FC<RescheduleAppointmentScreenPr
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
+  const [tempDay, setTempDay] = useState<number>(new Date().getDate());
+  const [tempMonth, setTempMonth] = useState<number>(new Date().getMonth());
+  const [tempYear, setTempYear] = useState<number>(new Date().getFullYear());
+  const [tempHour, setTempHour] = useState<number>(new Date().getHours());
+  const [tempMinute, setTempMinute] = useState<number>(new Date().getMinutes());
+  const [tempAmPm, setTempAmPm] = useState<'AM' | 'PM'>('AM');
+
   const formatDate = (date: Date): string => {
     const options: Intl.DateTimeFormatOptions = {
       day: '2-digit',
@@ -60,18 +68,47 @@ export const RescheduleAppointmentScreen: React.FC<RescheduleAppointmentScreenPr
     return date.toLocaleTimeString('es-ES', options);
   };
 
-  const handleDateChange = (event: any, date?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (date) {
-      setSelectedDate(date);
-    }
+  const getDaysInMonth = (month: number, year: number): number => {
+    return new Date(year, month + 1, 0).getDate();
   };
 
-  const handleTimeChange = (event: any, time?: Date) => {
-    setShowTimePicker(Platform.OS === 'ios');
-    if (time) {
-      setSelectedTime(time);
+  const openDatePicker = () => {
+    setTempDay(selectedDate.getDate());
+    setTempMonth(selectedDate.getMonth());
+    setTempYear(selectedDate.getFullYear());
+    setShowDatePicker(true);
+  };
+
+  const openTimePicker = () => {
+    let hours = selectedTime.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    
+    setTempHour(hours);
+    setTempMinute(selectedTime.getMinutes());
+    setTempAmPm(ampm);
+    setShowTimePicker(true);
+  };
+
+  const confirmDate = () => {
+    const newDate = new Date(tempYear, tempMonth, tempDay);
+    setSelectedDate(newDate);
+    setShowDatePicker(false);
+  };
+
+  const confirmTime = () => {
+    let hours = tempHour;
+    if (tempAmPm === 'PM' && hours !== 12) {
+      hours += 12;
+    } else if (tempAmPm === 'AM' && hours === 12) {
+      hours = 0;
     }
+    
+    const newTime = new Date();
+    newTime.setHours(hours);
+    newTime.setMinutes(tempMinute);
+    setSelectedTime(newTime);
+    setShowTimePicker(false);
   };
 
   const combineDateTime = (date: Date, time: Date): Date => {
@@ -172,6 +209,238 @@ export const RescheduleAppointmentScreen: React.FC<RescheduleAppointmentScreenPr
     }
   };
 
+  const renderDatePickerModal = () => {
+    const months = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 5 }, (_, i) => currentYear + i);
+    const days = Array.from({ length: getDaysInMonth(tempMonth, tempYear) }, (_, i) => i + 1);
+
+    return (
+      <Modal
+        visible={showDatePicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDatePicker(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowDatePicker(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.pickerModal}>
+                <Text style={styles.pickerModalTitle}>Seleccionar Fecha</Text>
+                
+                <View style={styles.pickerRow}>
+                  <View style={styles.pickerColumn}>
+                    <Text style={styles.pickerColumnLabel}>Día</Text>
+                    <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                      {days.map(day => (
+                        <TouchableOpacity
+                          key={day}
+                          style={[
+                            styles.pickerItem,
+                            tempDay === day && styles.pickerItemActive
+                          ]}
+                          onPress={() => setTempDay(day)}
+                        >
+                          <Text style={[
+                            styles.pickerItemText,
+                            tempDay === day && styles.pickerItemTextActive
+                          ]}>
+                            {day}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+
+                  <View style={styles.pickerColumn}>
+                    <Text style={styles.pickerColumnLabel}>Mes</Text>
+                    <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                      {months.map((month, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.pickerItem,
+                            tempMonth === index && styles.pickerItemActive
+                          ]}
+                          onPress={() => {
+                            setTempMonth(index);
+                            const maxDay = getDaysInMonth(index, tempYear);
+                            if (tempDay > maxDay) {
+                              setTempDay(maxDay);
+                            }
+                          }}
+                        >
+                          <Text style={[
+                            styles.pickerItemText,
+                            tempMonth === index && styles.pickerItemTextActive
+                          ]}>
+                            {month}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+
+                  <View style={styles.pickerColumn}>
+                    <Text style={styles.pickerColumnLabel}>Año</Text>
+                    <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                      {years.map(year => (
+                        <TouchableOpacity
+                          key={year}
+                          style={[
+                            styles.pickerItem,
+                            tempYear === year && styles.pickerItemActive
+                          ]}
+                          onPress={() => setTempYear(year)}
+                        >
+                          <Text style={[
+                            styles.pickerItemText,
+                            tempYear === year && styles.pickerItemTextActive
+                          ]}>
+                            {year}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                </View>
+
+                <View style={styles.pickerButtons}>
+                  <TouchableOpacity
+                    style={[styles.pickerButton, styles.pickerButtonCancel]}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={styles.pickerButtonTextCancel}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.pickerButton, styles.pickerButtonConfirm]}
+                    onPress={confirmDate}
+                  >
+                    <Text style={styles.pickerButtonTextConfirm}>Aceptar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
+  };
+
+  const renderTimePickerModal = () => {
+    const hours = Array.from({ length: 12 }, (_, i) => i + 1);
+    const minutes = Array.from({ length: 60 }, (_, i) => i);
+
+    return (
+      <Modal
+        visible={showTimePicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowTimePicker(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowTimePicker(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.pickerModal}>
+                <Text style={styles.pickerModalTitle}>Seleccionar Hora</Text>
+                
+                <View style={styles.pickerRow}>
+                  <View style={styles.pickerColumn}>
+                    <Text style={styles.pickerColumnLabel}>Hora</Text>
+                    <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                      {hours.map(hour => (
+                        <TouchableOpacity
+                          key={hour}
+                          style={[
+                            styles.pickerItem,
+                            tempHour === hour && styles.pickerItemActive
+                          ]}
+                          onPress={() => setTempHour(hour)}
+                        >
+                          <Text style={[
+                            styles.pickerItemText,
+                            tempHour === hour && styles.pickerItemTextActive
+                          ]}>
+                            {hour}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+
+                  <View style={styles.pickerColumn}>
+                    <Text style={styles.pickerColumnLabel}>Minuto</Text>
+                    <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                      {minutes.map(minute => (
+                        <TouchableOpacity
+                          key={minute}
+                          style={[
+                            styles.pickerItem,
+                            tempMinute === minute && styles.pickerItemActive
+                          ]}
+                          onPress={() => setTempMinute(minute)}
+                        >
+                          <Text style={[
+                            styles.pickerItemText,
+                            tempMinute === minute && styles.pickerItemTextActive
+                          ]}>
+                            {minute.toString().padStart(2, '0')}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+
+                  <View style={styles.pickerColumn}>
+                    <Text style={styles.pickerColumnLabel}>AM/PM</Text>
+                    <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+                      {['AM', 'PM'].map(period => (
+                        <TouchableOpacity
+                          key={period}
+                          style={[
+                            styles.pickerItem,
+                            tempAmPm === period && styles.pickerItemActive
+                          ]}
+                          onPress={() => setTempAmPm(period as 'AM' | 'PM')}
+                        >
+                          <Text style={[
+                            styles.pickerItemText,
+                            tempAmPm === period && styles.pickerItemTextActive
+                          ]}>
+                            {period}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                </View>
+
+                <View style={styles.pickerButtons}>
+                  <TouchableOpacity
+                    style={[styles.pickerButton, styles.pickerButtonCancel]}
+                    onPress={() => setShowTimePicker(false)}
+                  >
+                    <Text style={styles.pickerButtonTextCancel}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.pickerButton, styles.pickerButtonConfirm]}
+                    onPress={confirmTime}
+                  >
+                    <Text style={styles.pickerButtonTextConfirm}>Aceptar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
+  };
+
   if (!appointment) {
     return (
       <SafeContainer>
@@ -250,40 +519,22 @@ export const RescheduleAppointmentScreen: React.FC<RescheduleAppointmentScreenPr
             <Text style={styles.pickerLabel}>Fecha</Text>
             <Button
               title={formatDate(selectedDate)}
-              onPress={() => setShowDatePicker(true)}
+              onPress={openDatePicker}
               icon="calendar"
               variant="outline"
               fullWidth
             />
-            {showDatePicker && (
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display="default"
-                onChange={handleDateChange}
-                minimumDate={new Date()}
-              />
-            )}
           </View>
 
           <View style={styles.pickerCard}>
             <Text style={styles.pickerLabel}>Hora</Text>
             <Button
               title={formatTime(selectedTime)}
-              onPress={() => setShowTimePicker(true)}
+              onPress={openTimePicker}
               icon="clock"
               variant="outline"
               fullWidth
             />
-            {showTimePicker && (
-              <DateTimePicker
-                value={selectedTime}
-                mode="time"
-                display="default"
-                onChange={handleTimeChange}
-                is24Hour={false}
-              />
-            )}
           </View>
 
           <View style={styles.previewCard}>
@@ -301,6 +552,9 @@ export const RescheduleAppointmentScreen: React.FC<RescheduleAppointmentScreenPr
           </Text>
         </View>
       </ScrollView>
+
+      {renderDatePickerModal()}
+      {renderTimePickerModal()}
 
       <View style={styles.footer}>
         <View style={styles.buttonRow}>
@@ -488,5 +742,112 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textAlign: 'center',
     marginBottom: spacing.xl,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+
+  pickerModal: {
+    backgroundColor: colors.background.primary,
+    borderRadius: spacing.lg,
+    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+  },
+
+  pickerModalTitle: {
+    ...typography.styles.h2,
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+
+  pickerRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+
+  pickerColumn: {
+    flex: 1,
+  },
+
+  pickerColumnLabel: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    fontWeight: typography.fontWeight.semibold,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+  },
+
+  pickerScroll: {
+    maxHeight: 200,
+    borderRadius: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+  },
+
+  pickerItem: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+
+  pickerItemActive: {
+    backgroundColor: colors.primary.main,
+  },
+
+  pickerItemText: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    fontSize: 16,
+  },
+
+  pickerItemTextActive: {
+    color: colors.primary.contrast,
+    fontWeight: typography.fontWeight.semibold,
+  },
+
+  pickerButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+
+  pickerButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: spacing.sm,
+    alignItems: 'center',
+  },
+
+  pickerButtonCancel: {
+    backgroundColor: colors.background.secondary,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+  },
+
+  pickerButtonConfirm: {
+    backgroundColor: colors.primary.main,
+  },
+
+  pickerButtonTextCancel: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    fontWeight: typography.fontWeight.semibold,
+  },
+
+  pickerButtonTextConfirm: {
+    ...typography.styles.body,
+    color: colors.primary.contrast,
+    fontWeight: typography.fontWeight.semibold,
   },
 });

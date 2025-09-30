@@ -151,7 +151,7 @@ class AppointmentService {
 
       const token = await authService.getToken();
       if (!token) {
-        console.error('📅 AppointmentService: No hay token disponible');
+        //console.error('📅 AppointmentService: No hay token disponible');
         return {
           success: false,
           error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
@@ -181,7 +181,7 @@ class AppointmentService {
 
       if (!response.ok) {
         if (response.status === 401) {
-          console.error('📅 AppointmentService: Token inválido o expirado');
+          //console.error('📅 AppointmentService: Token inválido o expirado');
           return {
             success: false,
             error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
@@ -189,7 +189,7 @@ class AppointmentService {
         }
 
         const errorText = await response.text();
-        console.error('📅 AppointmentService: Error HTTP:', errorText);
+        //console.error('📅 AppointmentService: Error HTTP:', errorText);
         
         return {
           success: false,
@@ -202,7 +202,7 @@ class AppointmentService {
 
       // Validar estructura de respuesta
       if (!data || typeof data.resultado !== 'boolean') {
-        console.error('📅 AppointmentService: Respuesta inválida del servidor');
+        //console.error('📅 AppointmentService: Respuesta inválida del servidor');
         return {
           success: false,
           error: 'Respuesta inválida del servidor. Intenta de nuevo.',
@@ -215,7 +215,7 @@ class AppointmentService {
           ? data.error[0].Message 
           : 'No se pudieron obtener las citas';
         
-        console.error('📅 AppointmentService: Error en la respuesta:', errorMessage);
+        //console.error('📅 AppointmentService: Error en la respuesta:', errorMessage);
         return {
           success: false,
           error: errorMessage,
@@ -233,7 +233,7 @@ class AppointmentService {
       };
 
     } catch (error: any) {
-      console.error('📅 AppointmentService: Error en getClientAppointments:', error);
+      //console.error('📅 AppointmentService: Error en getClientAppointments:', error);
 
       if (error.name === 'AbortError') {
         return {

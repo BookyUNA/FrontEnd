@@ -24,6 +24,7 @@ import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 import { authService } from '../../services/auth/authService';
 import { ClientAppointmentsScreen } from '../client/ClientAppointmentsScreen';
+import { ProfessionalAppointmentsScreen } from '../client/ProfessionalAppointmentsScreen';
 
 interface HomeScreenProps {
   navigation?: any;
@@ -233,6 +234,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
             navigation={navigation} 
           />
         );
+
+      case 'professionalAppointments':
+      return (
+        <ProfessionalAppointmentsScreen 
+          navigation={navigation}
+        />
+      );
       
       default:
         return isClient ? renderClientHomeContent() : renderProfessionalHomeContent();

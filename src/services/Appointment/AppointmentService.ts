@@ -260,6 +260,121 @@ class AppointmentService {
     }
   }
 
+  /**
+ * Lista todas las citas del profesional autenticado
+ */
+async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
+  try {
+    console.log('📅 AppointmentService: Obteniendo citas del profesional...');
+
+    const token = await authService.getToken();
+    if (!token) {
+      console.error('📅 AppointmentService: No hay token disponible');
+      return {
+        success: false,
+        error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
+      };
+    }
+
+    const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.LISTAR_CITAS_PROFESIONAL}`;
+    console.log('📅 AppointmentService: URL:', url);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    console.log('📅 AppointmentService: Status de respuesta:', response.status);
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.error('📅 AppointmentService: Token inválido o expirado');
+        return {
+          success: false,
+          error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+        };
+      }
+
+      const errorText = await response.text();
+      console.error('📅 AppointmentService: Error HTTP:', errorText);
+      
+      return {
+        success: false,
+        error: `Error al obtener las citas (${response.status}). Intenta de nuevo.`,
+      };
+    }
+
+    const data: ListarCitasClienteResponse = await response.json();
+    console.log('📅 AppointmentService: Datos recibidos:', data);
+
+    if (!data || typeof data.resultado !== 'boolean') {
+      console.error('📅 AppointmentService: Respuesta inválida del servidor');
+      return {
+        success: false,
+        error: 'Respuesta inválida del servidor. Intenta de nuevo.',
+      };
+    }
+
+    if (!data.resultado || (data.error && data.error.length > 0)) {
+      const errorMessage = data.error && data.error.length > 0 
+        ? data.error[0].Message 
+        : 'No se pudieron obtener las citas';
+      
+      console.error('📅 AppointmentService: Error en la respuesta:', errorMessage);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+
+    const appointments: Appointment[] = (data.Citas || []).map(mapApiCitaToAppointment);
+    
+    console.log('📅 AppointmentService: Citas procesadas:', appointments.length);
+    
+    return {
+      success: true,
+      data: appointments,
+    };
+
+  } catch (error: any) {
+    console.error('📅 AppointmentService: Error en getProfessionalAppointments:', error);
+
+    if (error.name === 'AbortError') {
+      return {
+        success: false,
+        error: 'La solicitud tardó demasiado. Verifica tu conexión a internet.',
+        isNetworkError: true,
+      };
+    }
+
+    if (error.message?.toLowerCase().includes('network') || 
+        error.message?.toLowerCase().includes('fetch')) {
+      return {
+        success: false,
+        error: 'Error de conexión. Verifica tu conexión a internet e intenta de nuevo.',
+        isNetworkError: true,
+      };
+    }
+
+    return {
+      success: false,
+      error: 'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+      isNetworkError: false,
+    };
+  }
+}
+
   async rescheduleAppointment(
     appointment: Appointment,
     newDate: Date

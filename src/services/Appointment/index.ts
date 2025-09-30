@@ -17,3 +17,4 @@ export {
  */
 
 export { ClientAppointmentsScreen } from '../../screens/client/ClientAppointmentsScreen';
+export { ProfessionalAppointmentsScreen } from '../../screens/client/ProfessionalAppointmentsScreen';

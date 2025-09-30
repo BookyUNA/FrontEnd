@@ -28,6 +28,7 @@ export const API_CONFIG = {
     SOLICITAR_CITA: '/SolicitarCita',
     LISTAR_CITAS_CLIENTE: '/ListarCitasCliente',
     REPROGRAMAR_CITA: '/ReprogramarCita',
+    LISTAR_CITAS_PROFESIONAL: '/ListarCitasProfesional',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

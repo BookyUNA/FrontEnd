@@ -22,6 +22,7 @@ export type BottomNavTabType =
   | 'services' 
   | 'professionalServices' 
   | 'appointments' 
+  | 'professionalAppointments'
   | 'profile';
 
 interface BottomNavigationBarProps {
@@ -113,9 +114,16 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
     label: 'Perfil',
   };
 
+  // Tab de citas para profesionales
+  const professionalAppointmentsTab = {
+    key: 'professionalAppointments' as BottomNavTabType,
+    iconName: 'calendar',
+    label: 'Mis Citas',
+  };
+
   // Construir array de tabs según el rol
   const tabs = isProfessional 
-    ? [...baseTabs, servicesTab, profileTab] 
+    ? [...baseTabs, servicesTab, professionalAppointmentsTab, profileTab] 
     : [...baseTabs, professionalServicesTab, appointmentsTab, profileTab];
 
   return (

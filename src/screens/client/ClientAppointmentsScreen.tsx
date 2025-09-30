@@ -13,6 +13,7 @@ import {
   RefreshControl,
   Alert,
   Modal,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { SafeContainer } from '../../components/ui/SafeContainer';
@@ -35,6 +36,14 @@ interface ClientAppointmentsScreenProps {
 }
 
 type FilterStatus = AppointmentStatus | 'Todas';
+
+interface MenuOption {
+  id: string;
+  title: string;
+  icon: string;
+  color?: string;
+  onPress: () => void;
+}
 
 // =============================================
 // UTILIDADES
@@ -87,7 +96,6 @@ const getStatusIcon = (status: AppointmentStatus): string => {
 export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> = ({ 
   navigation 
 }) => {
-  // Estados principales
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -95,6 +103,7 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
   const [selectedFilter, setSelectedFilter] = useState<FilterStatus>('Todas');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
+  const [showContextMenu, setShowContextMenu] = useState<boolean>(false);
 
   // =============================================
   // EFECTOS
@@ -123,7 +132,7 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
         const sortedAppointments = appointmentService.sortAppointmentsByDate(result.data, false);
         setAppointments(sortedAppointments);
       } else {
-        console.error('📅 ClientAppointmentsScreen: Error al cargar citas:', result.error);
+        //console.error('📅 ClientAppointmentsScreen: Error al cargar citas:', result.error);
         
         if (result.isNetworkError) {
           Alert.alert(
@@ -141,7 +150,7 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
         setAppointments([]);
       }
     } catch (error) {
-      console.error('📅 ClientAppointmentsScreen: Error inesperado:', error);
+      //console.error('📅 ClientAppointmentsScreen: Error inesperado:', error);
       Alert.alert(
         'Error',
         'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
@@ -179,9 +188,67 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
     setIsModalVisible(true);
   };
 
+  const handleLongPress = (appointment: Appointment) => {
+    console.log('📅 ClientAppointmentsScreen: Mostrando menú contextual para cita:', appointment.id);
+    setSelectedAppointment(appointment);
+    setShowContextMenu(true);
+  };
+
   const handleCloseModal = () => {
     setIsModalVisible(false);
     setSelectedAppointment(null);
+  };
+
+  const closeContextMenu = () => {
+    setShowContextMenu(false);
+    setSelectedAppointment(null);
+  };
+
+  const handleRescheduleAppointment = () => {
+    if (selectedAppointment && navigation?.navigate) {
+      console.log('📅 Redirigiendo a reprogramar cita:', selectedAppointment.id);
+      navigation.navigate('RescheduleAppointment', { appointment: selectedAppointment });
+    } else if (selectedAppointment) {
+      Alert.alert(
+        'Reprogramar Cita',
+        `Funcionalidad para reprogramar la cita con ${selectedAppointment.nombreProfesional} en desarrollo.`,
+        [{ text: 'OK' }]
+      );
+    }
+    closeContextMenu();
+  };
+
+  const handleViewDetails = () => {
+    if (selectedAppointment) {
+      setShowContextMenu(false);
+      setIsModalVisible(true);
+    }
+  };
+
+  const getMenuOptions = (): MenuOption[] => {
+    const options: MenuOption[] = [
+      {
+        id: 'view-details',
+        title: 'Ver Detalles',
+        icon: 'eye',
+        color: colors.primary.main,
+        onPress: handleViewDetails,
+      },
+    ];
+
+    // Solo mostrar opción de reprogramar para citas Pendiente o Confirmada
+    if (selectedAppointment && 
+        (selectedAppointment.estado === 'Pendiente' || selectedAppointment.estado === 'Confirmada')) {
+      options.push({
+        id: 'reschedule',
+        title: 'Reprogramar',
+        icon: 'calendar-alt',
+        color: colors.states.info,
+        onPress: handleRescheduleAppointment,
+      });
+    }
+
+    return options;
   };
 
   // =============================================
@@ -257,9 +324,9 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
         key={appointment.id}
         style={styles.appointmentCard}
         onPress={() => handleAppointmentPress(appointment)}
+        onLongPress={() => handleLongPress(appointment)}
         activeOpacity={0.7}
       >
-        {/* Header de la tarjeta */}
         <View style={styles.cardHeader}>
           <View style={styles.serviceInfo}>
             <Icon name="briefcase" size={16} color={colors.primary.main} />
@@ -275,7 +342,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
           </View>
         </View>
 
-        {/* Información del profesional */}
         <View style={styles.cardContent}>
           <View style={styles.professionalInfo}>
             <Icon name="user-tie" size={14} color={colors.text.secondary} />
@@ -288,7 +354,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
           </Text>
         </View>
 
-        {/* Fecha y hora */}
         <View style={styles.cardFooter}>
           <View style={styles.dateTimeContainer}>
             <View style={styles.dateTime}>
@@ -311,7 +376,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
           </View>
         </View>
 
-        {/* Indicador de cita pasada */}
         {isPast && appointment.estado !== 'Completada' && (
           <View style={styles.pastIndicator}>
             <Icon name="exclamation-triangle" size={10} color={colors.states.warning} />
@@ -348,6 +412,79 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
     );
   };
 
+  const renderContextMenu = () => {
+    if (!selectedAppointment) return null;
+
+    const menuOptions = getMenuOptions();
+
+    return (
+      <Modal
+        visible={showContextMenu}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeContextMenu}
+      >
+        <TouchableWithoutFeedback onPress={closeContextMenu}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.contextMenu}>
+                <View style={styles.menuHeader}>
+                  <Text style={styles.menuTitle} numberOfLines={1}>
+                    {selectedAppointment.nombreServicio}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={closeContextMenu}
+                    style={styles.closeButton}
+                  >
+                    <Icon name="times" size={16} color={colors.text.secondary} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.menuOptions}>
+                  {menuOptions.map((option, index) => (
+                    <TouchableOpacity
+                      key={option.id}
+                      style={[
+                        styles.menuOption,
+                        index < menuOptions.length - 1 && styles.menuOptionWithBorder
+                      ]}
+                      onPress={option.onPress}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.optionContent}>
+                        <View style={[
+                          styles.optionIcon,
+                          { backgroundColor: (option.color || colors.text.secondary) + '15' }
+                        ]}>
+                          <Icon 
+                            name={option.icon} 
+                            size={16} 
+                            color={option.color || colors.text.secondary} 
+                          />
+                        </View>
+                        <Text style={[
+                          styles.optionText,
+                          { color: option.color || colors.text.primary }
+                        ]}>
+                          {option.title}
+                        </Text>
+                      </View>
+                      <Icon 
+                        name="chevron-right" 
+                        size={12} 
+                        color={colors.text.tertiary} 
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
+  };
+
   const renderDetailsModal = () => {
     if (!selectedAppointment) return null;
 
@@ -363,7 +500,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            {/* Header del modal */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Detalles de la Cita</Text>
               <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
@@ -375,7 +511,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
               style={styles.modalBody}
               showsVerticalScrollIndicator={false}
             >
-              {/* Estado */}
               <View style={[styles.modalStatusBadge, { backgroundColor: statusColor + '20' }]}>
                 <Icon name={statusIcon} size={20} color={statusColor} solid />
                 <Text style={[styles.modalStatusText, { color: statusColor }]}>
@@ -383,7 +518,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
                 </Text>
               </View>
 
-              {/* Servicio */}
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionTitle}>Servicio</Text>
                 <View style={styles.modalField}>
@@ -394,7 +528,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
                 </View>
               </View>
 
-              {/* Profesional */}
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionTitle}>Profesional</Text>
                 <View style={styles.modalField}>
@@ -435,7 +568,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
                 )}
               </View>
 
-              {/* Fecha y Hora */}
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionTitle}>Fecha y Hora</Text>
                 <View style={styles.modalField}>
@@ -458,7 +590,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
                 </View>
               </View>
 
-              {/* Precio */}
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionTitle}>Precio</Text>
                 <View style={styles.modalField}>
@@ -469,7 +600,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
                 </View>
               </View>
 
-              {/* Mensaje de solicitud */}
               {selectedAppointment.mensajeSolicitud && (
                 <View style={styles.modalSection}>
                   <Text style={styles.modalSectionTitle}>Mensaje de Solicitud</Text>
@@ -479,7 +609,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
                 </View>
               )}
 
-              {/* Motivo de rechazo */}
               {selectedAppointment.motivoRechazo && (
                 <View style={styles.modalSection}>
                   <Text style={[styles.modalSectionTitle, { color: colors.states.error }]}>
@@ -491,7 +620,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
                 </View>
               )}
 
-              {/* Motivo de cancelación */}
               {selectedAppointment.motivoCancelacion && (
                 <View style={styles.modalSection}>
                   <Text style={styles.modalSectionTitle}>Motivo de Cancelación</Text>
@@ -501,7 +629,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
                 </View>
               )}
 
-              {/* Fechas de gestión */}
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionTitle}>Información Adicional</Text>
                 <View style={styles.modalField}>
@@ -521,7 +648,6 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
               </View>
             </ScrollView>
 
-            {/* Footer del modal */}
             <View style={styles.modalFooter}>
               <Button
                 title="Cerrar"
@@ -573,6 +699,7 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
         {renderFilterTabs()}
         {renderAppointmentsList()}
       </ScrollView>
+      {renderContextMenu()}
       {renderDetailsModal()}
     </SafeContainer>
   );
@@ -601,7 +728,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
 
-  // Header
   header: {
     paddingTop: spacing['8xl'],
     paddingBottom: spacing.xl,
@@ -621,7 +747,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Filtros
   filterContainer: {
     marginBottom: spacing.lg,
   },
@@ -685,7 +810,6 @@ const styles = StyleSheet.create({
     color: colors.primary.contrast,
   },
 
-  // Lista de citas
   appointmentsList: {
     paddingBottom: spacing['2xl'],
     gap: spacing.md,
@@ -821,7 +945,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
 
-  // Estado vacío
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -844,11 +967,89 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+
+  contextMenu: {
+    backgroundColor: colors.background.secondary,
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 300,
+    shadowColor: colors.text.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+
+  menuHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.background.tertiary,
+  },
+
+  menuTitle: {
+    ...typography.styles.h3,
+    color: colors.text.primary,
+    flex: 1,
+    marginRight: spacing.md,
+  },
+
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.background.tertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  menuOptions: {
+    paddingVertical: spacing.sm,
+  },
+
+  menuOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+
+  menuOptionWithBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.background.tertiary,
+  },
+
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+
+  optionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+
+  optionText: {
+    ...typography.styles.body,
+    fontWeight: typography.fontWeight.medium,
+    flex: 1,
   },
 
   modalContent: {
@@ -871,10 +1072,6 @@ const styles = StyleSheet.create({
     ...typography.styles.h2,
     color: colors.text.primary,
     fontWeight: typography.fontWeight.semibold,
-  },
-
-  closeButton: {
-    padding: spacing.xs,
   },
 
   modalBody: {

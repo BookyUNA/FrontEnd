@@ -20,6 +20,7 @@ import { CreateServiceScreen } from "./src/screens/services/CreateServiceScreen"
 import { EditServiceScreen } from "./src/screens/services/EditServiceScreen";
 import { ProfessionalServicesScreen } from "./src/screens/client/ProfessionalServicesScreen";
 import { PlanSelectionScreen } from "./src/screens/subscription/PlanSelectionScreen";
+import { RescheduleAppointmentScreen } from "./src/screens/client/RescheduleAppointmentScreen";
 
 import { authService } from "./src/services/auth/authService";
 import { SafeContainer } from "./src/components/ui/SafeContainer";
@@ -37,6 +38,7 @@ export type RootStackParamList = {
   EditService: { service: any } | undefined;
   ProfessionalServices: undefined;
   PlanSelection: undefined;
+  RescheduleAppointment: { appointment: any } | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -142,6 +144,22 @@ function App(): React.JSX.Element {
               component={PlanSelectionScreen}
               options={{ 
                 title: "Planes de Suscripción",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
+            />
+
+            <Stack.Screen 
+              name="RescheduleAppointment" 
+              component={RescheduleAppointmentScreen}
+              options={{ 
+                title: "Reprogramar Cita",
                 headerStyle: {
                   backgroundColor: colors.background.primary,
                 },

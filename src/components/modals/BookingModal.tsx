@@ -182,7 +182,7 @@ export const BookingModal = ({
         Alert.alert('Error', `No se pudo procesar la solicitud:\n${errores}`);
       }
     } catch (error) {
-      console.error('Error al solicitar cita:', error);
+      //console.error('Error al solicitar cita:', error);
       Alert.alert(
         'Error',
         'Ocurrió un error al enviar la solicitud. Intenta nuevamente.'

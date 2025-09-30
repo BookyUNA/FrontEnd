@@ -27,6 +27,7 @@ export const API_CONFIG = {
     LISTAR_SERVICIOS_FILTROS: '/ListarServiciosFiltros',
     SOLICITAR_CITA: '/SolicitarCita',
     LISTAR_CITAS_CLIENTE: '/ListarCitasCliente',
+    REPROGRAMAR_CITA: '/ReprogramarCita',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

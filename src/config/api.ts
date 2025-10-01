@@ -29,6 +29,7 @@ export const API_CONFIG = {
     LISTAR_CITAS_CLIENTE: '/ListarCitasCliente',
     REPROGRAMAR_CITA: '/ReprogramarCita',
     LISTAR_CITAS_PROFESIONAL: '/ListarCitasProfesional',
+    APROBAR_DENEGAR_CITA: '/AprobarDenegarCita',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

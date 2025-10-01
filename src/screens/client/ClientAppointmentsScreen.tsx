@@ -68,23 +68,23 @@ const formatTime = (date: Date): string => {
 };
 
 const getStatusColor = (status: AppointmentStatus): string => {
-  switch (status) {
-    case 'Pendiente': return colors.states.warning;
-    case 'Confirmada': return colors.states.success;
-    case 'Rechazada': return colors.states.error;
-    case 'Cancelada': return colors.text.secondary;
-    case 'Completada': return colors.primary.main;
+  switch (status.toLowerCase()) {
+    case 'pendiente': return colors.states.warning;
+    case 'confirmada': return colors.states.success;
+    case 'rechazada': return colors.states.error;
+    case 'cancelada': return colors.text.secondary;
+    case 'completada': return colors.primary.main;
     default: return colors.text.secondary;
   }
 };
 
 const getStatusIcon = (status: AppointmentStatus): string => {
-  switch (status) {
-    case 'Pendiente': return 'clock';
-    case 'Confirmada': return 'check-circle';
-    case 'Rechazada': return 'times-circle';
-    case 'Cancelada': return 'ban';
-    case 'Completada': return 'check-double';
+  switch (status.toLowerCase()) {
+    case 'pendiente': return 'clock';
+    case 'confirmada': return 'check-circle';
+    case 'rechazada': return 'times-circle';
+    case 'cancelada': return 'ban';
+    case 'completada': return 'check-double';
     default: return 'question-circle';
   }
 };

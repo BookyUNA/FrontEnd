@@ -13,6 +13,7 @@ import {
   RefreshControl,
   Alert,
   Modal,
+  TextInput
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { SafeContainer } from '../../components/ui/SafeContainer';
@@ -82,6 +83,9 @@ export const ProfessionalAppointmentsScreen: React.FC<ProfessionalAppointmentsSc
   const [selectedFilter, setSelectedFilter] = useState<FilterStatus>('Pendiente');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
+  const [isRejectionModalVisible, setIsRejectionModalVisible] = useState<boolean>(false);
+  const [rejectionReason, setRejectionReason] = useState<string>('');
+  const [isProcessingRejection, setIsProcessingRejection] = useState<boolean>(false);
 
   useEffect(() => {
     loadAppointments();
@@ -221,75 +225,78 @@ const handleConfirmAppointment = async () => {
 
 const handleRejectAppointment = () => {
   if (!selectedAppointment) return;
+  
+  setRejectionReason('');
+  setIsRejectionModalVisible(true);
+};
 
-  Alert.prompt(
-    'Rechazar Cita',
-    `¿Por qué deseas rechazar la cita con ${selectedAppointment.nombreUsuario}?\n\nPor favor, proporciona un motivo:`,
-    [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Rechazar',
-        style: 'destructive',
-        onPress: async (rejectionReason?: string) => {
-          if (!rejectionReason || !rejectionReason.trim()) {
-            Alert.alert(
-              'Motivo Requerido',
-              'Debes proporcionar un motivo para rechazar la cita.',
-              [{ text: 'Entendido' }]
-            );
-            return;
+const handleConfirmRejection = async () => {
+  if (!rejectionReason.trim()) {
+    Alert.alert(
+      'Motivo Requerido',
+      'Debes proporcionar un motivo para rechazar la cita.',
+      [{ text: 'Entendido' }]
+    );
+    return;
+  }
+
+  if (!selectedAppointment) return;
+
+  setIsProcessingRejection(true);
+
+  try {
+    console.log('📅 Rechazando cita:', selectedAppointment.idCita);
+    
+    const result = await appointmentService.approveOrRejectAppointment(
+      selectedAppointment.idCita,
+      false,
+      rejectionReason.trim()
+    );
+
+    if (result.success) {
+      setIsRejectionModalVisible(false);
+      setRejectionReason('');
+      
+      Alert.alert(
+        'Cita Rechazada',
+        'La cita ha sido rechazada. El cliente será notificado.',
+        [{ 
+          text: 'Entendido',
+          onPress: () => {
+            handleCloseModal();
+            loadAppointments();
           }
-
-          try {
-            console.log('📅 Rechazando cita:', selectedAppointment.idCita);
-            
-            const result = await appointmentService.approveOrRejectAppointment(
-              selectedAppointment.idCita,
-              false,
-              rejectionReason
-            );
-
-            if (result.success) {
-              Alert.alert(
-                'Cita Rechazada',
-                'La cita ha sido rechazada. El cliente será notificado.',
-                [{ 
-                  text: 'Entendido',
-                  onPress: () => {
-                    handleCloseModal();
-                    loadAppointments(); // Recargar lista de citas
-                  }
-                }]
-              );
-            } else {
-              if (result.isNetworkError) {
-                Alert.alert(
-                  'Error de Conexión',
-                  result.error || 'No se pudo rechazar la cita. Verifica tu conexión a internet.',
-                  [{ text: 'Entendido' }]
-                );
-              } else {
-                Alert.alert(
-                  'Error',
-                  result.error || 'No se pudo rechazar la cita. Intenta de nuevo.',
-                  [{ text: 'Entendido' }]
-                );
-              }
-            }
-          } catch (error) {
-            Alert.alert(
-              'Error',
-              'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
-              [{ text: 'Entendido' }]
-            );
-          }
-        }
+        }]
+      );
+    } else {
+      if (result.isNetworkError) {
+        Alert.alert(
+          'Error de Conexión',
+          result.error || 'No se pudo rechazar la cita. Verifica tu conexión a internet.',
+          [{ text: 'Entendido' }]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          result.error || 'No se pudo rechazar la cita. Intenta de nuevo.',
+          [{ text: 'Entendido' }]
+        );
       }
-    ],
-    'plain-text',
-    '',
-    'default'
-  );
+    }
+  } catch (error) {
+    Alert.alert(
+      'Error',
+      'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+      [{ text: 'Entendido' }]
+    );
+  } finally {
+    setIsProcessingRejection(false);
+  }
+};
+
+const handleCancelRejection = () => {
+  setIsRejectionModalVisible(false);
+  setRejectionReason('');
 };
 
   const renderHeader = () => (
@@ -659,6 +666,80 @@ const handleRejectAppointment = () => {
     );
   };
 
+
+  const renderRejectionModal = () => {
+  if (!selectedAppointment) return null;
+
+  return (
+    <Modal
+      visible={isRejectionModalVisible}
+      animationType="fade"
+      transparent={true}
+      onRequestClose={handleCancelRejection}
+    >
+      <View style={styles.rejectionModalOverlay}>
+        <View style={styles.rejectionModalContent}>
+          <View style={styles.rejectionModalHeader}>
+            <Icon name="exclamation-circle" size={24} color={colors.states.error} />
+            <Text style={styles.rejectionModalTitle}>Rechazar Cita</Text>
+          </View>
+
+          <View style={styles.rejectionModalBody}>
+            <Text style={styles.rejectionModalText}>
+              Estás a punto de rechazar la cita con <Text style={styles.rejectionModalClientName}>{selectedAppointment.nombreUsuario}</Text>.
+            </Text>
+            
+            <Text style={styles.rejectionModalLabel}>
+              Motivo de rechazo <Text style={styles.requiredAsterisk}>*</Text>
+            </Text>
+            
+            <TextInput
+              style={styles.rejectionTextInput}
+              value={rejectionReason}
+              onChangeText={setRejectionReason}
+              placeholder="Ej: No tengo disponibilidad en esa fecha"
+              placeholderTextColor={colors.text.secondary}
+              multiline
+              numberOfLines={4}
+              maxLength={200}
+              textAlignVertical="top"
+              editable={!isProcessingRejection}
+            />
+            
+            <Text style={styles.characterCounter}>
+              {rejectionReason.length}/200 caracteres
+            </Text>
+          </View>
+
+          <View style={styles.rejectionModalFooter}>
+            <View style={styles.rejectionButtonsRow}>
+              <View style={styles.rejectionButton}>
+                <Button
+                  title="Cancelar"
+                  onPress={handleCancelRejection}
+                  variant="outline"
+                  disabled={isProcessingRejection}
+                />
+              </View>
+              <View style={styles.rejectionButton}>
+                <Button
+                  title={isProcessingRejection ? "Rechazando..." : "Rechazar Cita"}
+                  onPress={handleConfirmRejection}
+                  variant="primary"
+                  loading={isProcessingRejection}
+                  disabled={isProcessingRejection || !rejectionReason.trim()}
+                  icon="times-circle"
+                  iconPosition="left"
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
   const renderLoadingState = () => (
     <View style={styles.loadingContainer}>
       <Icon name="spinner" size={40} color={colors.primary.main} />
@@ -693,6 +774,7 @@ const handleRejectAppointment = () => {
         {renderAppointmentsList()}
       </ScrollView>
       {renderDetailsModal()}
+      {renderRejectionModal()}
     </SafeContainer>
   );
 };
@@ -1084,6 +1166,104 @@ const styles = StyleSheet.create({
   },
 
   actionButton: {
+    flex: 1,
+  },
+
+  // Estilos del modal de rechazo
+  rejectionModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+
+  rejectionModalContent: {
+    backgroundColor: colors.background.primary,
+    borderRadius: spacing.lg,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: colors.text.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+
+  rejectionModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+    gap: spacing.sm,
+  },
+
+  rejectionModalTitle: {
+    ...typography.styles.h2,
+    color: colors.text.primary,
+    fontWeight: typography.fontWeight.semibold,
+    flex: 1,
+  },
+
+  rejectionModalBody: {
+    padding: spacing.lg,
+  },
+
+  rejectionModalText: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    marginBottom: spacing.lg,
+    lineHeight: 22,
+  },
+
+  rejectionModalClientName: {
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary.main,
+  },
+
+  rejectionModalLabel: {
+    ...typography.styles.label,
+    color: colors.text.primary,
+    fontWeight: typography.fontWeight.bold,
+    marginBottom: spacing.sm,
+  },
+
+  requiredAsterisk: {
+    color: colors.states.error,
+  },
+
+  rejectionTextInput: {
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    borderRadius: spacing.sm,
+    padding: spacing.md,
+    fontSize: typography.fontSize.base,
+    color: colors.text.primary,
+    backgroundColor: colors.background.secondary,
+    minHeight: 100,
+    maxHeight: 150,
+  },
+
+  characterCounter: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    textAlign: 'right',
+    marginTop: spacing.xs,
+  },
+
+  rejectionModalFooter: {
+    padding: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.light,
+  },
+
+  rejectionButtonsRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+
+  rejectionButton: {
     flex: 1,
   },
 });

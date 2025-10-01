@@ -159,30 +159,138 @@ export const ProfessionalAppointmentsScreen: React.FC<ProfessionalAppointmentsSc
     setSelectedAppointment(null);
   };
 
-  const handleConfirmAppointment = () => {
-    Alert.alert(
-      'Confirmar Cita',
-      '¿Deseas confirmar esta cita?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: () => {
-            Alert.alert('Éxito', 'La cita ha sido confirmada.');
-            handleCloseModal();
+const handleConfirmAppointment = async () => {
+  if (!selectedAppointment) return;
+
+  Alert.alert(
+    'Confirmar Cita',
+    `¿Deseas confirmar la cita con ${selectedAppointment.nombreUsuario}?`,
+    [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Confirmar',
+        style: 'default',
+        onPress: async () => {
+          try {
+            console.log('📅 Confirmando cita:', selectedAppointment.idCita);
+            
+            const result = await appointmentService.approveOrRejectAppointment(
+              selectedAppointment.idCita,
+              true
+            );
+
+            if (result.success) {
+              Alert.alert(
+                'Éxito',
+                'La cita ha sido confirmada correctamente.',
+                [{ 
+                  text: 'Entendido',
+                  onPress: () => {
+                    handleCloseModal();
+                    loadAppointments(); // Recargar lista de citas
+                  }
+                }]
+              );
+            } else {
+              if (result.isNetworkError) {
+                Alert.alert(
+                  'Error de Conexión',
+                  result.error || 'No se pudo confirmar la cita. Verifica tu conexión a internet.',
+                  [{ text: 'Entendido' }]
+                );
+              } else {
+                Alert.alert(
+                  'Error',
+                  result.error || 'No se pudo confirmar la cita. Intenta de nuevo.',
+                  [{ text: 'Entendido' }]
+                );
+              }
+            }
+          } catch (error) {
+            Alert.alert(
+              'Error',
+              'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+              [{ text: 'Entendido' }]
+            );
           }
         }
-      ]
-    );
-  };
+      }
+    ]
+  );
+};
 
-  const handleRejectAppointment = () => {
-    Alert.alert(
-      'Rechazar Cita',
-      'Esta funcionalidad estará disponible próximamente.',
-      [{ text: 'Entendido' }]
-    );
-  };
+const handleRejectAppointment = () => {
+  if (!selectedAppointment) return;
+
+  Alert.prompt(
+    'Rechazar Cita',
+    `¿Por qué deseas rechazar la cita con ${selectedAppointment.nombreUsuario}?\n\nPor favor, proporciona un motivo:`,
+    [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Rechazar',
+        style: 'destructive',
+        onPress: async (rejectionReason?: string) => {
+          if (!rejectionReason || !rejectionReason.trim()) {
+            Alert.alert(
+              'Motivo Requerido',
+              'Debes proporcionar un motivo para rechazar la cita.',
+              [{ text: 'Entendido' }]
+            );
+            return;
+          }
+
+          try {
+            console.log('📅 Rechazando cita:', selectedAppointment.idCita);
+            
+            const result = await appointmentService.approveOrRejectAppointment(
+              selectedAppointment.idCita,
+              false,
+              rejectionReason
+            );
+
+            if (result.success) {
+              Alert.alert(
+                'Cita Rechazada',
+                'La cita ha sido rechazada. El cliente será notificado.',
+                [{ 
+                  text: 'Entendido',
+                  onPress: () => {
+                    handleCloseModal();
+                    loadAppointments(); // Recargar lista de citas
+                  }
+                }]
+              );
+            } else {
+              if (result.isNetworkError) {
+                Alert.alert(
+                  'Error de Conexión',
+                  result.error || 'No se pudo rechazar la cita. Verifica tu conexión a internet.',
+                  [{ text: 'Entendido' }]
+                );
+              } else {
+                Alert.alert(
+                  'Error',
+                  result.error || 'No se pudo rechazar la cita. Intenta de nuevo.',
+                  [{ text: 'Entendido' }]
+                );
+              }
+            }
+          } catch (error) {
+            Alert.alert(
+              'Error',
+              'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+              [{ text: 'Entendido' }]
+            );
+          }
+        }
+      }
+    ],
+    'plain-text',
+    '',
+    'default'
+  );
+};
 
   const renderHeader = () => (
     <View style={styles.header}>

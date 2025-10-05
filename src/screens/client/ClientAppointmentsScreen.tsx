@@ -14,6 +14,7 @@ import {
   Alert,
   Modal,
   TouchableWithoutFeedback,
+  TextInput
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { SafeContainer } from '../../components/ui/SafeContainer';
@@ -104,6 +105,9 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [showContextMenu, setShowContextMenu] = useState<boolean>(false);
+  const [showCancelModal, setShowCancelModal] = useState<boolean>(false);
+  const [cancellationReason, setCancellationReason] = useState<string>('');
+  const [isCancelling, setIsCancelling] = useState<boolean>(false);
 
   // =============================================
   // EFECTOS
@@ -217,6 +221,70 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
     }
     closeContextMenu();
   };
+
+  const handleCancelAppointment = () => {
+    setIsModalVisible(false);
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancellation = async () => {
+    if (!selectedAppointment) return;
+
+    if (!cancellationReason.trim()) {
+      Alert.alert(
+        'Motivo Requerido',
+        'Por favor, proporciona un motivo para cancelar la cita.',
+        [{ text: 'Entendido' }]
+      );
+      return;
+    }
+
+    setIsCancelling(true);
+
+    try {
+      const result = await appointmentService.cancelAppointment(
+        selectedAppointment.idCita,
+        cancellationReason
+      );
+
+      if (result.success) {
+        Alert.alert(
+          'Cita Cancelada',
+          'La cita ha sido cancelada exitosamente.',
+          [
+            {
+              text: 'Entendido',
+              onPress: () => {
+                setShowCancelModal(false);
+                setCancellationReason('');
+                setSelectedAppointment(null);
+                loadAppointments();
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          result.error || 'No se pudo cancelar la cita. Intenta de nuevo.',
+          [{ text: 'Entendido' }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+        [{ text: 'Entendido' }]
+      );
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const handleCloseCancelModal = () => {
+    setShowCancelModal(false);
+    setCancellationReason('');
+  };  
 
   const handleViewDetails = () => {
     if (selectedAppointment) {
@@ -649,6 +717,16 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
             </ScrollView>
 
             <View style={styles.modalFooter}>
+              {(selectedAppointment.estado === 'Pendiente' || 
+                selectedAppointment.estado === 'Confirmada') && (
+                <Button
+                  title="Cancelar Cita"
+                  onPress={handleCancelAppointment}
+                  variant="secondary"
+                  fullWidth
+                />
+              )}
+
               <Button
                 title="Cerrar"
                 onPress={handleCloseModal}
@@ -661,6 +739,106 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
       </Modal>
     );
   };
+
+const renderCancelModal = () => {
+  if (!selectedAppointment) return null;
+
+  return (
+    <Modal
+      visible={showCancelModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={handleCloseCancelModal}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.cancelModalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Cancelar Cita</Text>
+            <TouchableOpacity 
+              onPress={handleCloseCancelModal} 
+              style={styles.closeButton}
+              disabled={isCancelling}
+            >
+              <Icon name="times" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView 
+            style={styles.modalBody}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.cancelWarning}>
+              <Icon name="exclamation-triangle" size={24} color={colors.states.warning} />
+              <Text style={styles.cancelWarningText}>
+                ¿Estás seguro que deseas cancelar esta cita?
+              </Text>
+            </View>
+
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionTitle}>Detalles de la Cita</Text>
+              <View style={styles.modalField}>
+                <Icon name="briefcase" size={14} color={colors.text.secondary} />
+                <Text style={styles.modalFieldValue}>
+                  {selectedAppointment.nombreServicio}
+                </Text>
+              </View>
+              <View style={styles.modalField}>
+                <Icon name="user-tie" size={14} color={colors.text.secondary} />
+                <Text style={styles.modalFieldValue}>
+                  {selectedAppointment.nombreProfesional}
+                </Text>
+              </View>
+              <View style={styles.modalField}>
+                <Icon name="calendar" size={14} color={colors.text.secondary} />
+                <Text style={styles.modalFieldValue}>
+                  {formatDate(selectedAppointment.fechaCita)} - {formatTime(selectedAppointment.fechaCita)}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionTitle}>
+                Motivo de Cancelación *
+              </Text>
+              <TextInput
+                style={styles.cancellationInput}
+                placeholder="Explica el motivo de la cancelación..."
+                placeholderTextColor={colors.text.tertiary}
+                value={cancellationReason}
+                onChangeText={setCancellationReason}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                maxLength={500}
+                editable={!isCancelling}
+              />
+              <Text style={styles.characterCount}>
+                {cancellationReason.length}/500
+              </Text>
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalFooter}>
+            <Button
+              title="Volver"
+              onPress={handleCloseCancelModal}
+              variant="secondary"
+              fullWidth
+              disabled={isCancelling}
+            />
+            <Button
+              title={isCancelling ? "Cancelando..." : "Confirmar Cancelación"}
+              onPress={handleConfirmCancellation}
+              variant="secondary"
+              fullWidth
+              disabled={isCancelling}
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
   const renderLoadingState = () => (
     <View style={styles.loadingContainer}>
@@ -701,6 +879,7 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
       </ScrollView>
       {renderContextMenu()}
       {renderDetailsModal()}
+      {renderCancelModal()}
     </SafeContainer>
   );
 };
@@ -739,7 +918,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     textAlign: 'center',
     marginBottom: spacing.sm,
-  },
+  },  
 
   subtitle: {
     ...typography.styles.body,
@@ -1134,4 +1313,47 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border.light,
   },
+
+cancelModalContent: {
+  backgroundColor: colors.background.primary,
+  borderTopLeftRadius: spacing.xl,
+  borderTopRightRadius: spacing.xl,
+  maxHeight: '85%',
+},
+
+cancelWarning: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: colors.states.warning + '15',
+  padding: spacing.lg,
+  borderRadius: spacing.md,
+  marginBottom: spacing.lg,
+  gap: spacing.md,
+},
+
+cancelWarningText: {
+  ...typography.styles.body,
+  color: colors.states.warning,
+  fontWeight: typography.fontWeight.semibold,
+  flex: 1,
+},
+
+cancellationInput: {
+  ...typography.styles.body,
+  color: colors.text.primary,
+  backgroundColor: colors.background.secondary,
+  borderWidth: 1,
+  borderColor: colors.border.light,
+  borderRadius: spacing.sm,
+  padding: spacing.md,
+  minHeight: 100,
+  maxHeight: 150,
+},
+
+characterCount: {
+  ...typography.styles.caption,
+  color: colors.text.tertiary,
+  textAlign: 'right',
+  marginTop: spacing.xs,
+},  
 });

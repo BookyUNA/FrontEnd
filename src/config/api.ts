@@ -31,6 +31,7 @@ export const API_CONFIG = {
     LISTAR_CITAS_PROFESIONAL: '/ListarCitasProfesional',
     APROBAR_DENEGAR_CITA: '/AprobarDenegarCita',
     CANCELAR_CITA: '/CancelarCita',
+    EDIT_PROFESSIONAL_PROFILE: '/api/EditarPerfilProfesional',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

@@ -122,6 +122,33 @@ export interface EditProfileResult {
   isNetworkError?: boolean;
 }
 
+export interface EditProfessionalProfileRequest {
+  profesion: string;
+  descripcion: string;
+  direccion: string;
+}
+
+export interface EditProfessionalProfileResponse {
+  profesion: string;
+  descripcion: string;
+  direccion: string;
+  error: Array<{
+    ErrorCode: number;
+    Message: string;
+  }>;
+  resultado: boolean;
+}
+
+export interface EditProfessionalProfileResult {
+  success: boolean;
+  error?: string;
+  errors?: Array<{
+    ErrorCode: number;
+    Message: string;
+  }>;
+  isNetworkError?: boolean;
+}
+
 class UserService {
   /**
    * Registrar un nuevo usuario
@@ -569,6 +596,122 @@ class UserService {
       };
     }
   }
+
+
+  /**
+ * Actualizar información del perfil profesional
+ * Permite editar profesión, descripción y dirección
+ */
+async updateProfessionalProfile(profileData: EditProfessionalProfileRequest): Promise<EditProfessionalProfileResult> {
+  try {
+    console.log('✏️ UserService: Iniciando actualización de perfil profesional...');
+    
+    const token = await authService.getToken();
+    if (!token) {
+      return {
+        success: false,
+        error: 'No se encontró token de autenticación',
+      };
+    }
+
+    // Validar datos requeridos
+    if (!profileData.profesion || profileData.profesion.trim().length < 3) {
+      return {
+        success: false,
+        error: 'La profesión debe tener al menos 3 caracteres',
+      };
+    }
+
+    if (!profileData.descripcion || profileData.descripcion.trim().length < 10) {
+      return {
+        success: false,
+        error: 'La descripción debe tener al menos 10 caracteres',
+      };
+    }
+
+    if (!profileData.direccion || profileData.direccion.trim().length < 5) {
+      return {
+        success: false,
+        error: 'La dirección debe tener al menos 5 caracteres',
+      };
+    }
+
+    // Preparar datos para el endpoint
+    const updateData: EditProfessionalProfileRequest = {
+      profesion: profileData.profesion.trim(),
+      descripcion: profileData.descripcion.trim(),
+      direccion: profileData.direccion.trim(),
+    };
+
+    console.log('✏️ UserService: Enviando datos de actualización profesional:', updateData);
+
+    // Realizar petición al endpoint
+    const response = await apiService.put<EditProfessionalProfileResponse>(
+      API_CONFIG.ENDPOINTS.EDIT_PROFESSIONAL_PROFILE,
+      updateData,
+      token
+    );
+
+    console.log('✏️ UserService: Respuesta del servidor:', response);
+
+    // Verificar errores de red/conexión
+    if (!response.success && response.status === 0) {
+      return {
+        success: false,
+        error: response.error || 'Error de conexión. Verifica tu conexión a internet.',
+        isNetworkError: true,
+      };
+    }
+
+    // Verificar si llegaron datos del servidor
+    const data = response.data;
+    
+    if (!data) {
+      return {
+        success: false,
+        error: 'Respuesta inválida del servidor',
+      };
+    }
+
+    // Verificar si la actualización fue exitosa según la API
+    if (data.resultado === true) {
+      console.log('✏️ UserService: ✅ Actualización profesional exitosa según la API');
+      return {
+        success: true,
+      };
+    }
+
+    // Si resultado es false, es un error de negocio de la API
+    console.log('✏️ UserService: ❌ Actualización profesional falló según la API (resultado: false)');
+    
+    // Extraer y mostrar errores específicos
+    if (data.error && data.error.length > 0) {
+      const firstError = data.error[0];
+      const errorMessage = firstError.Message || 'Error al actualizar el perfil profesional';
+      
+      console.log('✏️ UserService: Mensaje de error para mostrar al usuario:', errorMessage);
+      
+      return {
+        success: false,
+        error: errorMessage,
+        errors: data.error,
+      };
+    }
+
+    // Caso donde resultado es false pero no hay errores específicos
+    return {
+      success: false,
+      error: 'No se pudo actualizar el perfil profesional. Por favor, intenta nuevamente.',
+    };
+
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
+      isNetworkError: true,
+    };
+  }
+}
 
   // UTILIDADES PARA EMAIL
   /**

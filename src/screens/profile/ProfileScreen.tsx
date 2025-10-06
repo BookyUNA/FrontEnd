@@ -631,8 +631,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           {renderReadOnlyField('Cédula', userProfile.cedula, 'id-card')}
           {renderReadOnlyField('Email', userProfile.email, 'envelope')}
           
-          {userRole === 'Profesional' && userProfile.calificacionPromedio !== null && (
-            renderRatingField('Calificación', userProfile.calificacionPromedio ?? null, userProfile.totalCalificaciones ?? null)
+          {userRole === 'Profesional' && (
+            <>
+              {userProfile.profesion && renderReadOnlyField('Profesión', userProfile.profesion, 'briefcase')}
+              {userProfile.descripcion && renderReadOnlyField('Descripción', userProfile.descripcion, 'info-circle')}
+              {userProfile.direccion && renderReadOnlyField('Dirección', userProfile.direccion, 'map-marker-alt')}
+              {userProfile.calificacionPromedio !== null && 
+                renderRatingField('Calificación', userProfile.calificacionPromedio ?? null, userProfile.totalCalificaciones ?? null)
+              }
+            </>
           )}
         </View>
       </View>
@@ -640,7 +647,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const renderEditableInfo = () => {
-    if (!userProfile) return null;
+    if (!userProfile || !isEditing) return null;
 
     return (
       <View style={styles.editableSection}>
@@ -673,7 +680,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const renderProfessionalInfo = () => {
-    if (!userProfile || userRole !== 'Profesional') return null;
+    if (!userProfile || userRole !== 'Profesional' || !isEditingProfessional) return null;
 
     return (
       <View style={styles.editableSection}>

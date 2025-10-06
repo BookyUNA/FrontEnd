@@ -44,10 +44,31 @@ export const BookingModal = ({
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Redondear hora a la hora exacta o media hora más cercana
+  const roundToNearestHalfHour = (date: Date): Date => {
+    const rounded = new Date(date);
+    const minutes = rounded.getMinutes();
+    
+    if (minutes < 15) {
+      rounded.setMinutes(0);
+    } else if (minutes < 45) {
+      rounded.setMinutes(30);
+    } else {
+      rounded.setMinutes(0);
+      rounded.setHours(rounded.getHours() + 1);
+    }
+    
+    rounded.setSeconds(0);
+    rounded.setMilliseconds(0);
+    
+    return rounded;
+  };
+
   const resetForm = () => {
+    const now = new Date();
     setFormulario({
       fecha: new Date(),
-      hora: new Date(),
+      hora: roundToNearestHalfHour(now),
       observaciones: ''
     });
   };
@@ -95,20 +116,37 @@ export const BookingModal = ({
     }
     
     if (selectedTime) {
-      if (!bookingService.validarHora(selectedTime)) {
+      // Redondear a hora exacta o media hora
+      const roundedTime = roundToNearestHalfHour(selectedTime);
+      
+      // Validar que esté en horario laboral (8 AM - 6 PM)
+      const hours = roundedTime.getHours();
+      if (hours < 8 || hours >= 18) {
         Alert.alert(
           'Hora inválida',
-          'Selecciona una hora entre 8:00 AM y 6:00 PM en intervalos de 15 minutos.',
+          'Selecciona una hora entre 8:00 AM y 6:00 PM.',
           [{ text: 'OK' }]
         );
         return;
       }
-      setFormulario(prev => ({ ...prev, hora: selectedTime }));
+      
+      setFormulario(prev => ({ ...prev, hora: roundedTime }));
     }
   };
 
   const handleSubmit = async () => {
     if (!service) return;
+
+    // Validar que la hora sea exacta o media hora
+    const minutes = formulario.hora.getMinutes();
+    if (minutes !== 0 && minutes !== 30) {
+      Alert.alert(
+        'Hora inválida',
+        'Solo se permiten reservas a las horas en punto o a las medias horas (ej: 9:00, 9:30, 10:00).',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
 
     // Validaciones
     if (!bookingService.validarFecha(formulario.fecha)) {
@@ -116,8 +154,9 @@ export const BookingModal = ({
       return;
     }
 
-    if (!bookingService.validarHora(formulario.hora)) {
-      Alert.alert('Error', 'La hora seleccionada no es válida.');
+    const hours = formulario.hora.getHours();
+    if (hours < 8 || hours >= 18) {
+      Alert.alert('Error', 'La hora debe estar entre 8:00 AM y 6:00 PM.');
       return;
     }
 
@@ -135,7 +174,6 @@ export const BookingModal = ({
         MensajeSolicitud: formulario.observaciones.trim()
       };
 
-      // DEBUG: Ver qué enviamos
       console.log('=== REQUEST ENVIADO ===');
       console.log('IdServicio:', request.IdServicio);
       console.log('FechaCita:', request.FechaCita);
@@ -144,7 +182,6 @@ export const BookingModal = ({
 
       const response = await bookingService.solicitarCita(request);
 
-      // DEBUG: Ver qué recibimos
       console.log('=== RESPONSE RECIBIDO ===');
       console.log('Response completo:', JSON.stringify(response, null, 2));
       console.log('resultado:', response.resultado);
@@ -166,7 +203,6 @@ export const BookingModal = ({
           ]
         );
       } else {
-        // DEBUG: Analizar errores específicos
         console.log('=== ERRORES DE LA API ===');
         if (response.error && response.error.length > 0) {
           response.error.forEach((err, index) => {
@@ -182,7 +218,6 @@ export const BookingModal = ({
         Alert.alert('Error', `No se pudo procesar la solicitud:\n${errores}`);
       }
     } catch (error) {
-      //console.error('Error al solicitar cita:', error);
       Alert.alert(
         'Error',
         'Ocurrió un error al enviar la solicitud. Intenta nuevamente.'
@@ -192,7 +227,6 @@ export const BookingModal = ({
     }
   };
 
-  // Early return corregido - ahora retorna JSX válido
   if (!service) {
     return null;
   }
@@ -207,7 +241,6 @@ export const BookingModal = ({
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
           <ScrollView style={styles.content}>
-            {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Reservar Cita</Text>
               <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
@@ -215,7 +248,6 @@ export const BookingModal = ({
               </TouchableOpacity>
             </View>
 
-            {/* Información del servicio */}
             <View style={styles.serviceInfo}>
               <Text style={styles.serviceName}>{service.nombreServicio}</Text>
               <Text style={styles.professionalInfo}>
@@ -226,7 +258,6 @@ export const BookingModal = ({
               </Text>
             </View>
 
-            {/* Selección de fecha */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Fecha preferida *</Text>
               <TouchableOpacity
@@ -244,7 +275,6 @@ export const BookingModal = ({
               </TouchableOpacity>
             </View>
 
-            {/* Selección de hora */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Hora preferida *</Text>
               <TouchableOpacity
@@ -258,9 +288,11 @@ export const BookingModal = ({
                   })}
                 </Text>
               </TouchableOpacity>
+              <Text style={styles.helpText}>
+                Solo se permiten horas en punto o medias horas (ej: 9:00, 9:30)
+              </Text>
             </View>
 
-            {/* Observaciones */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Observaciones y disponibilidad *</Text>
               <TextInput
@@ -277,7 +309,6 @@ export const BookingModal = ({
               </Text>
             </View>
 
-            {/* Nota informativa */}
             <View style={styles.infoNote}>
               <Text style={styles.infoText}>
                 📝 Esta es una solicitud. El profesional confirmará la disponibilidad y se pondrá en contacto contigo.
@@ -285,7 +316,6 @@ export const BookingModal = ({
             </View>
           </ScrollView>
 
-          {/* Botones */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
@@ -310,7 +340,6 @@ export const BookingModal = ({
         </View>
       </View>
 
-      {/* Date Picker */}
       {showDatePicker && (
         <DatePicker
           testID="dateTimePicker"
@@ -323,15 +352,15 @@ export const BookingModal = ({
         />
       )}
 
-      {/* Time Picker */}
       {showTimePicker && (
         <DatePicker
           testID="timeTimePicker"
           value={formulario.hora}
           mode="time"
-          is24Hour={true}
+          is24Hour={false}
           display="default"
           onChange={handleTimeChange}
+          minuteInterval={30}
         />
       )}
     </Modal>
@@ -418,6 +447,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text.primary,
     textAlign: 'center',
+  },
+  helpText: {
+    fontSize: 11,
+    color: colors.text.secondary,
+    marginTop: spacing.xs,
+    fontStyle: 'italic',
   },
   textArea: {
     backgroundColor: colors.background.secondary,

@@ -106,7 +106,7 @@ export const ProfessionalAppointmentsScreen: React.FC<ProfessionalAppointmentsSc
         const sortedAppointments = appointmentService.sortAppointmentsByDate(result.data, false);
         setAppointments(sortedAppointments);
       } else {
-        console.error('📅 ProfessionalAppointmentsScreen: Error al cargar citas:', result.error);
+        //console.error('📅 ProfessionalAppointmentsScreen: Error al cargar citas:', result.error);
         
         if (result.isNetworkError) {
           Alert.alert(
@@ -124,7 +124,7 @@ export const ProfessionalAppointmentsScreen: React.FC<ProfessionalAppointmentsSc
         setAppointments([]);
       }
     } catch (error) {
-      console.error('📅 ProfessionalAppointmentsScreen: Error inesperado:', error);
+      //console.error('📅 ProfessionalAppointmentsScreen: Error inesperado:', error);
       Alert.alert(
         'Error',
         'Ocurrió un error inesperado. Por favor, intenta de nuevo.',

@@ -1,7 +1,7 @@
 /**
  * Pantalla de Perfil - Booky
  * Sistema de reservas para profesionales independientes
- * Actualizada con información de usuario completa y edición
+ * Con sección de perfil profesional para profesionales
  */
 
 import React, { useState, useEffect } from 'react';
@@ -16,9 +16,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
+  Modal,
 } from 'react-native';
 
-// Importaciones locales
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { SafeContainer } from '../../components/ui/SafeContainer';
 import { Button } from '../../components/forms/Button';
@@ -28,6 +28,7 @@ import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 import { userService, ApiProfileResponse, EditProfileRequest } from '../../services/user/userService';
 import { jwtDecoder } from '../../utils/jwtDecoder';
+import { PROFESIONES } from '../../constants/profesiones';
 
 // =============================================
 // INTERFACES Y MODELOS
@@ -51,9 +52,21 @@ interface EditableUserData {
   Telefono: string;
 }
 
+interface EditableProfessionalData {
+  profesion: string;
+  descripcion: string;
+  direccion: string;
+}
+
 interface ValidationErrors {
   Nombre?: string;
   Telefono?: string;
+}
+
+interface ProfessionalValidationErrors {
+  profesion?: string;
+  descripcion?: string;
+  direccion?: string;
 }
 
 // =============================================
@@ -91,7 +104,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   
-  // Estados de edición (solo para campos editables reales)
+  // Estados para perfil profesional
+  const [isEditingProfessional, setIsEditingProfessional] = useState<boolean>(false);
+  const [isSavingProfessional, setIsSavingProfessional] = useState<boolean>(false);
+  const [showProfessionModal, setShowProfessionModal] = useState<boolean>(false);
+  const [professionalData, setProfessionalData] = useState<EditableProfessionalData>({
+    profesion: '',
+    descripcion: '',
+    direccion: '',
+  });
+  
+  // Estados de edición (solo para campos editables de usuario)
   const [editData, setEditData] = useState<EditableUserData>({
     Nombre: '',
     Telefono: '',
@@ -99,6 +122,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   
   // Estados de validación
   const [errors, setErrors] = useState<ValidationErrors>({});
+  const [professionalErrors, setProfessionalErrors] = useState<ProfessionalValidationErrors>({});
 
   // =============================================
   // EFECTOS Y CARGA DE DATOS
@@ -126,7 +150,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         console.warn('📱 ProfileScreen: No hay token disponible');
       }
     } catch (error) {
-      //console.error('📱 ProfileScreen: Error extrayendo rol del token:', error);
+      // Error silencioso
     }
   };
 
@@ -141,10 +165,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       const profile = mapApiProfileToUserProfile(apiProfile);
       setUserProfile(profile);
 
-      // Inicializar datos editables
+      // Inicializar datos editables de usuario
       setEditData({
         Nombre: profile.Nombre,
         Telefono: profile.telefono || '',
+      });
+
+      // Inicializar datos editables de profesional
+      setProfessionalData({
+        profesion: profile.profesion || '',
+        descripcion: profile.descripcion || '',
+        direccion: profile.direccion || '',
       });
 
       console.log('📱 ProfileScreen: Perfil procesado y establecido correctamente');
@@ -164,32 +195,61 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // VALIDACIONES
   // =============================================
 
-const validateForm = (): boolean => {
-  const newErrors: ValidationErrors = {};
+  const validateForm = (): boolean => {
+    const newErrors: ValidationErrors = {};
 
-  // Validar Nombre
-  if (!editData.Nombre.trim()) {
-    newErrors.Nombre = 'El Nombre es obligatorio';
-  } else if (editData.Nombre.trim().length < 2) {
-    newErrors.Nombre = 'El Nombre debe tener al menos 2 caracteres';
-  } else if (editData.Nombre.trim().length > 100) {
-    newErrors.Nombre = 'El Nombre no puede exceder 100 caracteres';
-  }
-
-  // Validar teléfono
-  if (editData.Telefono.trim()) {
-    // Usar la validación específica de teléfonos costarricenses
-    if (!userService.validateCostaRicanPhone(editData.Telefono.trim())) {
-      newErrors.Telefono = 'El teléfono debe tener exactamente 8 dígitos y empezar con 2, 6, 7 u 8';
+    // Validar Nombre
+    if (!editData.Nombre.trim()) {
+      newErrors.Nombre = 'El Nombre es obligatorio';
+    } else if (editData.Nombre.trim().length < 2) {
+      newErrors.Nombre = 'El Nombre debe tener al menos 2 caracteres';
+    } else if (editData.Nombre.trim().length > 100) {
+      newErrors.Nombre = 'El Nombre no puede exceder 100 caracteres';
     }
-  }
 
-  setErrors(newErrors);
-  return Object.keys(newErrors).length === 0;
-};
+    // Validar teléfono
+    if (editData.Telefono.trim()) {
+      if (!userService.validateCostaRicanPhone(editData.Telefono.trim())) {
+        newErrors.Telefono = 'El teléfono debe tener exactamente 8 dígitos y empezar con 2, 6, 7 u 8';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateProfessionalForm = (): boolean => {
+    const newErrors: ProfessionalValidationErrors = {};
+
+    // Validar profesión
+    if (!professionalData.profesion.trim()) {
+      newErrors.profesion = 'Debes seleccionar una profesión';
+    }
+
+    // Validar descripción
+    if (!professionalData.descripcion.trim()) {
+      newErrors.descripcion = 'La descripción es obligatoria';
+    } else if (professionalData.descripcion.trim().length < 10) {
+      newErrors.descripcion = 'La descripción debe tener al menos 10 caracteres';
+    } else if (professionalData.descripcion.trim().length > 500) {
+      newErrors.descripcion = 'La descripción no puede exceder 500 caracteres';
+    }
+
+    // Validar dirección
+    if (!professionalData.direccion.trim()) {
+      newErrors.direccion = 'La dirección es obligatoria';
+    } else if (professionalData.direccion.trim().length < 5) {
+      newErrors.direccion = 'La dirección debe tener al menos 5 caracteres';
+    } else if (professionalData.direccion.trim().length > 200) {
+      newErrors.direccion = 'La dirección no puede exceder 200 caracteres';
+    }
+
+    setProfessionalErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   // =============================================
-  // HANDLERS
+  // HANDLERS - PERFIL DE USUARIO
   // =============================================
 
   const handleStartEdit = () => {
@@ -200,7 +260,6 @@ const validateForm = (): boolean => {
 
   const handleCancelEdit = () => {
     console.log('📱 ProfileScreen: Cancelando edición del perfil');
-    // Restaurar datos originales
     if (userProfile) {
       setEditData({
         Nombre: userProfile.Nombre,
@@ -227,19 +286,16 @@ const validateForm = (): boolean => {
       setIsSaving(true);
       console.log('📱 ProfileScreen: Datos a guardar:', editData);
 
-      // Preparar datos para la API
       const updateData: EditProfileRequest = {
         Nombre: editData.Nombre.trim(),
         Telefono: editData.Telefono.trim(),
       };
 
-      // Llamar al endpoint de actualización
       const result = await userService.updateProfile(updateData);
       
       if (result.success) {
         console.log('📱 ProfileScreen: Perfil actualizado exitosamente');
         
-        // Actualizar el estado local del perfil
         setUserProfile(prev => prev ? {
           ...prev,
           Nombre: editData.Nombre.trim(),
@@ -255,11 +311,9 @@ const validateForm = (): boolean => {
           [{ text: 'Entendido' }]
         );
         
-        // Recargar el perfil desde el servidor para asegurar consistencia
         await loadUserProfile();
         
       } else {
-        
         if (result.isNetworkError) {
           Alert.alert(
             'Error de Conexión',
@@ -283,6 +337,101 @@ const validateForm = (): boolean => {
       );
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // =============================================
+  // HANDLERS - PERFIL PROFESIONAL
+  // =============================================
+
+  const handleStartEditProfessional = () => {
+    console.log('📱 ProfileScreen: Iniciando edición del perfil profesional');
+    setIsEditingProfessional(true);
+    setProfessionalErrors({});
+  };
+
+  const handleCancelEditProfessional = () => {
+    console.log('📱 ProfileScreen: Cancelando edición del perfil profesional');
+    if (userProfile) {
+      setProfessionalData({
+        profesion: userProfile.profesion || '',
+        descripcion: userProfile.descripcion || '',
+        direccion: userProfile.direccion || '',
+      });
+    }
+    setIsEditingProfessional(false);
+    setProfessionalErrors({});
+  };
+
+  const handleSaveProfessionalChanges = async () => {
+    console.log('📱 ProfileScreen: Intentando guardar cambios del perfil profesional');
+    
+    if (!validateProfessionalForm()) {
+      Alert.alert(
+        'Datos Inválidos',
+        'Por favor corrige los errores antes de guardar.',
+        [{ text: 'Entendido' }]
+      );
+      return;
+    }
+
+    try {
+      setIsSavingProfessional(true);
+      console.log('📱 ProfileScreen: Datos profesionales a guardar:', professionalData);
+
+      const updateData = {
+        profesion: professionalData.profesion.trim(),
+        descripcion: professionalData.descripcion.trim(),
+        direccion: professionalData.direccion.trim(),
+      };
+
+      const result = await userService.updateProfessionalProfile(updateData);
+      
+      if (result.success) {
+        console.log('📱 ProfileScreen: Perfil profesional actualizado exitosamente');
+        
+        setUserProfile(prev => prev ? {
+          ...prev,
+          profesion: professionalData.profesion.trim(),
+          descripcion: professionalData.descripcion.trim(),
+          direccion: professionalData.direccion.trim()
+        } : prev);
+
+        setIsEditingProfessional(false);
+        setProfessionalErrors({});
+
+        Alert.alert(
+          'Éxito',
+          'Los cambios del perfil profesional se guardaron correctamente.',
+          [{ text: 'Entendido' }]
+        );
+        
+        await loadUserProfile();
+        
+      } else {
+        if (result.isNetworkError) {
+          Alert.alert(
+            'Error de Conexión',
+            result.error || 'Hubo un problema de conexión. Verifica tu conexión a internet e intenta de nuevo.',
+            [{ text: 'Entendido' }]
+          );
+        } else {
+          Alert.alert(
+            'Error',
+            result.error || 'Hubo un problema al guardar los cambios. Intenta de nuevo.',
+            [{ text: 'Entendido' }]
+          );
+        }
+      }
+      
+    } catch (error: any) {
+      Alert.alert(
+        'Error',
+        'Ha ocurrido un error inesperado. Por favor, intenta de nuevo.',
+        [{ text: 'Entendido' }]
+      );
+    } finally {
+      setIsSavingProfessional(false);
     }
   };
 
@@ -333,7 +482,6 @@ const validateForm = (): boolean => {
               }
               
             } catch (error: unknown) {
-              
               Alert.alert(
                 'Error',
                 'Hubo un problema al cerrar sesión. Se cerrará la sesión localmente.',
@@ -371,15 +519,17 @@ const validateForm = (): boolean => {
     error?: string,
     placeholder?: string,
     keyboardType?: 'default' | 'email-address' | 'phone-pad',
-    maxLength?: number
+    maxLength?: number,
+    multiline?: boolean
   ) => (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
         style={[
           styles.textInput,
+          multiline ? styles.textInputMultiline : null,
           error ? styles.inputError : null,
-          !isEditing ? styles.disabledInput : null
+          !isEditing && !isEditingProfessional ? styles.disabledInput : null
         ]}
         value={value}
         onChangeText={onChangeText}
@@ -387,12 +537,15 @@ const validateForm = (): boolean => {
         placeholderTextColor={colors.text.secondary}
         keyboardType={keyboardType}
         maxLength={maxLength}
-        editable={isEditing}
+        editable={isEditing || isEditingProfessional}
+        multiline={multiline}
+        numberOfLines={multiline ? 4 : 1}
+        textAlignVertical={multiline ? 'top' : 'center'}
       />
       {error && (
         <Text style={styles.errorText}>{error}</Text>
       )}
-      {maxLength && isEditing && (
+      {maxLength && (isEditing || isEditingProfessional) && (
         <Text style={styles.characterCount}>
           {value.length}/{maxLength}
         </Text>
@@ -445,7 +598,9 @@ const validateForm = (): boolean => {
     <View style={styles.header}>
       <Text style={styles.title}>Mi Perfil</Text>
       <Text style={styles.subtitle}>
-        {isEditing ? 'Editando información personal' : 'Gestiona tu información personal'}
+        {isEditing ? 'Editando información personal' : 
+         isEditingProfessional ? 'Editando perfil profesional' : 
+         'Gestiona tu información personal'}
       </Text>
     </View>
   );
@@ -475,13 +630,14 @@ const validateForm = (): boolean => {
           {renderReadOnlyField('Cédula', userProfile.cedula, 'id-card')}
           {renderReadOnlyField('Email', userProfile.email, 'envelope')}
           
-          {/* Mostrar datos profesionales solo si existen (profesionales) */}
-          {userProfile.profesion && (
+          {userRole === 'Profesional' && (
             <>
-              {renderReadOnlyField('Profesión', userProfile.profesion, 'briefcase')}
+              {userProfile.profesion && renderReadOnlyField('Profesión', userProfile.profesion, 'briefcase')}
               {userProfile.descripcion && renderReadOnlyField('Descripción', userProfile.descripcion, 'info-circle')}
               {userProfile.direccion && renderReadOnlyField('Dirección', userProfile.direccion, 'map-marker-alt')}
-              {renderRatingField('Calificación', userProfile.calificacionPromedio ?? null, userProfile.totalCalificaciones ?? null)}
+              {userProfile.calificacionPromedio !== null && 
+                renderRatingField('Calificación', userProfile.calificacionPromedio ?? null, userProfile.totalCalificaciones ?? null)
+              }
             </>
           )}
         </View>
@@ -490,7 +646,7 @@ const validateForm = (): boolean => {
   };
 
   const renderEditableInfo = () => {
-    if (!userProfile) return null;
+    if (!userProfile || !isEditing) return null;
 
     return (
       <View style={styles.editableSection}>
@@ -518,6 +674,110 @@ const validateForm = (): boolean => {
           'phone-pad',
           8
         )}
+      </View>
+    );
+  };
+
+  const renderProfessionalInfo = () => {
+    if (!userProfile || userRole !== 'Profesional' || !isEditingProfessional) return null;
+
+    return (
+      <View style={styles.editableSection}>
+        <View style={styles.sectionHeader}>
+          <Icon name="briefcase" size={16} color={colors.primary.main} />
+          <Text style={styles.sectionTitle}>Perfil Profesional</Text>
+        </View>
+
+        {/* Campo de Profesión con Modal Selector */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.fieldLabel}>Profesión *</Text>
+          <TouchableOpacity
+            style={[
+              styles.textInput,
+              styles.professionSelector,
+              professionalErrors.profesion ? styles.inputError : null,
+              !isEditingProfessional ? styles.disabledInput : null
+            ]}
+            onPress={() => setShowProfessionModal(true)}
+            disabled={!isEditingProfessional}
+          >
+            <Text style={[
+              styles.professionSelectorText,
+              !professionalData.profesion && styles.professionSelectorPlaceholder
+            ]}>
+              {professionalData.profesion || 'Selecciona una profesión'}
+            </Text>
+            <Icon name="chevron-down" size={16} color={colors.text.secondary} />
+          </TouchableOpacity>
+          {professionalErrors.profesion && (
+            <Text style={styles.errorText}>{professionalErrors.profesion}</Text>
+          )}
+        </View>
+
+        {renderEditableField(
+          'Descripción *',
+          professionalData.descripcion,
+          (text) => setProfessionalData(prev => ({ ...prev, descripcion: text })),
+          professionalErrors.descripcion,
+          'Describe tus servicios y experiencia',
+          'default',
+          500,
+          true
+        )}
+
+        {renderEditableField(
+          'Dirección *',
+          professionalData.direccion,
+          (text) => setProfessionalData(prev => ({ ...prev, direccion: text })),
+          professionalErrors.direccion,
+          'Dirección de tu consultorio o lugar de trabajo',
+          'default',
+          200
+        )}
+
+        {/* Modal para seleccionar profesión */}
+        <Modal
+          visible={showProfessionModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowProfessionModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Selecciona tu profesión</Text>
+                <TouchableOpacity onPress={() => setShowProfessionModal(false)}>
+                  <Icon name="times" size={24} color={colors.text.primary} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalList}>
+                {PROFESIONES.map((prof) => (
+                  <TouchableOpacity
+                    key={prof}
+                    style={[
+                      styles.modalItem,
+                      professionalData.profesion === prof && styles.modalItemSelected
+                    ]}
+                    onPress={() => {
+                      setProfessionalData(prev => ({ ...prev, profesion: prof }));
+                      setShowProfessionModal(false);
+                    }}
+                  >
+                    <Text style={[
+                      styles.modalItemText,
+                      professionalData.profesion === prof && styles.modalItemTextSelected
+                    ]}>
+                      {prof}
+                    </Text>
+                    {professionalData.profesion === prof && (
+                      <Icon name="check" size={16} color={colors.primary.main} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   };
@@ -554,23 +814,60 @@ const validateForm = (): boolean => {
           fullWidth
           icon="edit"
           iconPosition="left"
-          disabled={isLoggingOut}
+          disabled={isLoggingOut || isEditingProfessional}
         />
       )}
 
-      {/* Botón de Planes - solo para profesionales */}
       {userRole === 'Profesional' && (
-        <View style={styles.planButtonContainer}>
-          <Button
-            title="Gestionar Plan"
-            onPress={() => navigation?.navigate('PlanSelection')}
-            variant="outline"
-            fullWidth
-            icon="credit-card"
-            iconPosition="left"
-            disabled={isLoggingOut || isSaving}
-          />
-        </View>
+        <>
+          {isEditingProfessional ? (
+            <View style={[styles.editButtonsRow, styles.professionalButtonsRow]}>
+              <View style={styles.editButton}>
+                <Button
+                  title="Cancelar"
+                  onPress={handleCancelEditProfessional}
+                  variant="outline"
+                  disabled={isSavingProfessional}
+                />
+              </View>
+              <View style={styles.editButton}>
+                <Button
+                  title={isSavingProfessional ? "Guardando..." : "Guardar Cambios"}
+                  onPress={handleSaveProfessionalChanges}
+                  variant="primary"
+                  loading={isSavingProfessional}
+                  disabled={isSavingProfessional}
+                  icon="save"
+                  iconPosition="left"
+                />
+              </View>
+            </View>
+          ) : (
+            <View style={styles.professionalButtonContainer}>
+              <Button
+                title="Editar Perfil Profesional"
+                onPress={handleStartEditProfessional}
+                variant="outline"
+                fullWidth
+                icon="briefcase"
+                iconPosition="left"
+                disabled={isLoggingOut || isEditing}
+              />
+            </View>
+          )}
+
+          <View style={styles.planButtonContainer}>
+            <Button
+              title="Gestionar Plan"
+              onPress={() => navigation?.navigate('PlanSelection')}
+              variant="outline"
+              fullWidth
+              icon="credit-card"
+              iconPosition="left"
+              disabled={isLoggingOut || isSaving || isSavingProfessional}
+            />
+          </View>
+        </>
       )}
 
       <View style={styles.logoutContainer}>
@@ -580,7 +877,7 @@ const validateForm = (): boolean => {
           variant="outline"
           fullWidth
           loading={isLoggingOut}
-          disabled={isLoggingOut || isSaving}
+          disabled={isLoggingOut || isSaving || isSavingProfessional}
           icon="sign-out-alt"
           iconPosition="left"
         />
@@ -643,6 +940,7 @@ const validateForm = (): boolean => {
           {renderHeader()}
           {renderUserInfo()}
           {renderEditableInfo()}
+          {renderProfessionalInfo()}
           {renderActionButtons()}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -699,7 +997,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
 
-  // Header
   header: {
     paddingTop: spacing['8xl'],
     paddingBottom: spacing.xl,
@@ -719,7 +1016,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // User Info Section
   userInfoSection: {
     marginBottom: spacing['2xl'],
   },
@@ -773,7 +1069,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  // Read-only section
   readOnlySection: {
     backgroundColor: colors.background.secondary,
     borderRadius: spacing.md,
@@ -805,15 +1100,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  readOnlyNote: {
-    ...typography.styles.caption,
-    color: colors.text.secondary,
-    fontStyle: 'italic',
-    marginTop: spacing.sm,
-    textAlign: 'center',
-  },
-
-  // Rating specific styles
   ratingContainer: {
     flexDirection: 'column',
     gap: spacing.xs,
@@ -830,7 +1116,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Editable section
   editableSection: {
     marginBottom: spacing['2xl'],
   },
@@ -872,6 +1157,11 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
 
+  textInputMultiline: {
+    minHeight: 100,
+    paddingTop: spacing.md,
+  },
+
   disabledInput: {
     backgroundColor: colors.background.secondary,
     color: colors.text.secondary,
@@ -894,7 +1184,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
 
-  // Action buttons
   actionButtonsContainer: {
     paddingVertical: spacing.xl,
     paddingBottom: spacing['4xl'],
@@ -906,15 +1195,94 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
 
+  professionalButtonsRow: {
+    marginTop: spacing.lg,
+  },
+
   editButton: {
     flex: 1,
+  },
+
+  professionalButtonContainer: {
+    marginTop: spacing.lg,
+  },
+
+  planButtonContainer: {
+    marginTop: spacing.lg,
   },
 
   logoutContainer: {
     marginTop: spacing.lg,
   },
-  planButtonContainer: {
-    marginTop: spacing.lg,
+
+  professionSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
 
+  professionSelectorText: {
+    flex: 1,
+    color: colors.text.primary,
+    fontSize: typography.fontSize.base,
+  },
+
+  professionSelectorPlaceholder: {
+    color: colors.text.secondary,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay.dark,
+    justifyContent: 'flex-end',
+  },
+
+  modalContent: {
+    backgroundColor: colors.background.primary,
+    borderTopLeftRadius: spacing.lg,
+    borderTopRightRadius: spacing.lg,
+    maxHeight: '80%',
+  },
+
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+
+  modalTitle: {
+    ...typography.styles.h3,
+    color: colors.text.primary,
+  },
+
+  modalList: {
+    maxHeight: 400,
+  },
+
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+
+  modalItemSelected: {
+    backgroundColor: colors.primary.light + '20',
+  },
+
+  modalItemText: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    flex: 1,
+  },
+
+  modalItemTextSelected: {
+    color: colors.primary.main,
+    fontWeight: 'bold',
+  },
 });

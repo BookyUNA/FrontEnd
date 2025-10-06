@@ -25,6 +25,7 @@ import { Button } from '../forms/Button';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
+import { PROFESIONES } from '../../constants/profesiones';
 import { 
   clientServicesService, 
   ServicioCliente, 
@@ -41,6 +42,7 @@ interface FilterOption {
   field: string;
   placeholder: string;
   selected: boolean;
+  type?: 'text' | 'select';
 }
 
 interface SearchValues {
@@ -57,21 +59,24 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
       label: 'Nombre del servicio', 
       field: 'nombreServicio', 
       placeholder: 'Ej: Terapia, Masaje, Consulta...',
-      selected: true 
+      selected: true,
+      type: 'text'
     },
     { 
       id: 'profesional', 
       label: 'Nombre profesional', 
       field: 'nombreProfesional', 
       placeholder: 'Ej: Alberto, María, Carlos...',
-      selected: false 
+      selected: false,
+      type: 'text'
     },
     { 
       id: 'profesion', 
       label: 'Profesión', 
       field: 'profesion', 
-      placeholder: 'Ej: Fisioterapeuta, Psicólogo...',
-      selected: false 
+      placeholder: 'Selecciona una profesión',
+      selected: false,
+      type: 'select'
     },
   ]);
 
@@ -82,8 +87,11 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
     profesion: '',
   });
 
-  // Estados para el dropdown
+  // Estados para el dropdown de filtros
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+
+  // Estados para el modal de profesiones
+  const [isProfessionModalOpen, setIsProfessionModalOpen] = useState<boolean>(false);
 
   // Estados para el panel de búsqueda colapsable
   const [isSearchExpanded, setIsSearchExpanded] = useState<boolean>(false);
@@ -145,7 +153,6 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
         }
       }
     } catch (error) {
-      //console.error('Error al cargar servicios:', error);
       Alert.alert('Error', 'Error inesperado al cargar servicios');
     } finally {
       setIsLoading(false);
@@ -156,12 +163,11 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
    * Alternar panel de búsqueda
    */
   const toggleSearchPanel = () => {
-    // Calcular altura dinámica basada en filtros seleccionados
     const selectedFilters = getSelectedFilters();
-    const baseHeight = 200; // Altura base (título + selector de filtros + botones)
-    const fieldHeight = 80; // Altura por cada campo de búsqueda
+    const baseHeight = 200;
+    const fieldHeight = 80;
     const dynamicHeight = baseHeight + (selectedFilters.length * fieldHeight);
-    const maxHeight = 400; // Altura máxima para evitar que tome toda la pantalla
+    const maxHeight = 400;
     
     const targetHeight = isSearchExpanded ? 0 : Math.min(dynamicHeight, maxHeight);
     
@@ -233,13 +239,11 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
   const handleSearch = async () => {
     const selectedFilters = getSelectedFilters();
     
-    // Si no hay filtros seleccionados, mostrar todos los servicios
     if (selectedFilters.length === 0) {
       loadAllServices();
       return;
     }
 
-    // Si hay filtros seleccionados pero no hay valores, mostrar alerta
     if (!hasSearchValues()) {
       Alert.alert(
         'Búsqueda Vacía',
@@ -282,7 +286,6 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
         }
       }
     } catch (error) {
-      //console.error('Error en búsqueda:', error);
       Alert.alert('Error', 'Error inesperado en la búsqueda');
     } finally {
       setIsLoading(false);
@@ -336,7 +339,7 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
         `Profesional: ${service.nombreProfesional}\n` +
         `Profesión: ${service.profesion}\n` +
         `Duración: ${service.duracionMinutos} min\n` +
-        `Precio: $${service.precio.toFixed(2)}` +
+        `Precio: ₡${service.precio.toFixed(2)}` +
         (service.permiteDescuento ? `\nDescuento: ${service.porcentajeDescuento}%` : ''),
         [{ text: 'OK' }]
       );
@@ -351,7 +354,7 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
       <View style={styles.serviceHeader}>
         <Text style={styles.serviceName}>{item.nombreServicio}</Text>
         <Text style={styles.servicePrice}>
-          	₡{item.precio.toFixed(2)}
+          ₡{item.precio.toFixed(2)}
         </Text>
       </View>
       
@@ -445,11 +448,27 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
         {selectedFilters.map(filter => (
           <View key={filter.id} style={styles.searchField}>
             <Text style={styles.fieldLabel}>{filter.label}</Text>
-            <Input
-              placeholder={filter.placeholder}
-              value={searchValues[filter.id]}
-              onChangeText={(value) => handleSearchValueChange(filter.id, value)}
-            />
+            {filter.type === 'select' ? (
+              <TouchableOpacity
+                style={styles.professionSelector}
+                onPress={() => setIsProfessionModalOpen(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.professionSelectorText,
+                  !searchValues[filter.id] && styles.professionSelectorPlaceholder
+                ]}>
+                  {searchValues[filter.id] || filter.placeholder}
+                </Text>
+                <Icon name="chevron-down" size={16} color={colors.text.secondary} />
+              </TouchableOpacity>
+            ) : (
+              <Input
+                placeholder={filter.placeholder}
+                value={searchValues[filter.id]}
+                onChangeText={(value) => handleSearchValueChange(filter.id, value)}
+              />
+            )}
           </View>
         ))}
       </View>
@@ -544,7 +563,7 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
         </ScrollView>
       </Animated.View>
 
-      {/* Dropdown modal - fuera del panel para que funcione correctamente */}
+      {/* Modal de filtros */}
       <Modal
         visible={isDropdownOpen}
         transparent={true}
@@ -571,6 +590,70 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
             </View>
           </View>
         </Pressable>
+      </Modal>
+
+      {/* Modal de profesiones */}
+      <Modal
+        visible={isProfessionModalOpen}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsProfessionModalOpen(false)}
+      >
+        <View style={styles.professionModalOverlay}>
+          <View style={styles.professionModalContent}>
+            <View style={styles.professionModalHeader}>
+              <Text style={styles.professionModalTitle}>Selecciona una profesión</Text>
+              <TouchableOpacity onPress={() => setIsProfessionModalOpen(false)}>
+                <Icon name="times" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.professionModalList}>
+              <TouchableOpacity
+                style={[
+                  styles.professionModalItem,
+                  !searchValues.profesion && styles.professionModalItemSelected
+                ]}
+                onPress={() => {
+                  handleSearchValueChange('profesion', '');
+                  setIsProfessionModalOpen(false);
+                }}
+              >
+                <Text style={[
+                  styles.professionModalItemText,
+                  !searchValues.profesion && styles.professionModalItemTextSelected
+                ]}>
+                  Todas las profesiones
+                </Text>
+                {!searchValues.profesion && (
+                  <Icon name="check" size={16} color={colors.primary.main} />
+                )}
+              </TouchableOpacity>
+              {PROFESIONES.map((prof) => (
+                <TouchableOpacity
+                  key={prof}
+                  style={[
+                    styles.professionModalItem,
+                    searchValues.profesion === prof && styles.professionModalItemSelected
+                  ]}
+                  onPress={() => {
+                    handleSearchValueChange('profesion', prof);
+                    setIsProfessionModalOpen(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.professionModalItemText,
+                    searchValues.profesion === prof && styles.professionModalItemTextSelected
+                  ]}>
+                    {prof}
+                  </Text>
+                  {searchValues.profesion === prof && (
+                    <Icon name="check" size={16} color={colors.primary.main} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
 
       {/* Sección de Resultados */}
@@ -808,6 +891,84 @@ const styles = StyleSheet.create({
     ...typography.styles.caption,
     color: colors.text.primary,
     fontWeight: typography.fontWeight.medium,
+  },
+
+  professionSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.background.primary,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    minHeight: 48,
+  },
+
+  professionSelectorText: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    flex: 1,
+  },
+
+  professionSelectorPlaceholder: {
+    color: colors.text.secondary,
+  },
+
+  professionModalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay.dark,
+    justifyContent: 'flex-end',
+  },
+
+  professionModalContent: {
+    backgroundColor: colors.background.primary,
+    borderTopLeftRadius: spacing.lg,
+    borderTopRightRadius: spacing.lg,
+    maxHeight: '80%',
+  },
+
+  professionModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+
+  professionModalTitle: {
+    ...typography.styles.h3,
+    color: colors.text.primary,
+  },
+
+  professionModalList: {
+    maxHeight: 400,
+  },
+
+  professionModalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+
+  professionModalItemSelected: {
+    backgroundColor: colors.primary.light + '20',
+  },
+
+  professionModalItemText: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    flex: 1,
+  },
+
+  professionModalItemTextSelected: {
+    color: colors.primary.main,
+    fontWeight: 'bold',
   },
 
   noFiltersContainer: {

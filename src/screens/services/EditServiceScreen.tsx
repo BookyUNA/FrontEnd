@@ -257,7 +257,7 @@ export const EditServiceScreen: React.FC<EditServiceScreenProps> = ({
       }
 
     } catch (error: any) {
-      //console.error('📋 Error actualizando servicio:', error);
+      console.log('📋 Error actualizando servicio:', error);
       
       Alert.alert(
         'Error',

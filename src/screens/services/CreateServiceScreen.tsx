@@ -225,7 +225,7 @@ export const CreateServiceScreen: React.FC<CreateServiceScreenProps> = ({
       }
 
     } catch (error: any) {
-      //console.error('📋 Error creando servicio:', error);
+      console.log('📋 Error creando servicio:', error);
       
       Alert.alert(
         'Error',

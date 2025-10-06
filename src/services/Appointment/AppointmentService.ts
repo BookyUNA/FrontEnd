@@ -181,7 +181,7 @@ class AppointmentService {
 
       const token = await authService.getToken();
       if (!token) {
-        //console.error('📅 AppointmentService: No hay token disponible');
+        console.log('📅 AppointmentService: No hay token disponible');
         return {
           success: false,
           error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
@@ -290,7 +290,7 @@ async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
 
     const token = await authService.getToken();
     if (!token) {
-      console.error('📅 AppointmentService: No hay token disponible');
+      console.log('📅 AppointmentService: No hay token disponible');
       return {
         success: false,
         error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
@@ -320,7 +320,7 @@ async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
 
     if (!response.ok) {
       if (response.status === 401) {
-        console.error('📅 AppointmentService: Token inválido o expirado');
+        console.log('📅 AppointmentService: Token inválido o expirado');
         return {
           success: false,
           error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
@@ -328,7 +328,7 @@ async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
       }
 
       const errorText = await response.text();
-      console.error('📅 AppointmentService: Error HTTP:', errorText);
+      console.log('📅 AppointmentService: Error HTTP:', errorText);
       
       return {
         success: false,
@@ -340,7 +340,7 @@ async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
     console.log('📅 AppointmentService: Datos recibidos:', data);
 
     if (!data || typeof data.resultado !== 'boolean') {
-      console.error('📅 AppointmentService: Respuesta inválida del servidor');
+      console.log('📅 AppointmentService: Respuesta inválida del servidor');
       return {
         success: false,
         error: 'Respuesta inválida del servidor. Intenta de nuevo.',
@@ -352,7 +352,7 @@ async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
         ? data.error[0].Message 
         : 'No se pudieron obtener las citas';
       
-      console.error('📅 AppointmentService: Error en la respuesta:', errorMessage);
+      console.log('📅 AppointmentService: Error en la respuesta:', errorMessage);
       return {
         success: false,
         error: errorMessage,
@@ -369,7 +369,7 @@ async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
     };
 
   } catch (error: any) {
-    console.error('📅 AppointmentService: Error en getProfessionalAppointments:', error);
+    console.log('📅 AppointmentService: Error en getProfessionalAppointments:', error);
 
     if (error.name === 'AbortError') {
       return {
@@ -580,7 +580,7 @@ async approveOrRejectAppointment(
       }
 
       const errorText = await response.text();
-      console.error('📅 AppointmentService: Error HTTP:', errorText);
+      console.log('📅 AppointmentService: Error HTTP:', errorText);
       
       return {
         success: false,
@@ -605,7 +605,7 @@ async approveOrRejectAppointment(
           ? 'No se pudo confirmar la cita' 
           : 'No se pudo rechazar la cita';
       
-      console.error('📅 AppointmentService: Error en la respuesta:', errorMessage);
+      console.log('📅 AppointmentService: Error en la respuesta:', errorMessage);
       return {
         success: false,
         error: errorMessage,
@@ -620,7 +620,7 @@ async approveOrRejectAppointment(
     };
 
   } catch (error: any) {
-    console.error('📅 AppointmentService: Error al procesar decisión:', error);
+    console.log('📅 AppointmentService: Error al procesar decisión:', error);
 
     if (error.name === 'AbortError') {
       return {
@@ -705,7 +705,7 @@ async cancelAppointment(
       }
 
       const errorText = await response.text();
-      console.error('📅 AppointmentService: Error HTTP:', errorText);
+      console.log('📅 AppointmentService: Error HTTP:', errorText);
       
       return {
         success: false,
@@ -728,7 +728,7 @@ async cancelAppointment(
         ? data.error[0].Message 
         : 'No se pudo cancelar la cita';
       
-      console.error('📅 AppointmentService: Error en la respuesta:', errorMessage);
+      console.log('📅 AppointmentService: Error en la respuesta:', errorMessage);
       return {
         success: false,
         error: errorMessage,
@@ -743,7 +743,7 @@ async cancelAppointment(
     };
 
   } catch (error: any) {
-    console.error('📅 AppointmentService: Error al cancelar cita:', error);
+    console.log('📅 AppointmentService: Error al cancelar cita:', error);
 
     if (error.name === 'AbortError') {
       return {

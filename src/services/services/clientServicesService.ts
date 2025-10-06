@@ -153,7 +153,7 @@ class ClientServicesService {
       }
 
     } catch (error: any) {
-      //console.error('🔍 Error al buscar servicios:', error);
+      console.log('🔍 Error al buscar servicios:', error);
 
       // Determinar tipo de error
       if (error?.response?.status) {
@@ -239,7 +239,7 @@ class ClientServicesService {
       return isAuthenticated;
       
     } catch (error) {
-      //console.error('🔍 Error al verificar permisos de búsqueda:', error);
+      console.log('🔍 Error al verificar permisos de búsqueda:', error);
       return false;
     }
   }

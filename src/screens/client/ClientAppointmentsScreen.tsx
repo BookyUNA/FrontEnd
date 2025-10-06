@@ -136,7 +136,7 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
         const sortedAppointments = appointmentService.sortAppointmentsByDate(result.data, false);
         setAppointments(sortedAppointments);
       } else {
-        //console.error('📅 ClientAppointmentsScreen: Error al cargar citas:', result.error);
+        console.log('📅 ClientAppointmentsScreen: Error al cargar citas:', result.error);
         
         if (result.isNetworkError) {
           Alert.alert(
@@ -154,7 +154,7 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
         setAppointments([]);
       }
     } catch (error) {
-      //console.error('📅 ClientAppointmentsScreen: Error inesperado:', error);
+      console.log('📅 ClientAppointmentsScreen: Error inesperado:', error);
       Alert.alert(
         'Error',
         'Ocurrió un error inesperado. Por favor, intenta de nuevo.',

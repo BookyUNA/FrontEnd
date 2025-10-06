@@ -1,7 +1,7 @@
 /**
  * Pantalla de Reprogramación de Cita - Booky
  * Permite al cliente reprogramar una cita existente
- * Solución sin librerías externas para Android
+ * Solo permite horas exactas o medias horas
  */
 
 import React, { useState } from 'react';
@@ -22,6 +22,7 @@ import { Appointment, appointmentService } from '../../services/Appointment/Appo
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
+
 interface RescheduleAppointmentScreenProps {
   route?: {
     params?: {
@@ -37,17 +38,22 @@ export const RescheduleAppointmentScreen: React.FC<RescheduleAppointmentScreenPr
 }) => {
   const appointment = route?.params?.appointment;
   
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedTime, setSelectedTime] = useState<Date>(new Date());
+  // Inicializar con la fecha/hora de la cita original
+  const getInitialDate = () => {
+    return appointment ? new Date(appointment.fechaCita) : new Date();
+  };
+  
+  const [selectedDate, setSelectedDate] = useState<Date>(getInitialDate());
+  const [selectedTime, setSelectedTime] = useState<Date>(getInitialDate());
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
-  const [tempDay, setTempDay] = useState<number>(new Date().getDate());
-  const [tempMonth, setTempMonth] = useState<number>(new Date().getMonth());
-  const [tempYear, setTempYear] = useState<number>(new Date().getFullYear());
-  const [tempHour, setTempHour] = useState<number>(new Date().getHours());
-  const [tempMinute, setTempMinute] = useState<number>(new Date().getMinutes());
+  const [tempDay, setTempDay] = useState<number>(getInitialDate().getDate());
+  const [tempMonth, setTempMonth] = useState<number>(getInitialDate().getMonth());
+  const [tempYear, setTempYear] = useState<number>(getInitialDate().getFullYear());
+  const [tempHour, setTempHour] = useState<number>(getInitialDate().getHours());
+  const [tempMinute, setTempMinute] = useState<number>(getInitialDate().getMinutes());
   const [tempAmPm, setTempAmPm] = useState<'AM' | 'PM'>('AM');
 
   const formatDate = (date: Date): string => {
@@ -97,11 +103,31 @@ export const RescheduleAppointmentScreen: React.FC<RescheduleAppointmentScreenPr
   };
 
   const confirmTime = () => {
+    // Validar que sea hora exacta o media hora
+    if (tempMinute !== 0 && tempMinute !== 30) {
+      Alert.alert(
+        'Hora inválida',
+        'Solo se permiten horas en punto (00) o medias horas (30).',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     let hours = tempHour;
     if (tempAmPm === 'PM' && hours !== 12) {
       hours += 12;
     } else if (tempAmPm === 'AM' && hours === 12) {
       hours = 0;
+    }
+    
+    // Validar horario laboral (8 AM - 6 PM)
+    if (hours < 8 || hours >= 18) {
+      Alert.alert(
+        'Hora inválida',
+        'Selecciona una hora entre 8:00 AM y 6:00 PM.',
+        [{ text: 'OK' }]
+      );
+      return;
     }
     
     const newTime = new Date();
@@ -131,6 +157,17 @@ export const RescheduleAppointmentScreen: React.FC<RescheduleAppointmentScreenPr
         'Fecha Inválida',
         'La fecha y hora seleccionadas deben ser futuras.',
         [{ text: 'Entendido' }]
+      );
+      return;
+    }
+
+    // Validar que sea hora exacta o media hora
+    const minutes = newDateTime.getMinutes();
+    if (minutes !== 0 && minutes !== 30) {
+      Alert.alert(
+        'Hora inválida',
+        'Solo se permiten reservas a las horas en punto o a las medias horas (ej: 9:00, 9:30, 10:00).',
+        [{ text: 'OK' }]
       );
       return;
     }
@@ -333,7 +370,8 @@ export const RescheduleAppointmentScreen: React.FC<RescheduleAppointmentScreenPr
 
   const renderTimePickerModal = () => {
     const hours = Array.from({ length: 12 }, (_, i) => i + 1);
-    const minutes = Array.from({ length: 60 }, (_, i) => i);
+    // Solo permitir minutos 0 y 30
+    const minutes = [0, 30];
 
     return (
       <Modal
@@ -347,6 +385,9 @@ export const RescheduleAppointmentScreen: React.FC<RescheduleAppointmentScreenPr
             <TouchableWithoutFeedback>
               <View style={styles.pickerModal}>
                 <Text style={styles.pickerModalTitle}>Seleccionar Hora</Text>
+                <Text style={styles.pickerHelpText}>
+                  Solo horas en punto o medias horas (8 AM - 6 PM)
+                </Text>
                 
                 <View style={styles.pickerRow}>
                   <View style={styles.pickerColumn}>
@@ -765,7 +806,15 @@ const styles = StyleSheet.create({
     ...typography.styles.h2,
     color: colors.text.primary,
     textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+
+  pickerHelpText: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    textAlign: 'center',
     marginBottom: spacing.lg,
+    fontStyle: 'italic',
   },
 
   pickerRow: {

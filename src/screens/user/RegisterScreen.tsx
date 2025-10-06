@@ -296,7 +296,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
       }
       
     } catch (error: any) {
-      //console.error('💥 ERROR INESPERADO en handleRegister:', error);
+      console.log('💥 ERROR INESPERADO en handleRegister:', error);
       const errorMessage = 'Ha ocurrido un error inesperado. Por favor, verifica tu conexión e intenta nuevamente.';
       setGeneralError(errorMessage);
       setShowError(true);

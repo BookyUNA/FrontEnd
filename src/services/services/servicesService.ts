@@ -174,7 +174,7 @@ class ServicesService {
       }
 
     } catch (error: any) {
-      //console.error('📋 Error al obtener servicios:', error);
+      console.log('📋 Error al obtener servicios:', error);
 
       // Determinar tipo de error
       if (error?.response?.status) {
@@ -247,7 +247,7 @@ class ServicesService {
       return result;
       
     } catch (error) {
-      //console.error('📋 Error al obtener servicios activos:', error);
+      console.log('📋 Error al obtener servicios activos:', error);
       return {
         success: false,
         error: 'Error al filtrar servicios activos',
@@ -266,7 +266,7 @@ class ServicesService {
       return isAuthenticated && isProfessional;
       
     } catch (error) {
-      //console.error('📋 Error al verificar permisos de servicios:', error);
+      console.log('📋 Error al verificar permisos de servicios:', error);
       return false;
     }
   }
@@ -319,7 +319,7 @@ class ServicesService {
       return { total: 0, activos: 0, inactivos: 0 };
       
     } catch (error) {
-      //console.error('📋 Error al obtener estadísticas:', error);
+      console.log('📋 Error al obtener estadísticas:', error);
       return { total: 0, activos: 0, inactivos: 0 };
     }
   }
@@ -458,7 +458,7 @@ class ServicesService {
       }
 
     } catch (error: any) {
-      //console.error('🔄 Error al cambiar estado de servicio:', error);
+      console.log('🔄 Error al cambiar estado de servicio:', error);
 
       // Determinar tipo de error
       if (error?.response?.status) {

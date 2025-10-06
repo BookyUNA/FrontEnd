@@ -152,7 +152,7 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
       }
 
     } catch (error) {
-      //console.error('📋 Error al cargar servicios:', error);
+      console.log('📋 Error al cargar servicios:', error);
       setError('Error de conexión. Revisa tu internet e intenta nuevamente.');
       setShowError(true);
       setServices([]);
@@ -583,11 +583,11 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
           [{ text: 'OK' }]
         );
 
-        //console.error('🔄 Error del servidor:', errorMessage);
+        console.log('🔄 Error del servidor:', errorMessage);
       }
 
     } catch (error: any) {
-      //console.error('🔄 Error al cambiar estado de servicio:', error);
+      console.log('🔄 Error al cambiar estado de servicio:', error);
       
       const errorMessage = 'Error inesperado al cambiar el estado del servicio. Intenta nuevamente.';
       setError(errorMessage);

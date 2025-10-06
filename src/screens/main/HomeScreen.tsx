@@ -19,6 +19,7 @@ import { BottomNavigationBar, BottomNavTabType } from '../../components/navigati
 import { ProfileScreen } from '../profile/ProfileScreen';
 import { ServicesScreen } from '../services/ServicesScreen';
 import { ProfessionalServicesScreen } from '../client/ProfessionalServicesScreen';
+import { ProfessionalSchedule } from '../../components/appointments/ProfessionalSchedule';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
@@ -117,53 +118,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
 
   const renderProfessionalHomeContent = () => (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Logo size="medium" showTagline />
-        <Text style={styles.welcomeTitle}>
-          ¡Bienvenido Profesional!
-        </Text>
+      <View style={styles.scheduleHeader}>
+        <Logo size="small" />
+        <Text style={styles.scheduleTitle}>Mi Horario</Text>
       </View>
 
-      <View style={styles.content}>
-        <Text style={styles.message}>
-          🚧 Aplicación en construcción
-        </Text>
-        <Icon name="rocket" size={50} color={colors.text.primary} />
-        <Text style={styles.description}>
-          Las funcionalidades principales están siendo desarrolladas.
-        </Text>
-      </View>
-
-      <View style={styles.debugSection}>
-        <Button
-          title="🔍 Verificar Estado Completo"
-          onPress={async () => {
-            try {
-              await authService.debugAuthState();
-              
-              const token = await authService.getToken();
-              const isAuth = await authService.isAuthenticated();
-              const role = await authService.getUserRole();
-              const isProf = await authService.isProfessional();
-              const userData = await authService.getUserData();
-              
-              Alert.alert(
-                'Estado Completo de Autenticación',
-                `Token: ${token ? 'SÍ EXISTE' : 'NO EXISTE'}\n` +
-                `Autenticado: ${isAuth ? 'SÍ' : 'NO'}\n` +
-                `Rol: ${role || 'Sin rol'}\n` +
-                `¿Es Profesional?: ${isProf ? 'SÍ' : 'NO'}\n` +
-                `User ID: ${userData?.userId || 'N/A'}\n` +
-                `Token expirado: ${userData?.isExpired ? 'SÍ' : 'NO'}\n` +
-                `Token preview: ${token ? token.substring(0, 30) + '...' : 'N/A'}`,
-                [{ text: 'OK' }]
-              );
-            } catch (error) {
-              // Error silencioso en debug
-            }
-          }}
-          variant="outline"
-        />
+      <View style={styles.scheduleContainer}>
+        <ProfessionalSchedule />
       </View>
     </View>
   );
@@ -220,11 +181,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
         );
         
       case 'appointments':
-      return (
-        <ClientAppointmentsScreen 
-          navigation={navigation}
-        />
-      );  
+        return (
+          <ClientAppointmentsScreen 
+            navigation={navigation}
+          />
+        );  
 
       case 'profile':
         return (
@@ -236,11 +197,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
         );
 
       case 'professionalAppointments':
-      return (
-        <ProfessionalAppointmentsScreen 
-          navigation={navigation}
-        />
-      );
+        return (
+          <ProfessionalAppointmentsScreen 
+            navigation={navigation}
+          />
+        );
       
       default:
         return isClient ? renderClientHomeContent() : renderProfessionalHomeContent();
@@ -280,7 +241,25 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
+  },
+
+  scheduleHeader: {
+    alignItems: 'center',
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.background.secondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+
+  scheduleTitle: {
+    ...typography.styles.h2,
+    color: colors.text.primary,
+    marginTop: spacing.sm,
+  },
+
+  scheduleContainer: {
+    flex: 1,
   },
 
   header: {
@@ -300,6 +279,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: spacing.lg,
   },
 
   message: {
@@ -315,10 +295,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: spacing.xl,
     marginTop: spacing.lg,
-  },
-
-  debugSection: {
-    paddingVertical: spacing.xl,
-    paddingBottom: spacing['2xl'],
   },
 });

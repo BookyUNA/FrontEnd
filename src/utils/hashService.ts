@@ -21,7 +21,7 @@ export class HashService {
       const hash = CryptoJS.SHA256(password).toString(CryptoJS.enc.Hex);
       return hash;
     } catch (error) {
-      //console.error('Error al hashear contraseña:', error);
+      console.log('Error al hashear contraseña:', error);
       throw new Error('Error al procesar la contraseña');
     }
   }

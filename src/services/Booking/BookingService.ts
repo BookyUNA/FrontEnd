@@ -47,13 +47,13 @@ class BookingService {
 
       return response.data;
     } catch (error: any) {
-      //console.error('=== ERROR EN BOOKING SERVICE ===');
-      //console.error('Error completo:', error);
-      //console.error('Error message:', error?.message);
+      console.log('=== ERROR EN BOOKING SERVICE ===');
+      console.log('Error completo:', error);
+      console.log('Error message:', error?.message);
 
       if (error?.response) {
-        //console.error('Error status:', error.response?.status);
-        //console.error('Error data:', error.response?.data);
+        console.log('Error status:', error.response?.status);
+        console.log('Error data:', error.response?.data);
       }
 
       // Errores comunes

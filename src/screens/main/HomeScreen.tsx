@@ -119,7 +119,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
   const renderProfessionalHomeContent = () => (
     <View style={styles.container}>
       <View style={styles.scheduleHeader}>
-        <Logo size="small" />
         <Text style={styles.scheduleTitle}>Mi Horario</Text>
       </View>
 
@@ -244,13 +243,13 @@ const styles = StyleSheet.create({
   },
 
   scheduleHeader: {
-    alignItems: 'center',
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.background.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-  },
+  alignItems: 'center',
+  paddingTop: spacing['6xl'],
+  paddingBottom: spacing.md,
+  backgroundColor: colors.background.secondary,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border.light,
+},
 
   scheduleTitle: {
     ...typography.styles.h2,

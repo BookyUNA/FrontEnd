@@ -157,7 +157,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         setShowError(true);
       }
     } catch (error) {
-      //console.error('Error inesperado en login:', error);
+      console.log('Error inesperado en login:', error);
       setGeneralError('Ha ocurrido un error inesperado. Por favor, intenta nuevamente.');
       setShowError(true);
     }

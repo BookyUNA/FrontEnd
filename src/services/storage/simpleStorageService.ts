@@ -18,7 +18,7 @@ class SimpleStorageService {
       this.authToken = token;
       console.log('🔐 Token guardado en memoria');
     } catch (error) {
-      //console.error('🔐 Error al guardar token:', error);
+      console.log('🔐 Error al guardar token:', error);
       throw error;
     }
   }
@@ -30,7 +30,7 @@ class SimpleStorageService {
     try {
       return this.authToken;
     } catch (error) {
-      //console.error('🔐 Error al obtener token:', error);
+      console.log('🔐 Error al obtener token:', error);
       return null;
     }
   }
@@ -43,7 +43,7 @@ class SimpleStorageService {
       this.authToken = null;
       console.log('🔐 Token eliminado de memoria');
     } catch (error) {
-      //console.error('🔐 Error al eliminar token:', error);
+      console.log('🔐 Error al eliminar token:', error);
       throw error;
     }
   }
@@ -55,7 +55,7 @@ class SimpleStorageService {
     try {
       return !!this.authToken;
     } catch (error) {
-      //console.error('🔐 Error al verificar token:', error);
+      console.log('🔐 Error al verificar token:', error);
       return false;
     }
   }
@@ -68,7 +68,7 @@ class SimpleStorageService {
       this.userRole = role;
       console.log('👤 Rol de usuario guardado en memoria:', role);
     } catch (error) {
-      //console.error('👤 Error al guardar rol:', error);
+      console.log('👤 Error al guardar rol:', error);
       throw error;
     }
   }
@@ -80,7 +80,7 @@ class SimpleStorageService {
     try {
       return this.userRole;
     } catch (error) {
-      //console.error('👤 Error al obtener rol:', error);
+      console.log('👤 Error al obtener rol:', error);
       return null;
     }
   }
@@ -93,7 +93,7 @@ class SimpleStorageService {
       this.userRole = null;
       console.log('👤 Rol eliminado de memoria');
     } catch (error) {
-      //console.error('👤 Error al eliminar rol:', error);
+      console.log('👤 Error al eliminar rol:', error);
       throw error;
     }
   }
@@ -106,7 +106,7 @@ class SimpleStorageService {
       const currentRole = await this.getUserRole();
       return currentRole === targetRole;
     } catch (error) {
-      //console.error('👤 Error al verificar rol:', error);
+      console.log('👤 Error al verificar rol:', error);
       return false;
     }
   }
@@ -118,7 +118,7 @@ class SimpleStorageService {
     try {
       return await this.hasRole('Profesional');
     } catch (error) {
-      //console.error('👤 Error al verificar si es profesional:', error);
+      console.log('👤 Error al verificar si es profesional:', error);
       return false;
     }
   }
@@ -130,7 +130,7 @@ class SimpleStorageService {
     try {
       return await this.hasRole('Cliente');
     } catch (error) {
-      //console.error('👤 Error al verificar si es cliente:', error);
+      console.log('👤 Error al verificar si es cliente:', error);
       return false;
     }
   }
@@ -143,7 +143,7 @@ class SimpleStorageService {
       this.userData = userData;
       console.log('👤 Datos de usuario guardados en memoria');
     } catch (error) {
-      //console.error('👤 Error al guardar datos de usuario:', error);
+      console.log('👤 Error al guardar datos de usuario:', error);
       throw error;
     }
   }
@@ -155,7 +155,7 @@ class SimpleStorageService {
     try {
       return this.userData;
     } catch (error) {
-      //console.error('👤 Error al obtener datos de usuario:', error);
+      console.log('👤 Error al obtener datos de usuario:', error);
       return null;
     }
   }
@@ -170,7 +170,7 @@ class SimpleStorageService {
       this.userData = null;
       console.log('🧹 Todos los datos limpiados de memoria');
     } catch (error) {
-      //console.error('🧹 Error al limpiar datos:', error);
+      console.log('🧹 Error al limpiar datos:', error);
       throw error;
     }
   }

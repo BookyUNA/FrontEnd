@@ -73,7 +73,7 @@ class ApiService {
       } catch (error: any) {
         lastError = error;
         
-        //console.error(`🌐 API Error [Intento ${attempt}]:`, error);
+        console.log(`🌐 API Error [Intento ${attempt}]:`, error);
         
         // Verificar si es un error de timeout
         if (error.name === 'AbortError') {
@@ -95,7 +95,7 @@ class ApiService {
       isNetworkError: true,
     };
 
-    //console.error('🌐 API Request Failed:', networkError);
+    console.log('🌐 API Request Failed:', networkError);
 
     return {
       success: false,

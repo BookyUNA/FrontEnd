@@ -86,7 +86,7 @@ export const ProfessionalSchedule: React.FC = () => {
         setAppointments(response.data);
       }
     } catch (error) {
-      //console.error('Error al cargar citas:', error);
+      console.log('Error al cargar citas:', error);
     } finally {
       setLoading(false);
     }

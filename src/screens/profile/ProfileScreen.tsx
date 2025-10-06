@@ -16,6 +16,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
+  Modal,
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/FontAwesome5';
@@ -27,6 +28,7 @@ import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 import { userService, ApiProfileResponse, EditProfileRequest } from '../../services/user/userService';
 import { jwtDecoder } from '../../utils/jwtDecoder';
+import { PROFESIONES } from '../../constants/profesiones';
 
 // =============================================
 // INTERFACES Y MODELOS
@@ -105,6 +107,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // Estados para perfil profesional
   const [isEditingProfessional, setIsEditingProfessional] = useState<boolean>(false);
   const [isSavingProfessional, setIsSavingProfessional] = useState<boolean>(false);
+  const [showProfessionModal, setShowProfessionModal] = useState<boolean>(false);
   const [professionalData, setProfessionalData] = useState<EditableProfessionalData>({
     profesion: '',
     descripcion: '',
@@ -220,11 +223,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
     // Validar profesión
     if (!professionalData.profesion.trim()) {
-      newErrors.profesion = 'La profesión es obligatoria';
-    } else if (professionalData.profesion.trim().length < 3) {
-      newErrors.profesion = 'La profesión debe tener al menos 3 caracteres';
-    } else if (professionalData.profesion.trim().length > 100) {
-      newErrors.profesion = 'La profesión no puede exceder 100 caracteres';
+      newErrors.profesion = 'Debes seleccionar una profesión';
     }
 
     // Validar descripción
@@ -689,15 +688,31 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <Text style={styles.sectionTitle}>Perfil Profesional</Text>
         </View>
 
-        {renderEditableField(
-          'Profesión *',
-          professionalData.profesion,
-          (text) => setProfessionalData(prev => ({ ...prev, profesion: text })),
-          professionalErrors.profesion,
-          'Ej: Psicólogo, Dentista, Abogado',
-          'default',
-          100
-        )}
+        {/* Campo de Profesión con Modal Selector */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.fieldLabel}>Profesión *</Text>
+          <TouchableOpacity
+            style={[
+              styles.textInput,
+              styles.professionSelector,
+              professionalErrors.profesion ? styles.inputError : null,
+              !isEditingProfessional ? styles.disabledInput : null
+            ]}
+            onPress={() => setShowProfessionModal(true)}
+            disabled={!isEditingProfessional}
+          >
+            <Text style={[
+              styles.professionSelectorText,
+              !professionalData.profesion && styles.professionSelectorPlaceholder
+            ]}>
+              {professionalData.profesion || 'Selecciona una profesión'}
+            </Text>
+            <Icon name="chevron-down" size={16} color={colors.text.secondary} />
+          </TouchableOpacity>
+          {professionalErrors.profesion && (
+            <Text style={styles.errorText}>{professionalErrors.profesion}</Text>
+          )}
+        </View>
 
         {renderEditableField(
           'Descripción *',
@@ -719,6 +734,50 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           'default',
           200
         )}
+
+        {/* Modal para seleccionar profesión */}
+        <Modal
+          visible={showProfessionModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowProfessionModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Selecciona tu profesión</Text>
+                <TouchableOpacity onPress={() => setShowProfessionModal(false)}>
+                  <Icon name="times" size={24} color={colors.text.primary} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalList}>
+                {PROFESIONES.map((prof) => (
+                  <TouchableOpacity
+                    key={prof}
+                    style={[
+                      styles.modalItem,
+                      professionalData.profesion === prof && styles.modalItemSelected
+                    ]}
+                    onPress={() => {
+                      setProfessionalData(prev => ({ ...prev, profesion: prof }));
+                      setShowProfessionModal(false);
+                    }}
+                  >
+                    <Text style={[
+                      styles.modalItemText,
+                      professionalData.profesion === prof && styles.modalItemTextSelected
+                    ]}>
+                      {prof}
+                    </Text>
+                    {professionalData.profesion === prof && (
+                      <Icon name="check" size={16} color={colors.primary.main} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   };
@@ -1154,5 +1213,76 @@ const styles = StyleSheet.create({
 
   logoutContainer: {
     marginTop: spacing.lg,
+  },
+
+  professionSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  professionSelectorText: {
+    flex: 1,
+    color: colors.text.primary,
+    fontSize: typography.fontSize.base,
+  },
+
+  professionSelectorPlaceholder: {
+    color: colors.text.secondary,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay.dark,
+    justifyContent: 'flex-end',
+  },
+
+  modalContent: {
+    backgroundColor: colors.background.primary,
+    borderTopLeftRadius: spacing.lg,
+    borderTopRightRadius: spacing.lg,
+    maxHeight: '80%',
+  },
+
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+
+  modalTitle: {
+    ...typography.styles.h3,
+    color: colors.text.primary,
+  },
+
+  modalList: {
+    maxHeight: 400,
+  },
+
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+
+  modalItemSelected: {
+    backgroundColor: colors.primary.light + '20',
+  },
+
+  modalItemText: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    flex: 1,
+  },
+
+  modalItemTextSelected: {
+    color: colors.primary.main,
+    fontWeight: 'bold',
   },
 });

@@ -108,6 +108,9 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
   const [showCancelModal, setShowCancelModal] = useState<boolean>(false);
   const [cancellationReason, setCancellationReason] = useState<string>('');
   const [isCancelling, setIsCancelling] = useState<boolean>(false);
+  const [showRatingModal, setShowRatingModal] = useState<boolean>(false);
+  const [selectedRating, setSelectedRating] = useState<number>(0);
+  const [isRating, setIsRating] = useState<boolean>(false);
 
   // =============================================
   // EFECTOS
@@ -293,20 +296,90 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
     }
   };
 
-  const getMenuOptions = (): MenuOption[] => {
-    const options: MenuOption[] = [
-      {
-        id: 'view-details',
-        title: 'Ver Detalles',
-        icon: 'eye',
-        color: colors.primary.main,
-        onPress: handleViewDetails,
-      },
-    ];
+const handleRateAppointment = () => {
+  if (selectedAppointment) {
+    setShowContextMenu(false);
+    setShowRatingModal(true);
+    setSelectedRating(0);
+  }
+};
 
-    // Solo mostrar opción de reprogramar para citas Pendiente o Confirmada
-    if (selectedAppointment && 
-        (selectedAppointment.estado === 'Pendiente' || selectedAppointment.estado === 'Confirmada')) {
+const handleConfirmRating = async () => {
+  if (!selectedAppointment || selectedRating === 0) {
+    Alert.alert(
+      'Selecciona una Calificación',
+      'Por favor, selecciona al menos una estrella para calificar.',
+      [{ text: 'Entendido' }]
+    );
+    return;
+  }
+
+  setIsRating(true);
+
+  try {
+    const result = await appointmentService.rateProfessional(
+      selectedAppointment.idCita,
+      selectedRating
+    );
+
+    if (result.success) {
+      Alert.alert(
+        '¡Calificación Enviada!',
+        `Has calificado a ${selectedAppointment.nombreProfesional} con ${selectedRating} estrella${selectedRating !== 1 ? 's' : ''}.`,
+        [
+          {
+            text: 'Entendido',
+            onPress: () => {
+              setShowRatingModal(false);
+              setSelectedRating(0);
+              setSelectedAppointment(null);
+              loadAppointments();
+            },
+          },
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Error',
+        result.error || 'No se pudo enviar la calificación. Intenta de nuevo.',
+        [{ text: 'Entendido' }]
+      );
+    }
+  } catch (error) {
+    Alert.alert(
+      'Error',
+      'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+      [{ text: 'Entendido' }]
+    );
+  } finally {
+    setIsRating(false);
+  }
+};
+
+const handleCloseRatingModal = () => {
+  setShowRatingModal(false);
+  setSelectedRating(0);
+};
+
+const canRateAppointment = (appointment: Appointment): boolean => {
+  return appointment.estado === 'Completada';
+};
+
+const getMenuOptions = (): MenuOption[] => {
+  const options: MenuOption[] = [
+    {
+      id: 'view-details',
+      title: 'Ver Detalles',
+      icon: 'eye',
+      color: colors.primary.main,
+      onPress: handleViewDetails,
+    },
+  ];
+
+  if (selectedAppointment) {
+    // Opción de reprogramar para citas Pendiente o Confirmada
+    if (selectedAppointment.estado === 'Pendiente' || 
+        selectedAppointment.estado === 'Confirmada') {
       options.push({
         id: 'reschedule',
         title: 'Reprogramar',
@@ -316,8 +389,20 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
       });
     }
 
-    return options;
-  };
+    // Opción de calificar para citas Confirmadas que ya pasaron
+    if (canRateAppointment(selectedAppointment)) {
+      options.push({
+        id: 'rate',
+        title: 'Calificar Profesional',
+        icon: 'star',
+        color: colors.states.warning,
+        onPress: handleRateAppointment,
+      });
+    }
+  }
+
+  return options;
+};
 
   // =============================================
   // COMPONENTES DE RENDERIZADO
@@ -738,7 +823,112 @@ export const ClientAppointmentsScreen: React.FC<ClientAppointmentsScreenProps> =
         </View>
       </Modal>
     );
+
   };
+
+const renderRatingModal = () => {
+  if (!selectedAppointment) return null;
+
+  return (
+    <Modal
+      visible={showRatingModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={handleCloseRatingModal}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.ratingModalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Calificar Profesional</Text>
+            <TouchableOpacity 
+              onPress={handleCloseRatingModal} 
+              style={styles.closeButton}
+              disabled={isRating}
+            >
+              <Icon name="times" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView 
+            style={styles.modalBody}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.ratingModalBody}
+          >
+            <View style={styles.ratingProfessionalInfo}>
+              <Icon name="user-tie" size={48} color={colors.primary.main} />
+              <Text style={styles.ratingProfessionalName}>
+                {selectedAppointment.nombreProfesional}
+              </Text>
+              <Text style={styles.ratingProfession}>
+                {selectedAppointment.profesion}
+              </Text>
+              <Text style={styles.ratingServiceName}>
+                {selectedAppointment.nombreServicio}
+              </Text>
+            </View>
+
+            <View style={styles.ratingSection}>
+              <Text style={styles.ratingTitle}>
+                ¿Cómo calificarías el servicio?
+              </Text>
+              <Text style={styles.ratingSubtitle}>
+                Tu opinión nos ayuda a mejorar
+              </Text>
+
+              <View style={styles.starsContainer}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity
+                    key={star}
+                    onPress={() => !isRating && setSelectedRating(star)}
+                    activeOpacity={0.7}
+                    style={styles.starButton}
+                    disabled={isRating}
+                  >
+                    <Icon
+                      name={selectedRating >= star ? 'star' : 'star'}
+                      size={48}
+                      color={selectedRating >= star ? colors.states.warning : colors.border.light}
+                      solid={selectedRating >= star}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {selectedRating > 0 && (
+                <View style={styles.ratingFeedback}>
+                  <Text style={styles.ratingFeedbackText}>
+                    {selectedRating === 1 && '😞 Muy insatisfecho'}
+                    {selectedRating === 2 && '😕 Insatisfecho'}
+                    {selectedRating === 3 && '😐 Neutral'}
+                    {selectedRating === 4 && '😊 Satisfecho'}
+                    {selectedRating === 5 && '🤩 Muy satisfecho'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalFooter}>
+            <Button
+              title="Cancelar"
+              onPress={handleCloseRatingModal}
+              variant="secondary"
+              fullWidth
+              disabled={isRating}
+            />
+            <Button
+              title={isRating ? "Enviando..." : "Enviar Calificación"}
+              onPress={handleConfirmRating}
+              variant="primary"
+              fullWidth
+              disabled={isRating || selectedRating === 0}
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 const renderCancelModal = () => {
   if (!selectedAppointment) return null;
@@ -880,6 +1070,7 @@ const renderCancelModal = () => {
       {renderContextMenu()}
       {renderDetailsModal()}
       {renderCancelModal()}
+      {renderRatingModal()}
     </SafeContainer>
   );
 };
@@ -1356,4 +1547,94 @@ characterCount: {
   textAlign: 'right',
   marginTop: spacing.xs,
 },  
+
+ratingModalContent: {
+  backgroundColor: colors.background.primary,
+  borderTopLeftRadius: spacing.xl,
+  borderTopRightRadius: spacing.xl,
+  maxHeight: '80%',
+},
+
+ratingModalBody: {
+  alignItems: 'center',
+},
+
+ratingProfessionalInfo: {
+  alignItems: 'center',
+  paddingVertical: spacing.xl,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border.light,
+  width: '100%',
+},
+
+ratingProfessionalName: {
+  ...typography.styles.h2,
+  color: colors.text.primary,
+  fontWeight: typography.fontWeight.bold,
+  marginTop: spacing.md,
+  textAlign: 'center',
+},
+
+ratingProfession: {
+  ...typography.styles.body,
+  color: colors.text.secondary,
+  marginTop: spacing.xs,
+  textAlign: 'center',
+},
+
+ratingServiceName: {
+  ...typography.styles.caption,
+  color: colors.primary.main,
+  marginTop: spacing.sm,
+  fontWeight: typography.fontWeight.semibold,
+  textAlign: 'center',
+},
+
+ratingSection: {
+  width: '100%',
+  paddingVertical: spacing.xl,
+  alignItems: 'center',
+},
+
+ratingTitle: {
+  ...typography.styles.h3,
+  color: colors.text.primary,
+  fontWeight: typography.fontWeight.semibold,
+  textAlign: 'center',
+  marginBottom: spacing.xs,
+},
+
+ratingSubtitle: {
+  ...typography.styles.body,
+  color: colors.text.secondary,
+  textAlign: 'center',
+  marginBottom: spacing.xl,
+},
+
+starsContainer: {
+  flexDirection: 'row',
+  justifyContent: 'center',
+  alignItems: 'center',
+  gap: spacing.sm,
+  paddingVertical: spacing.lg,
+},
+
+starButton: {
+  padding: spacing.xs,
+},
+
+ratingFeedback: {
+  marginTop: spacing.lg,
+  paddingVertical: spacing.md,
+  paddingHorizontal: spacing.xl,
+  backgroundColor: colors.background.secondary,
+  borderRadius: spacing.md,
+},
+
+ratingFeedbackText: {
+  ...typography.styles.h3,
+  color: colors.text.primary,
+  fontWeight: typography.fontWeight.semibold,
+  textAlign: 'center',
+},
 });

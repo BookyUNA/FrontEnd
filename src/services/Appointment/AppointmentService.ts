@@ -151,6 +151,16 @@ export interface CancelarCitaResponse {
   resultado: boolean;
 }
 
+export interface CalificarProfesionalRequest {
+  IdCita: number;
+  Calificacion: number;
+}
+
+export interface CalificarProfesionalResponse {
+  error: ApiError[] | null;
+  resultado: boolean;
+}
+
 /**
  * Normaliza el estado de la cita
  */
@@ -744,6 +754,137 @@ async cancelAppointment(
 
   } catch (error: any) {
     console.log('📅 AppointmentService: Error al cancelar cita:', error);
+
+    if (error.name === 'AbortError') {
+      return {
+        success: false,
+        error: 'La solicitud tardó demasiado. Verifica tu conexión a internet.',
+        isNetworkError: true,
+      };
+    }
+
+    if (error.message?.toLowerCase().includes('network') || 
+        error.message?.toLowerCase().includes('fetch')) {
+      return {
+        success: false,
+        error: 'Error de conexión. Verifica tu conexión a internet e intenta de nuevo.',
+        isNetworkError: true,
+      };
+    }
+
+    return {
+      success: false,
+      error: 'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+      isNetworkError: false,
+    };
+  }
+}
+
+/**
+ * Califica al profesional después de completar una cita
+ */
+async rateProfessional(
+  idCita: number,
+  rating: number
+): Promise<ServiceResponse<boolean>> {
+  try {
+    console.log('📅 AppointmentService: Calificando profesional...', { 
+      idCita,
+      rating 
+    });
+
+    // Validar que la calificación esté entre 1 y 5
+    if (rating < 1 || rating > 5) {
+      return {
+        success: false,
+        error: 'La calificación debe estar entre 1 y 5 estrellas.',
+      };
+    }
+
+    const token = await authService.getToken();
+    if (!token) {
+      return {
+        success: false,
+        error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
+      };
+    }
+
+    const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CALIFICAR_PROFESIONAL}`;
+    console.log('📅 AppointmentService: URL:', url);
+
+    const requestBody: CalificarProfesionalRequest = {
+      IdCita: idCita,
+      Calificacion: rating,
+    };
+
+    console.log('📅 AppointmentService: Request body:', requestBody);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    console.log('📅 AppointmentService: Status de respuesta:', response.status);
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return {
+          success: false,
+          error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+        };
+      }
+
+      const errorText = await response.text();
+      console.log('📅 AppointmentService: Error HTTP:', errorText);
+      
+      return {
+        success: false,
+        error: `Error al calificar al profesional (${response.status}). Intenta de nuevo.`,
+      };
+    }
+
+    const data: CalificarProfesionalResponse = await response.json();
+    console.log('📅 AppointmentService: Respuesta recibida:', data);
+
+    if (!data || typeof data.resultado !== 'boolean') {
+      return {
+        success: false,
+        error: 'Respuesta inválida del servidor. Intenta de nuevo.',
+      };
+    }
+
+    if (!data.resultado || (data.error && data.error.length > 0)) {
+      const errorMessage = data.error && data.error.length > 0 
+        ? data.error[0].Message 
+        : 'No se pudo calificar al profesional';
+      
+      console.log('📅 AppointmentService: Error en la respuesta:', errorMessage);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+
+    console.log('📅 AppointmentService: Profesional calificado exitosamente');
+    
+    return {
+      success: true,
+      data: true,
+    };
+
+  } catch (error: any) {
+    console.log('📅 AppointmentService: Error al calificar profesional:', error);
 
     if (error.name === 'AbortError') {
       return {

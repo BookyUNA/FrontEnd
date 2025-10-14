@@ -21,6 +21,7 @@ import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 import { appointmentService, Appointment } from '../../services/Appointment/AppointmentService';
+import { CreateEventModal, EventData } from '../../components/appointments/CreateEventModal';
 
 const SLOT_DURATION = 30;
 const START_HOUR = 7;
@@ -58,6 +59,7 @@ export const ProfessionalSchedule: React.FC = () => {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<Date>(getCostaRicaDate());
   const [fabMenuVisible, setFabMenuVisible] = useState<boolean>(false);
+  const [createEventModalVisible, setCreateEventModalVisible] = useState<boolean>(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const fabRotation = useRef(new Animated.Value(0)).current;
 
@@ -221,8 +223,12 @@ export const ProfessionalSchedule: React.FC = () => {
 
   const handleCreateEvent = () => {
     setFabMenuVisible(false);
-    // Funcionalidad pendiente
-    console.log('Crear evento');
+    setCreateEventModalVisible(true);
+  };
+
+  const handleSaveEvent = (eventData: EventData) => {
+    console.log('Evento creado:', eventData);
+    // Funcionalidad pendiente: integrar con servicio backend
   };
 
   const renderTimeSlot = (slot: TimeSlot, index: number) => {
@@ -418,6 +424,13 @@ export const ProfessionalSchedule: React.FC = () => {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <CreateEventModal
+        visible={createEventModalVisible}
+        onClose={() => setCreateEventModalVisible(false)}
+        onSave={handleSaveEvent}
+        selectedDate={selectedDate}
+      />
     </View>
   );
 };

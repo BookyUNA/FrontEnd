@@ -13,12 +13,15 @@ import {
   ActivityIndicator,
   RefreshControl,
   Dimensions,
+  Modal,
+  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 import { appointmentService, Appointment } from '../../services/Appointment/AppointmentService';
+import { CreateEventModal } from '../../components/appointments/CreateEventModal';
 
 const SLOT_DURATION = 30;
 const START_HOUR = 7;
@@ -37,14 +40,8 @@ interface TimeSlot {
 export const ProfessionalSchedule: React.FC = () => {
   // Crear fecha en hora de Costa Rica (UTC-6)
   const getCostaRicaDate = () => {
-    // Obtener la fecha/hora actual en UTC
     const now = new Date();
-    
-    // Costa Rica está en UTC-6 (sin cambio de horario de verano)
-    // Convertir a milisegundos desde epoch en UTC
     const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-    
-    // Restar 6 horas para obtener hora de Costa Rica
     const costaRicaTime = new Date(utcTime - (6 * 60 * 60 * 1000));
     
     console.log('🕐 Hora del sistema:', now.toLocaleString());
@@ -61,7 +58,10 @@ export const ProfessionalSchedule: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<Date>(getCostaRicaDate());
+  const [fabMenuVisible, setFabMenuVisible] = useState<boolean>(false);
+  const [createEventModalVisible, setCreateEventModalVisible] = useState<boolean>(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const fabRotation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadAppointments();
@@ -76,6 +76,15 @@ export const ProfessionalSchedule: React.FC = () => {
   useEffect(() => {
     generateTimeSlots();
   }, [selectedDate, appointments]);
+
+  // Animación del botón flotante
+  useEffect(() => {
+    Animated.timing(fabRotation, {
+      toValue: fabMenuVisible ? 1 : 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [fabMenuVisible]);
 
   const loadAppointments = async () => {
     try {
@@ -202,6 +211,25 @@ export const ProfessionalSchedule: React.FC = () => {
     }
   };
 
+  const toggleFabMenu = () => {
+    setFabMenuVisible(!fabMenuVisible);
+  };
+
+  const handleConfigureSchedule = () => {
+    setFabMenuVisible(false);
+    // Funcionalidad pendiente
+    console.log('Configurar horario');
+  };
+
+  const handleCreateEvent = () => {
+    setFabMenuVisible(false);
+    setCreateEventModalVisible(true);
+  };
+
+  const handleEventSuccess = () => {
+    loadAppointments();
+  };
+
   const renderTimeSlot = (slot: TimeSlot, index: number) => {
     if (slot.appointment) {
       const isFirstSlot = index === 0 || 
@@ -267,6 +295,11 @@ export const ProfessionalSchedule: React.FC = () => {
       </View>
     );
   };
+
+  const fabRotationDegrees = fabRotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '45deg'],
+  });
 
   const currentTimePosition = getCurrentTimePosition();
 
@@ -339,6 +372,64 @@ export const ProfessionalSchedule: React.FC = () => {
           {formatTime(START_HOUR, 0)} - {formatTime(END_HOUR, 0)}
         </Text>
       </View>
+
+      {/* Botón flotante principal */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={toggleFabMenu}
+        activeOpacity={0.8}
+      >
+        <Animated.View style={{ transform: [{ rotate: fabRotationDegrees }] }}>
+          <Icon name="plus" size={24} color={colors.text.inverse} />
+        </Animated.View>
+      </TouchableOpacity>
+
+      {/* Menú de opciones del FAB */}
+      <Modal
+        visible={fabMenuVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setFabMenuVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.fabMenuOverlay}
+          activeOpacity={1}
+          onPress={() => setFabMenuVisible(false)}
+        >
+          <View style={styles.fabMenuContainer}>
+            {/* Opción: Crear Evento */}
+            <TouchableOpacity
+              style={styles.fabMenuItem}
+              onPress={handleCreateEvent}
+              activeOpacity={0.7}
+            >
+              <View style={styles.fabMenuIconContainer}>
+                <Icon name="calendar-plus" size={20} color={colors.text.inverse} />
+              </View>
+              <Text style={styles.fabMenuText}>Crear Evento</Text>
+            </TouchableOpacity>
+
+            {/* Opción: Configurar Horario */}
+            <TouchableOpacity
+              style={styles.fabMenuItem}
+              onPress={handleConfigureSchedule}
+              activeOpacity={0.7}
+            >
+              <View style={styles.fabMenuIconContainer}>
+                <Icon name="cog" size={20} color={colors.text.inverse} />
+              </View>
+              <Text style={styles.fabMenuText}>Configurar Horario</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <CreateEventModal
+        visible={createEventModalVisible}
+        onClose={() => setCreateEventModalVisible(false)}
+        onSuccess={handleEventSuccess}
+        selectedDate={selectedDate}
+      />
     </View>
   );
 };
@@ -584,5 +675,69 @@ const styles = StyleSheet.create({
   legendText: {
     ...typography.styles.caption,
     color: colors.text.secondary,
+  },
+
+  // Estilos del botón flotante
+  fab: {
+    position: 'absolute',
+    bottom: spacing.xl,
+    right: spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+
+  // Estilos del menú del FAB
+  fabMenuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+  },
+
+  fabMenuContainer: {
+    marginBottom: spacing.xl + 56 + spacing.sm,
+    marginRight: spacing.lg,
+    gap: spacing.sm,
+  },
+
+  fabMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.secondary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 28,
+    gap: spacing.md,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    minWidth: 200,
+  },
+
+  fabMenuIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary.light,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  fabMenuText: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    fontWeight: '600',
+    flex: 1,
   },
 });

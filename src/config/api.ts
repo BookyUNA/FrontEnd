@@ -33,6 +33,7 @@ export const API_CONFIG = {
     CANCELAR_CITA: '/CancelarCita',
     EDIT_PROFESSIONAL_PROFILE: '/EditarMiPerfilProfesional',
     CALIFICAR_PROFESIONAL: '/CalificarProfesional',
+    CREAR_EVENTO: '/CrearEvento',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

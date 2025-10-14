@@ -34,6 +34,7 @@ export const API_CONFIG = {
     EDIT_PROFESSIONAL_PROFILE: '/EditarMiPerfilProfesional',
     CALIFICAR_PROFESIONAL: '/CalificarProfesional',
     CREAR_EVENTO: '/CrearEvento',
+    AGREGAR_HORARIOS: '/AgregarHorarios', 
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

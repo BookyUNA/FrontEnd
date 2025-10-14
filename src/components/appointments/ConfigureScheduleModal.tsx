@@ -19,18 +19,12 @@ import Icon from 'react-native-vector-icons/FontAwesome5';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
+import { scheduleService, HorarioProfesional } from '../../services/schedule';
 
 interface ConfigureScheduleModalProps {
   visible: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-}
-
-interface HorarioProfesional {
-  HoraInicio: string;
-  HoraFin: string;
-  FechaDiaSemana: string;
-  Estado: string;
 }
 
 interface DaySchedule {
@@ -114,6 +108,16 @@ export const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
   useEffect(() => {
     calculateGeneratedDates();
   }, [fechaInicio, fechaFin, schedules]);
+
+  useEffect(() => {
+    if (messageType === 'success') {
+      const timer = setTimeout(() => {
+        handleClose();
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [messageType]);
 
   const calculateGeneratedDates = () => {
     const enabledDays = schedules.filter(s => s.enabled).map(s => s.dayIndex);
@@ -297,14 +301,11 @@ export const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
       const schedule = enabledSchedulesMap.get(dayOfWeek);
       
       if (schedule) {
-        const fechaCompleta = new Date(current);
-        fechaCompleta.setHours(12, 0, 0, 0);
-        
         horarios.push({
           HoraInicio: formatTimeForAPI(schedule.horaInicio),
           HoraFin: formatTimeForAPI(schedule.horaFin),
-          FechaDiaSemana: fechaCompleta.toISOString(),
-          Estado: 'Activo',
+          FechaDiaSemana: formatDateForAPI(current),
+          Estado: 'Activa',
         });
       }
       
@@ -325,19 +326,38 @@ export const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
 
     const horarios = generateSpecificDates();
 
-    console.log('Horarios a guardar:', JSON.stringify({ horarios }, null, 2));
-    console.log(`Total de horarios generados: ${horarios.length}`);
+    console.log('📅 ConfigureScheduleModal: Enviando horarios al servicio');
+    console.log(`📅 Total de horarios generados: ${horarios.length}`);
 
-    setTimeout(() => {
-      setMessage(`Horarios configurados exitosamente (${horarios.length} horarios creados)`);
-      setMessageType('success');
+    try {
+      const response = await scheduleService.addSchedules({ horarios });
+
+      if (response.success && response.data) {
+        const failedCount = response.data.HorariosFallidos?.length || 0;
+        
+        if (failedCount === 0) {
+          setMessage(`¡Horarios configurados exitosamente! Se crearon ${horarios.length} horarios.`);
+          setMessageType('success');
+          
+          if (onSuccess) {
+            onSuccess();
+          }
+        } else {
+          const successCount = horarios.length - failedCount;
+          setMessage(`Se crearon ${successCount} horarios. ${failedCount} horarios no pudieron agregarse (fechas pasadas o duplicados).`);
+          setMessageType('error');
+        }
+      } else {
+        setMessage(response.error || 'Error al configurar los horarios. Intenta nuevamente.');
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.log('📅 ConfigureScheduleModal: Error inesperado:', error);
+      setMessage('Error al conectar con el servidor. Intenta nuevamente.');
+      setMessageType('error');
+    } finally {
       setLoading(false);
-      
-      setTimeout(() => {
-        handleClose();
-        if (onSuccess) onSuccess();
-      }, 2000);
-    }, 1000);
+    }
   };
 
   const formatTimeForAPI = (date: Date): string => {
@@ -345,6 +365,13 @@ export const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
     const minutes = date.getMinutes().toString().padStart(2, '0');
     const seconds = '00';
     return `${hours}:${minutes}:${seconds}`;
+  };
+
+  const formatDateForAPI = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const formatTime = (date: Date): string => {

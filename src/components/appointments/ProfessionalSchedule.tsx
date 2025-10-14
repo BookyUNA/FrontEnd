@@ -22,6 +22,7 @@ import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 import { appointmentService, Appointment } from '../../services/Appointment/AppointmentService';
 import { CreateEventModal } from '../../components/appointments/CreateEventModal';
+import { ConfigureScheduleModal } from '../../components/appointments/ConfigureScheduleModal';
 
 const SLOT_DURATION = 30;
 const START_HOUR = 7;
@@ -60,6 +61,8 @@ export const ProfessionalSchedule: React.FC = () => {
   const [currentTime, setCurrentTime] = useState<Date>(getCostaRicaDate());
   const [fabMenuVisible, setFabMenuVisible] = useState<boolean>(false);
   const [createEventModalVisible, setCreateEventModalVisible] = useState<boolean>(false);
+  const [configureScheduleModalVisible, setConfigureScheduleModalVisible] = useState<boolean>(false);
+
   const scrollViewRef = useRef<ScrollView>(null);
   const fabRotation = useRef(new Animated.Value(0)).current;
 
@@ -216,10 +219,9 @@ export const ProfessionalSchedule: React.FC = () => {
   };
 
   const handleConfigureSchedule = () => {
-    setFabMenuVisible(false);
-    // Funcionalidad pendiente
-    console.log('Configurar horario');
-  };
+  setFabMenuVisible(false);
+  setConfigureScheduleModalVisible(true);
+};
 
   const handleCreateEvent = () => {
     setFabMenuVisible(false);
@@ -429,6 +431,11 @@ export const ProfessionalSchedule: React.FC = () => {
         onClose={() => setCreateEventModalVisible(false)}
         onSuccess={handleEventSuccess}
         selectedDate={selectedDate}
+      />
+      <ConfigureScheduleModal
+        visible={configureScheduleModalVisible}
+        onClose={() => setConfigureScheduleModalVisible(false)}
+        onSuccess={handleEventSuccess}
       />
     </View>
   );

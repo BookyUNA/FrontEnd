@@ -161,23 +161,28 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
   const handleConfirmPlanSelection = () => {
     const selectedPlanData = PLANS_DATA.find(plan => plan.id === selectedPlan);
 
-    Alert.alert(
-      'Confirmar Cambio de Plan',
-      `¿Deseas cambiar tu plan actual a: ${selectedPlanData?.name}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Confirmar', 
-          onPress: () => {
-            Alert.alert(
-              'Plan Actualizado',
-              'Funcionalidad de procesamiento de pago en desarrollo.',
-              [{ text: 'OK' }]
-            );
-          }
-        }
-      ]
-    );
+    if (!selectedPlanData) {
+      Alert.alert('Error', 'Por favor selecciona un plan');
+      return;
+    }
+
+    if (selectedPlanData.isFree) {
+      Alert.alert(
+        'Plan Gratuito',
+        'El plan gratuito no requiere pago. Se activará automáticamente.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    navigation?.navigate('PaymentGateway', {
+      plan: {
+        id: selectedPlanData.id,
+        name: selectedPlanData.name,
+        price: selectedPlanData.price,
+        color: selectedPlanData.color,
+      },
+    });
   };
 
   // Confirmar servicios adicionales

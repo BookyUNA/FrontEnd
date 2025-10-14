@@ -20,6 +20,7 @@ import { CreateServiceScreen } from "./src/screens/services/CreateServiceScreen"
 import { EditServiceScreen } from "./src/screens/services/EditServiceScreen";
 import { ProfessionalServicesScreen } from "./src/screens/client/ProfessionalServicesScreen";
 import { PlanSelectionScreen } from "./src/screens/subscription/PlanSelectionScreen";
+import { PaymentGatewayScreen } from "./src/screens/subscription/PaymentGatewayScreen";
 import { RescheduleAppointmentScreen } from "./src/screens/client/RescheduleAppointmentScreen";
 
 import { authService } from "./src/services/auth/authService";
@@ -38,6 +39,7 @@ export type RootStackParamList = {
   EditService: { service: any } | undefined;
   ProfessionalServices: undefined;
   PlanSelection: undefined;
+  PaymentGateway: { plan: { id: string; name: string; price: string; color: string } } | undefined;
   RescheduleAppointment: { appointment: any } | undefined;
 };
 
@@ -144,6 +146,22 @@ function App(): React.JSX.Element {
               component={PlanSelectionScreen}
               options={{ 
                 title: "Planes de Suscripción",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
+            />
+
+            <Stack.Screen 
+              name="PaymentGateway" 
+              component={PaymentGatewayScreen}
+              options={{ 
+                title: "Pasarela de Pago",
                 headerStyle: {
                   backgroundColor: colors.background.primary,
                 },

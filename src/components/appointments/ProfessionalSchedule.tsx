@@ -21,7 +21,7 @@ import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 import { appointmentService, Appointment } from '../../services/Appointment/AppointmentService';
-import { CreateEventModal, EventData } from '../../components/appointments/CreateEventModal';
+import { CreateEventModal } from '../../components/appointments/CreateEventModal';
 
 const SLOT_DURATION = 30;
 const START_HOUR = 7;
@@ -226,9 +226,8 @@ export const ProfessionalSchedule: React.FC = () => {
     setCreateEventModalVisible(true);
   };
 
-  const handleSaveEvent = (eventData: EventData) => {
-    console.log('Evento creado:', eventData);
-    // Funcionalidad pendiente: integrar con servicio backend
+  const handleEventSuccess = () => {
+    loadAppointments();
   };
 
   const renderTimeSlot = (slot: TimeSlot, index: number) => {
@@ -428,7 +427,7 @@ export const ProfessionalSchedule: React.FC = () => {
       <CreateEventModal
         visible={createEventModalVisible}
         onClose={() => setCreateEventModalVisible(false)}
-        onSave={handleSaveEvent}
+        onSuccess={handleEventSuccess}
         selectedDate={selectedDate}
       />
     </View>

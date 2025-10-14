@@ -2,7 +2,7 @@
  * Modal para crear eventos personalizados en el calendario
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,17 +12,19 @@ import {
   TextInput,
   ScrollView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
+import { eventService } from '../../services/events';
 
 interface CreateEventModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (event: EventData) => void;
+  onSuccess?: () => void;
   selectedDate?: Date;
 }
 
@@ -33,10 +35,12 @@ export interface EventData {
   FechaHoraFin: string;
 }
 
+type MessageType = 'success' | 'error' | null;
+
 export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   visible,
   onClose,
-  onSave,
+  onSuccess,
   selectedDate,
 }) => {
   const getInitialDate = () => {
@@ -62,6 +66,19 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [messageType, setMessageType] = useState<MessageType>(null);
+
+  useEffect(() => {
+    if (messageType === 'success') {
+      const timer = setTimeout(() => {
+        handleClose();
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [messageType]);
 
   const resetForm = () => {
     setNombreEvento('');
@@ -72,6 +89,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     endDate.setHours(17, 0, 0, 0);
     setFechaFin(endDate);
     setErrors({});
+    setLoading(false);
+    setMessage(null);
+    setMessageType(null);
   };
 
   const handleClose = () => {
@@ -94,10 +114,14 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) {
       return;
     }
+
+    setLoading(true);
+    setMessage(null);
+    setMessageType(null);
 
     const eventData: EventData = {
       NombreEvento: nombreEvento.trim(),
@@ -106,8 +130,28 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       FechaHoraFin: fechaFin.toISOString(),
     };
 
-    onSave(eventData);
-    handleClose();
+    try {
+      const response = await eventService.createEvent(eventData);
+
+      if (response.success && response.data) {
+        setMessage(
+          `¡Evento creado exitosamente! Se desactivaron ${response.data.HorariosDesactivados} horarios.`
+        );
+        setMessageType('success');
+        
+        if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        setMessage(response.error || 'Error desconocido al crear el evento');
+        setMessageType('error');
+      }
+    } catch (error) {
+      setMessage('Error al conectar con el servidor. Intenta nuevamente.');
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const onChangeStartDate = (event: any, selectedDate?: Date) => {
@@ -259,6 +303,25 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             )}
           </ScrollView>
 
+          {message && (
+            <View style={[
+              styles.messageContainer,
+              messageType === 'success' ? styles.successMessage : styles.errorMessage
+            ]}>
+              <Icon 
+                name={messageType === 'success' ? 'check-circle' : 'exclamation-circle'} 
+                size={16} 
+                color={messageType === 'success' ? colors.states.success : colors.states.error} 
+              />
+              <Text style={[
+                styles.messageText,
+                messageType === 'success' ? styles.successText : styles.errorText
+              ]}>
+                {message}
+              </Text>
+            </View>
+          )}
+
           <View style={styles.modalFooter}>
             <TouchableOpacity
               style={styles.cancelButton}
@@ -268,10 +331,15 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.saveButton}
+              style={[styles.saveButton, loading && styles.saveButtonDisabled]}
               onPress={handleSave}
+              disabled={loading}
             >
-              <Text style={styles.saveButtonText}>Guardar Evento</Text>
+              {loading ? (
+                <ActivityIndicator color={colors.text.inverse} />
+              ) : (
+                <Text style={styles.saveButtonText}>Guardar Evento</Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -451,6 +519,34 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
 
+  messageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.sm,
+    borderRadius: 8,
+  },
+
+  successMessage: {
+    backgroundColor: colors.states.success + '15',
+  },
+
+  errorMessage: {
+    backgroundColor: colors.states.error + '15',
+  },
+
+  messageText: {
+    ...typography.styles.body,
+    flex: 1,
+  },
+
+  successText: {
+    color: colors.states.success,
+  },
+
   modalFooter: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -482,6 +578,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     backgroundColor: colors.primary.main,
+  },
+
+  saveButtonDisabled: {
+    opacity: 0.6,
   },
 
   saveButtonText: {

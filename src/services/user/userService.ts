@@ -93,6 +93,7 @@ export interface ApiProfileResponse {
   Direccion: string | null;
   CalificacionPromedio: number | null;
   TotalCalificaciones: number | null;
+  IdPerfil: number;  // AÑADIR SOLO SI NO EXISTE
   error?: { ErrorCode: number; Message: string }[];
   resultado: boolean;
 }
@@ -146,6 +147,26 @@ export interface EditProfessionalProfileResult {
     ErrorCode: number;
     Message: string;
   }>;
+  isNetworkError?: boolean;
+}
+
+export interface ObtenerCalificacionPromedioRequest {
+  IdPerfil: number;
+}
+
+export interface ObtenerCalificacionPromedioResponse {
+  CalificacionPromedio: number;
+  error: Array<{
+    ErrorCode: number;
+    Message: string;
+  }>;
+  resultado: boolean;
+}
+
+export interface CalificacionPromedioResult {
+  success: boolean;
+  calificacionPromedio?: number;
+  error?: string;
   isNetworkError?: boolean;
 }
 
@@ -708,6 +729,92 @@ async updateProfessionalProfile(profileData: EditProfessionalProfileRequest): Pr
     return {
       success: false,
       error: error.message || 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
+      isNetworkError: true,
+    };
+  }
+}
+
+/**
+ * Obtener calificación promedio del profesional
+ */
+async getProfessionalRating(idPerfil: number): Promise<CalificacionPromedioResult> {
+  try {
+    console.log('⭐ UserService: Obteniendo calificación promedio del profesional...');
+    
+    const token = await authService.getToken();
+    if (!token) {
+      return {
+        success: false,
+        error: 'No se encontró token de autenticación',
+      };
+    }
+
+    const requestData: ObtenerCalificacionPromedioRequest = { 
+      IdPerfil: idPerfil 
+    };
+
+    console.log('⭐ UserService: Solicitando calificación para perfil:', idPerfil);
+
+    const response = await apiService.post<ObtenerCalificacionPromedioResponse>(
+      API_CONFIG.ENDPOINTS.OBTENER_CALIFICACION_PROMEDIO,
+      requestData,
+      token
+    );
+
+    console.log('⭐ UserService: Respuesta recibida:', response);
+
+    // Verificar errores de red/conexión
+    if (!response.success && response.status === 0) {
+      return {
+        success: false,
+        error: response.error || 'Error de conexión. Verifica tu conexión a internet.',
+        isNetworkError: true,
+      };
+    }
+
+    const data = response.data;
+    
+    if (!data) {
+      return {
+        success: false,
+        error: 'Respuesta inválida del servidor',
+      };
+    }
+
+    // Verificar si la consulta fue exitosa según la API
+    if (data.resultado === true) {
+      console.log('⭐ UserService: ✅ Calificación obtenida exitosamente:', data.CalificacionPromedio);
+      return {
+        success: true,
+        calificacionPromedio: data.CalificacionPromedio || 0,
+      };
+    }
+
+    // Si resultado es false, es un error de negocio de la API
+    console.log('⭐ UserService: ❌ Error al obtener calificación (resultado: false)');
+    
+    if (data.error && data.error.length > 0) {
+      const firstError = data.error[0];
+      const errorMessage = firstError.Message || 'Error al obtener la calificación';
+      
+      console.log('⭐ UserService: Mensaje de error:', errorMessage);
+      
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+
+    return {
+      success: false,
+      error: 'No se pudo obtener la calificación promedio.',
+    };
+
+  } catch (error: any) {
+    console.log('⭐ UserService: Error inesperado:', error);
+    return {
+      success: false,
+      error: error.message || 'Ha ocurrido un error inesperado.',
       isNetworkError: true,
     };
   }

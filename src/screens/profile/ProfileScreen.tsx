@@ -91,6 +91,26 @@ const mapApiProfileToUserProfile = (api: ApiProfileResponse): UserProfile => ({
   totalCalificaciones: api.TotalCalificaciones || null,
 });
 
+const renderRatingStars = (rating: number, size: number = 16) => {
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 >= 0.5;
+  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+      {[...Array(fullStars)].map((_, i) => (
+        <Icon key={`full-${i}`} name="star" size={size} color={colors.states.warning} solid />
+      ))}
+      {hasHalfStar && (
+        <Icon name="star-half-alt" size={size} color={colors.states.warning} solid />
+      )}
+      {[...Array(emptyStars)].map((_, i) => (
+        <Icon key={`empty-${i}`} name="star" size={size} color={colors.border.light} />
+      ))}
+    </View>
+  );
+};
+
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
   onLogout, 
   isLoggingOut = false,
@@ -123,7 +143,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // Estados de validación
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [professionalErrors, setProfessionalErrors] = useState<ProfessionalValidationErrors>({});
-
+  const [ratingData, setRatingData] = useState<{
+    calificacionPromedio: number;
+    isLoading: boolean;
+  }>({
+    calificacionPromedio: 0,
+    isLoading: false,
+  });
   // =============================================
   // EFECTOS Y CARGA DE DATOS
   // =============================================
@@ -154,42 +180,47 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
-  const loadUserProfile = async () => {
-    try {
-      setIsLoading(true);
-      console.log('📱 ProfileScreen: Cargando perfil del usuario...');
-      
-      const apiProfile = await userService.getProfile();
-      console.log('📱 ProfileScreen: Perfil obtenido:', apiProfile);
-      
-      const profile = mapApiProfileToUserProfile(apiProfile);
-      setUserProfile(profile);
+const loadUserProfile = async () => {
+  try {
+    setIsLoading(true);
+    console.log('📱 ProfileScreen: Cargando perfil del usuario...');
+    
+    const apiProfile = await userService.getProfile();
+    console.log('📱 ProfileScreen: Perfil obtenido:', apiProfile);
+    
+    const profile = mapApiProfileToUserProfile(apiProfile);
+    setUserProfile(profile);
 
-      // Inicializar datos editables de usuario
-      setEditData({
-        Nombre: profile.Nombre,
-        Telefono: profile.telefono || '',
-      });
+    // Inicializar datos editables de usuario
+    setEditData({
+      Nombre: profile.Nombre,
+      Telefono: profile.telefono || '',
+    });
 
-      // Inicializar datos editables de profesional
-      setProfessionalData({
-        profesion: profile.profesion || '',
-        descripcion: profile.descripcion || '',
-        direccion: profile.direccion || '',
-      });
+    // Inicializar datos editables de profesional
+    setProfessionalData({
+      profesion: profile.profesion || '',
+      descripcion: profile.descripcion || '',
+      direccion: profile.direccion || '',
+    });
 
-      console.log('📱 ProfileScreen: Perfil procesado y establecido correctamente');
-      
-    } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.message || 'No se pudo cargar la información del perfil. Intenta de nuevo.',
-        [{ text: 'Entendido' }]
-      );
-    } finally {
-      setIsLoading(false);
+    console.log('📱 ProfileScreen: Perfil procesado y establecido correctamente');
+    
+    // AÑADIR ESTO: Cargar calificación si es profesional y tiene IdPerfil
+    if (apiProfile.IdPerfil && userRole === 'Profesional') {
+      await loadProfessionalRating(apiProfile.IdPerfil);
     }
-  };
+    
+  } catch (error: any) {
+    Alert.alert(
+      'Error',
+      error.message || 'No se pudo cargar la información del perfil. Intenta de nuevo.',
+      [{ text: 'Entendido' }]
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // =============================================
   // VALIDACIONES
@@ -501,6 +532,36 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     );
   };
 
+  const loadProfessionalRating = async (idPerfil: number) => {
+  if (!idPerfil || idPerfil <= 0) {
+    console.log('⭐ ProfessionalProfileScreen: IdPerfil inválido');
+    return;
+  }
+
+  setRatingData(prev => ({ ...prev, isLoading: true }));
+
+  try {
+    const result = await userService.getProfessionalRating(idPerfil);
+
+    if (result.success && result.calificacionPromedio !== undefined) {
+      setRatingData({
+        calificacionPromedio: result.calificacionPromedio,
+        isLoading: false,
+      });
+    } else {
+      setRatingData({
+        calificacionPromedio: 0,
+        isLoading: false,
+      });
+    }
+  } catch (error) {
+    setRatingData({
+      calificacionPromedio: 0,
+      isLoading: false,
+    });
+  }
+};
+
   // =============================================
   // COMPONENTES DE RENDERIZADO
   // =============================================
@@ -635,9 +696,35 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {userProfile.profesion && renderReadOnlyField('Profesión', userProfile.profesion, 'briefcase')}
               {userProfile.descripcion && renderReadOnlyField('Descripción', userProfile.descripcion, 'info-circle')}
               {userProfile.direccion && renderReadOnlyField('Dirección', userProfile.direccion, 'map-marker-alt')}
-              {userProfile.calificacionPromedio !== null && 
-                renderRatingField('Calificación', userProfile.calificacionPromedio ?? null, userProfile.totalCalificaciones ?? null)
-              }
+              
+              {/* AÑADIR ESTA SECCIÓN DE CALIFICACIÓN */}
+              {!ratingData.isLoading && ratingData.calificacionPromedio > 0 && (
+                <View style={styles.professionalRatingSection}>
+                  <View style={styles.professionalRatingHeader}>
+                    <View style={styles.professionalRatingIconContainer}>
+                      <Icon name="award" size={18} color={colors.primary.main} solid />
+                    </View>
+                    <Text style={styles.professionalRatingTitle}>Tu Calificación</Text>
+                  </View>
+                  
+                  <View style={styles.professionalRatingContent}>
+                    <Text style={styles.professionalRatingScore}>
+                      {ratingData.calificacionPromedio.toFixed(1)}
+                    </Text>
+                    <View style={styles.professionalRatingStars}>
+                      {renderRatingStars(ratingData.calificacionPromedio, 18)}
+                      <Text style={styles.professionalRatingMax}>de 5.0</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.professionalRatingDescription}>
+                    <Icon name="info-circle" size={12} color={colors.text.secondary} />
+                    <Text style={styles.professionalRatingDescriptionText}>
+                      Calificación promedio basada en evaluaciones de clientes
+                    </Text>
+                  </View>
+                </View>
+              )}
             </>
           )}
         </View>
@@ -1285,4 +1372,76 @@ const styles = StyleSheet.create({
     color: colors.primary.main,
     fontWeight: 'bold',
   },
+professionalRatingSection: {
+  marginTop: spacing.lg,
+  paddingTop: spacing.lg,
+  borderTopWidth: 1,
+  borderTopColor: colors.border.light,
+},
+
+professionalRatingHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: spacing.md,
+  gap: spacing.sm,
+},
+
+professionalRatingIconContainer: {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: colors.primary.main + '15',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+professionalRatingTitle: {
+  ...typography.styles.h3,
+  color: colors.text.primary,
+  fontWeight: typography.fontWeight.semibold,
+  fontSize: 16,
+},
+
+professionalRatingContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: spacing.lg,
+  marginBottom: spacing.md,
+},
+
+professionalRatingScore: {
+  fontSize: 42,
+  fontWeight: typography.fontWeight.bold,
+  color: colors.primary.main,
+  lineHeight: 48,
+},
+
+professionalRatingStars: {
+  flex: 1,
+  gap: spacing.xs,
+},
+
+professionalRatingMax: {
+  ...typography.styles.body,
+  color: colors.text.secondary,
+  fontSize: 13,
+  marginTop: spacing.xs / 2,
+},
+
+professionalRatingDescription: {
+  flexDirection: 'row',
+  alignItems: 'flex-start',
+  gap: spacing.sm,
+  backgroundColor: colors.background.primary,
+  padding: spacing.sm,
+  borderRadius: spacing.xs,
+},
+
+professionalRatingDescriptionText: {
+  ...typography.styles.caption,
+  color: colors.text.secondary,
+  flex: 1,
+  lineHeight: 16,
+  fontSize: 11,
+},
 });

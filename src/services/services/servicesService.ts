@@ -18,6 +18,8 @@ export interface Servicio {
   PorcentajeDescuento: number;
   FechaCreacion: string;
   Estado: boolean;
+  IdProfesional?: number; 
+  CalificacionPromedio?: number; 
 }
 
 export interface Error {

@@ -35,6 +35,7 @@ export const API_CONFIG = {
     CALIFICAR_PROFESIONAL: '/CalificarProfesional',
     CREAR_EVENTO: '/CrearEvento',
     AGREGAR_HORARIOS: '/AgregarHorarios', 
+    OBTENER_CALIFICACION_PROMEDIO: '/ObtenerCalficacionPromedio',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

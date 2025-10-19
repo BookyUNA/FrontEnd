@@ -29,6 +29,7 @@ import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 import { servicesService } from '../../services/services/servicesService';
+import { userService } from '../../services/user/userService';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - (spacing.lg * 2) - spacing.md) / 2;
@@ -84,6 +85,10 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
 
   // Estados para el manejo de Activar / Desactivar servicio
   const [isTogglingState, setIsTogglingState] = useState<boolean>(false);
+
+  // Estado para calificación del profesional
+const [professionalRating, setProfessionalRating] = useState<number>(0);
+const [isLoadingRating, setIsLoadingRating] = useState<boolean>(false);
 
   /**
    * Hook para recargar datos cuando la pantalla recibe el foco
@@ -142,6 +147,11 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
       if (result.success && result.servicios) {
         setServices(result.servicios);
         console.log('📋 Servicios cargados:', result.servicios.length);
+        
+        // AÑADIR: Cargar calificación si hay servicios y tienen IdProfesional
+        if (result.servicios.length > 0 && result.servicios[0].IdProfesional) {
+          await loadProfessionalRating(result.servicios[0].IdProfesional);
+        }
       } else {
         // Error del servidor o sin servicios
         if (result.error) {
@@ -161,6 +171,37 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
       setIsRefreshing(false);
     }
   };
+
+
+  /**
+ * Cargar calificación promedio del profesional
+ */
+const loadProfessionalRating = async (idProfesional: number) => {
+  if (!idProfesional || idProfesional <= 0) {
+    console.log('⭐ ServicesScreen: IdProfesional inválido');
+    return;
+  }
+
+  setIsLoadingRating(true);
+
+  try {
+    console.log('⭐ ServicesScreen: Cargando calificación para profesional:', idProfesional);
+    const result = await userService.getProfessionalRating(idProfesional);
+
+    if (result.success && result.calificacionPromedio !== undefined) {
+      console.log('⭐ ServicesScreen: Calificación obtenida:', result.calificacionPromedio);
+      setProfessionalRating(result.calificacionPromedio);
+    } else {
+      console.log('⭐ ServicesScreen: No se pudo obtener calificación');
+      setProfessionalRating(0);
+    }
+  } catch (error) {
+    console.log('⭐ ServicesScreen: Error al cargar calificación:', error);
+    setProfessionalRating(0);
+  } finally {
+    setIsLoadingRating(false);
+  }
+};
 
   /**
    * Filtrar servicios según el término de búsqueda
@@ -316,6 +357,30 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
         .toUpperCase();
     }
   };
+
+
+  /**
+ * Renderizar estrellas de calificación
+ */
+const renderRatingStars = (rating: number, size: number = 12) => {
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 >= 0.5;
+  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+      {[...Array(fullStars)].map((_, i) => (
+        <Icon key={`full-${i}`} name="star" size={size} color={colors.states.warning} solid />
+      ))}
+      {hasHalfStar && (
+        <Icon name="star-half-alt" size={size} color={colors.states.warning} solid />
+      )}
+      {[...Array(emptyStars)].map((_, i) => (
+        <Icon key={`empty-${i}`} name="star" size={size} color={colors.border.light} />
+      ))}
+    </View>
+  );
+};
 
   /**
    * Renderizar elemento de servicio en formato grid
@@ -610,6 +675,26 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
         <View style={styles.header}>
           <Text style={styles.title}>Mis Servicios</Text>
           <Text style={styles.subtitle}>Brindando un servicio ideal</Text>
+          
+          {/* AÑADIR: Sección de calificación */}
+          {professionalRating > 0 && !isLoadingRating && (
+            <View style={styles.ratingHeaderSection}>
+              <View style={styles.ratingHeaderContent}>
+                <View style={styles.ratingHeaderIcon}>
+                  <Icon name="award" size={16} color={colors.primary.main} solid />
+                </View>
+                <View style={styles.ratingHeaderInfo}>
+                  <Text style={styles.ratingHeaderLabel}>Tu calificación</Text>
+                  <View style={styles.ratingHeaderStars}>
+                    {renderRatingStars(professionalRating, 14)}
+                    <Text style={styles.ratingHeaderValue}>
+                      {professionalRating.toFixed(1)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Buscador */}
@@ -1034,4 +1119,54 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
     flex: 1,
   },
+ratingHeaderSection: {
+  marginTop: spacing.lg,
+  backgroundColor: colors.background.secondary,
+  borderRadius: spacing.md,
+  padding: spacing.md,
+  borderWidth: 1,
+  borderColor: colors.border.light,
+},
+
+ratingHeaderContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: spacing.sm,
+},
+
+ratingHeaderIcon: {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: colors.primary.main + '15',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+ratingHeaderInfo: {
+  flex: 1,
+  gap: spacing.xs / 2,
+},
+
+ratingHeaderLabel: {
+  ...typography.styles.caption,
+  color: colors.text.secondary,
+  fontSize: 11,
+  fontWeight: typography.fontWeight.medium,
+  textTransform: 'uppercase',
+  letterSpacing: 0.5,
+},
+
+ratingHeaderStars: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: spacing.sm,
+},
+
+ratingHeaderValue: {
+  ...typography.styles.h3,
+  color: colors.primary.main,
+  fontWeight: typography.fontWeight.bold,
+  fontSize: 16,
+},
 });

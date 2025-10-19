@@ -90,6 +90,27 @@ const getStatusIcon = (status: AppointmentStatus): string => {
   }
 };
 
+const renderRatingStars = (rating: number, size: number = 12) => {
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 >= 0.5;
+  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+      {[...Array(fullStars)].map((_, i) => (
+        <Icon key={`full-${i}`} name="star" size={size} color={colors.states.warning} solid />
+      ))}
+      {hasHalfStar && (
+        <Icon name="star-half-alt" size={size} color={colors.states.warning} solid />
+      )}
+      {[...Array(emptyStars)].map((_, i) => (
+        <Icon key={`empty-${i}`} name="star" size={size} color={colors.border.light} />
+      ))}
+    </View>
+  );
+};
+
+
 // =============================================
 // COMPONENTE PRINCIPAL
 // =============================================
@@ -362,7 +383,7 @@ const handleCloseRatingModal = () => {
 };
 
 const canRateAppointment = (appointment: Appointment): boolean => {
-  return appointment.estado === 'Completada';
+  return appointment.estado === 'Completada' && appointment.estadoCalificacion === 'No Calificada';
 };
 
 const getMenuOptions = (): MenuOption[] => {
@@ -506,6 +527,21 @@ const getMenuOptions = (): MenuOption[] => {
             {appointment.profesion}
           </Text>
         </View>
+
+      {appointment.calificacionPromedio > 0 && (
+        <View style={styles.ratingInfoContainer}>
+          <View style={styles.ratingInfo}>
+            <Icon name="award" size={12} color={colors.primary.main} />
+            <Text style={styles.ratingLabel}>Calificación del profesional:</Text>
+          </View>
+          <View style={styles.ratingValue}>
+            {renderRatingStars(appointment.calificacionPromedio, 14)}
+            <Text style={styles.ratingNumber}>
+              {appointment.calificacionPromedio.toFixed(1)}
+            </Text>
+          </View>
+        </View>
+      )}
 
         <View style={styles.cardFooter}>
           <View style={styles.dateTimeContainer}>
@@ -752,6 +788,36 @@ const getMenuOptions = (): MenuOption[] => {
                   </Text>
                 </View>
               </View>
+
+            {selectedAppointment.calificacionPromedio > 0 && (
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionTitle}>Calificación del Profesional</Text>
+              <View style={styles.modalRatingContainer}>
+                {renderRatingStars(selectedAppointment.calificacionPromedio, 18)}
+                <Text style={styles.modalRatingValue}>
+                  {selectedAppointment.calificacionPromedio.toFixed(1)} de 5.0
+                </Text>
+              </View>
+            </View>
+          )}
+
+            {selectedAppointment.estado === 'Completada' && (
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Estado de Calificación</Text>
+                <View style={styles.modalField}>
+                  <Icon 
+                    name={selectedAppointment.estadoCalificacion === 'Calificada' ? 'check-circle' : 'clock'} 
+                    size={14} 
+                    color={selectedAppointment.estadoCalificacion === 'Calificada' ? colors.states.success : colors.states.warning} 
+                  />
+                  <Text style={styles.modalFieldValue}>
+                    {selectedAppointment.estadoCalificacion === 'Calificada' 
+                      ? 'Ya has calificado este servicio' 
+                      : 'Pendiente de calificar'}
+                  </Text>
+                </View>
+              </View>
+            )}
 
               {selectedAppointment.mensajeSolicitud && (
                 <View style={styles.modalSection}>
@@ -1636,5 +1702,55 @@ ratingFeedbackText: {
   color: colors.text.primary,
   fontWeight: typography.fontWeight.semibold,
   textAlign: 'center',
+},
+
+ratingInfoContainer: {
+  paddingTop: spacing.sm,
+  marginTop: spacing.sm,
+  borderTopWidth: 1,
+  borderTopColor: colors.border.light,
+  gap: spacing.xs,
+},
+
+ratingInfo: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: spacing.xs,
+},
+
+ratingLabel: {
+  ...typography.styles.caption,
+  color: colors.text.secondary,
+  fontSize: 11,
+  fontWeight: typography.fontWeight.medium,
+},
+
+ratingValue: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: spacing.sm,
+  marginLeft: spacing.lg + spacing.xs,
+},
+
+ratingNumber: {
+  ...typography.styles.caption,
+  color: colors.primary.main,
+  fontSize: 12,
+  fontWeight: typography.fontWeight.bold,
+},
+
+modalRatingContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: spacing.md,
+  backgroundColor: colors.background.secondary,
+  padding: spacing.md,
+  borderRadius: spacing.sm,
+},
+
+modalRatingValue: {
+  ...typography.styles.h3,
+  color: colors.primary.main,
+  fontWeight: typography.fontWeight.bold,
 },
 });

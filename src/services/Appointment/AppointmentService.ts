@@ -35,6 +35,9 @@ export interface ApiCita {
   EmailProfesional: string;
   TelefonoProfesional: string;
   NombreServicio: string;
+  IdProfesional: number;  
+  CalificacionPromedio: number;  
+  EstadoCalificacion: string;  
 }
 
 export interface Appointment {
@@ -63,6 +66,9 @@ export interface Appointment {
   telefonoProfesional: string;
   // Información del servicio
   nombreServicio: string;
+  idProfesional: number;  
+  calificacionPromedio: number;  
+  estadoCalificacion: 'Calificada' | 'No Calificada';  
 }
 
 export interface ApiError {
@@ -127,6 +133,9 @@ const mapApiCitaToAppointment = (apiCita: ApiCita): Appointment => {
     emailProfesional: apiCita.EmailProfesional,
     telefonoProfesional: apiCita.TelefonoProfesional,
     nombreServicio: apiCita.NombreServicio,
+    idProfesional: apiCita.IdProfesional, 
+    calificacionPromedio: apiCita.CalificacionPromedio, 
+    estadoCalificacion: apiCita.EstadoCalificacion === 'Calificada' ? 'Calificada' : 'No Calificada', 
   };
 };
 

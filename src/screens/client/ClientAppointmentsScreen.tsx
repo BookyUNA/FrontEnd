@@ -72,7 +72,7 @@ const getStatusColor = (status: AppointmentStatus): string => {
   switch (status.toLowerCase()) {
     case 'pendiente': return colors.states.warning;
     case 'confirmada': return colors.states.success;
-    case 'rechazada': return colors.states.error;
+    case 'denegada': return colors.states.error;  // CAMBIO
     case 'cancelada': return colors.text.secondary;
     case 'completada': return colors.primary.main;
     default: return colors.text.secondary;
@@ -83,7 +83,7 @@ const getStatusIcon = (status: AppointmentStatus): string => {
   switch (status.toLowerCase()) {
     case 'pendiente': return 'clock';
     case 'confirmada': return 'check-circle';
-    case 'rechazada': return 'times-circle';
+    case 'denegada': return 'times-circle';  // CAMBIO
     case 'cancelada': return 'ban';
     case 'completada': return 'check-double';
     default: return 'question-circle';
@@ -439,7 +439,7 @@ const getMenuOptions = (): MenuOption[] => {
   );
 
   const renderFilterTabs = () => {
-    const filters: FilterStatus[] = ['Todas', 'Pendiente', 'Confirmada', 'Completada', 'Rechazada', 'Cancelada'];
+    const filters: FilterStatus[] = ['Todas', 'Pendiente', 'Confirmada', 'Completada', 'Denegada', 'Cancelada'];  
     const counts = appointmentService.getAppointmentCountByStatus(appointments);
 
     return (

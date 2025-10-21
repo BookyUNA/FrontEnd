@@ -55,7 +55,7 @@ const getStatusColor = (status: AppointmentStatus): string => {
   switch (status) {
     case 'Pendiente': return colors.states.warning;
     case 'Confirmada': return colors.states.success;
-    case 'Rechazada': return colors.states.error;
+    case 'Denegada': return colors.states.error; 
     case 'Cancelada': return colors.text.secondary;
     case 'Completada': return colors.primary.main;
     default: return colors.text.secondary;
@@ -66,7 +66,7 @@ const getStatusIcon = (status: AppointmentStatus): string => {
   switch (status) {
     case 'Pendiente': return 'clock';
     case 'Confirmada': return 'check-circle';
-    case 'Rechazada': return 'times-circle';
+    case 'Denegada': return 'times-circle';  
     case 'Cancelada': return 'ban';
     case 'Completada': return 'check-double';
     default: return 'question-circle';
@@ -254,7 +254,7 @@ const handleConfirmRejection = async () => {
   if (!rejectionReason.trim()) {
     Alert.alert(
       'Motivo Requerido',
-      'Debes proporcionar un motivo para rechazar la cita.',
+      'Debes proporcionar un motivo para denegar la cita.',  // CAMBIO
       [{ text: 'Entendido' }]
     );
     return;
@@ -265,7 +265,7 @@ const handleConfirmRejection = async () => {
   setIsProcessingRejection(true);
 
   try {
-    console.log('📅 Rechazando cita:', selectedAppointment.idCita);
+    console.log('📅 Denegando cita:', selectedAppointment.idCita);  // CAMBIO
     
     const result = await appointmentService.approveOrRejectAppointment(
       selectedAppointment.idCita,
@@ -278,8 +278,8 @@ const handleConfirmRejection = async () => {
       setRejectionReason('');
       
       Alert.alert(
-        'Cita Rechazada',
-        'La cita ha sido rechazada. El cliente será notificado.',
+        'Cita Denegada',  // CAMBIO
+        'La cita ha sido denegada. El cliente será notificado.',  // CAMBIO
         [{ 
           text: 'Entendido',
           onPress: () => {
@@ -292,13 +292,13 @@ const handleConfirmRejection = async () => {
       if (result.isNetworkError) {
         Alert.alert(
           'Error de Conexión',
-          result.error || 'No se pudo rechazar la cita. Verifica tu conexión a internet.',
+          result.error || 'No se pudo denegar la cita. Verifica tu conexión a internet.',  // CAMBIO
           [{ text: 'Entendido' }]
         );
       } else {
         Alert.alert(
           'Error',
-          result.error || 'No se pudo rechazar la cita. Intenta de nuevo.',
+          result.error || 'No se pudo denegar la cita. Intenta de nuevo.',  // CAMBIO
           [{ text: 'Entendido' }]
         );
       }
@@ -329,7 +329,7 @@ const handleCancelRejection = () => {
   );
 
   const renderFilterTabs = () => {
-    const filters: FilterStatus[] = ['Todas', 'Pendiente', 'Confirmada', 'Completada', 'Rechazada', 'Cancelada'];
+    const filters: FilterStatus[] = ['Todas', 'Pendiente', 'Confirmada', 'Completada', 'Denegada', 'Cancelada']; 
     const counts = appointmentService.getAppointmentCountByStatus(appointments);
 
     return (
@@ -481,30 +481,30 @@ const handleCancelRejection = () => {
   };
 
   const renderAppointmentsList = () => {
-    if (filteredAppointments.length === 0) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Icon name="calendar-times" size={60} color={colors.text.secondary} />
-          <Text style={styles.emptyTitle}>
-            {selectedFilter === 'Todas' 
-              ? 'No tienes citas registradas' 
-              : `No tienes citas ${selectedFilter.toLowerCase()}`}
-          </Text>
-          <Text style={styles.emptyMessage}>
-            {selectedFilter === 'Pendiente'
-              ? 'Cuando recibas solicitudes de citas, aparecerán aquí'
-              : 'Intenta cambiar el filtro para ver otras citas'}
-          </Text>
-        </View>
-      );
-    }
-
+  if (filteredAppointments.length === 0) {
     return (
-      <View style={styles.appointmentsList}>
-        {filteredAppointments.map(renderAppointmentCard)}
+      <View style={styles.emptyContainer}>
+        <Icon name="calendar-times" size={60} color={colors.text.secondary} />
+        <Text style={styles.emptyTitle}>
+          {selectedFilter === 'Todas' 
+            ? 'No tienes citas registradas' 
+            : `No tienes citas ${selectedFilter.toLowerCase()}`}  {/* esto mostrará "denegadas" */}
+        </Text>
+        <Text style={styles.emptyMessage}>
+          {selectedFilter === 'Pendiente'
+            ? 'Cuando recibas solicitudes de citas, aparecerán aquí'
+            : 'Intenta cambiar el filtro para ver otras citas'}
+        </Text>
       </View>
     );
-  };
+  }
+
+  return (
+    <View style={styles.appointmentsList}>
+      {filteredAppointments.map(renderAppointmentCard)}
+    </View>
+  );
+};
 
   const renderDetailsModal = () => {
     if (!selectedAppointment) return null;
@@ -746,16 +746,16 @@ const handleCancelRejection = () => {
         <View style={styles.rejectionModalContent}>
           <View style={styles.rejectionModalHeader}>
             <Icon name="exclamation-circle" size={24} color={colors.states.error} />
-            <Text style={styles.rejectionModalTitle}>Rechazar Cita</Text>
+            <Text style={styles.rejectionModalTitle}>Denegar Cita</Text>
           </View>
 
           <View style={styles.rejectionModalBody}>
             <Text style={styles.rejectionModalText}>
-              Estás a punto de rechazar la cita con <Text style={styles.rejectionModalClientName}>{selectedAppointment.nombreUsuario}</Text>.
+              Estás a punto de denegar la cita con <Text style={styles.rejectionModalClientName}>{selectedAppointment.nombreUsuario}</Text>
             </Text>
             
             <Text style={styles.rejectionModalLabel}>
-              Motivo de rechazo <Text style={styles.requiredAsterisk}>*</Text>
+              Motivo de denegación <Text style={styles.requiredAsterisk}>*</Text>  
             </Text>
             
             <TextInput
@@ -788,7 +788,7 @@ const handleCancelRejection = () => {
               </View>
               <View style={styles.rejectionButton}>
                 <Button
-                  title={isProcessingRejection ? "Rechazando..." : "Rechazar Cita"}
+                  title={isProcessingRejection ? "Denegando..." : "Denegar Cita"}  
                   onPress={handleConfirmRejection}
                   variant="primary"
                   loading={isProcessingRejection}

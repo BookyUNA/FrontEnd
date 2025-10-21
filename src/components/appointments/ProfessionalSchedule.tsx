@@ -117,8 +117,8 @@ export const ProfessionalSchedule: React.FC = () => {
     const selectedDateStr = selectedDate.toDateString();
     const dayAppointments = appointments.filter(apt => {
       const aptDateStr = apt.fechaCita.toDateString();
-      return aptDateStr === selectedDateStr && apt.estado !== 'Cancelada' && apt.estado !== 'Rechazada';
-    });
+       return aptDateStr === selectedDateStr && apt.estado !== 'Cancelada' && apt.estado !== 'Denegada';  // CAMBIO
+  });
 
     for (let i = 0; i < totalSlots; i++) {
       const hour = START_HOUR + Math.floor((i * SLOT_DURATION) / 60);

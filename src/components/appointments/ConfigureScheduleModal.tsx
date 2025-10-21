@@ -109,6 +109,7 @@ export const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
     calculateGeneratedDates();
   }, [fechaInicio, fechaFin, schedules]);
 
+  // Cerrar modal automáticamente después de mostrar mensaje de éxito
   useEffect(() => {
     if (messageType === 'success') {
       const timer = setTimeout(() => {
@@ -339,9 +340,12 @@ export const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
           setMessage(`¡Horarios configurados exitosamente! Se crearon ${horarios.length} horarios.`);
           setMessageType('success');
           
-          if (onSuccess) {
-            onSuccess();
-          }
+          // Llamar callback de éxito después de cerrar
+          setTimeout(() => {
+            if (onSuccess) {
+              onSuccess();
+            }
+          }, 3100);
         } else {
           const successCount = horarios.length - failedCount;
           setMessage(`Se crearon ${successCount} horarios. ${failedCount} horarios no pudieron agregarse (fechas pasadas o duplicados).`);
@@ -430,6 +434,7 @@ export const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
                   <TouchableOpacity
                     style={styles.dateButton}
                     onPress={() => openDatePicker('start')}
+                    disabled={loading || messageType === 'success'}
                   >
                     <Icon name="calendar" size={14} color={colors.primary.main} />
                     <Text style={styles.dateButtonText}>
@@ -443,6 +448,7 @@ export const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
                   <TouchableOpacity
                     style={styles.dateButton}
                     onPress={() => openDatePicker('end')}
+                    disabled={loading || messageType === 'success'}
                   >
                     <Icon name="calendar" size={14} color={colors.primary.main} />
                     <Text style={styles.dateButtonText}>
@@ -468,6 +474,7 @@ export const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
                     style={styles.applyAllButtonSmall}
                     onPress={applyToAllDays}
                     activeOpacity={0.7}
+                    disabled={loading || messageType === 'success'}
                   >
                     <Icon name="copy" size={12} color={colors.primary.main} />
                     <Text style={styles.applyAllTextSmall}>Copiar al resto</Text>
@@ -482,6 +489,7 @@ export const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
                       style={styles.dayHeader}
                       onPress={() => toggleDay(schedule.id)}
                       activeOpacity={0.7}
+                      disabled={loading || messageType === 'success'}
                     >
                       <View style={styles.checkboxContainer}>
                         <View
@@ -505,6 +513,7 @@ export const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
                           <TouchableOpacity
                             style={styles.timeButton}
                             onPress={() => openTimePicker(schedule.id, 'start')}
+                            disabled={loading || messageType === 'success'}
                           >
                             <Icon name="clock" size={12} color={colors.primary.main} />
                             <Text style={styles.timeButtonText}>
@@ -522,6 +531,7 @@ export const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
                           <TouchableOpacity
                             style={styles.timeButton}
                             onPress={() => openTimePicker(schedule.id, 'end')}
+                            disabled={loading || messageType === 'success'}
                           >
                             <Icon name="clock" size={12} color={colors.primary.main} />
                             <Text style={styles.timeButtonText}>
@@ -579,14 +589,21 @@ export const ConfigureScheduleModal: React.FC<ConfigureScheduleModalProps> = ({
           )}
 
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
+            <TouchableOpacity 
+              style={styles.cancelButton} 
+              onPress={handleClose}
+              disabled={loading}
+            >
               <Text style={styles.cancelButtonText}>Cancelar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+              style={[
+                styles.saveButton, 
+                (loading || messageType === 'success') && styles.saveButtonDisabled
+              ]}
               onPress={handleSave}
-              disabled={loading}
+              disabled={loading || messageType === 'success'}
             >
               {loading ? (
                 <ActivityIndicator color={colors.text.inverse} />

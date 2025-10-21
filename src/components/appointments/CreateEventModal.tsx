@@ -70,11 +70,12 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<MessageType>(null);
 
+  // Cuando se muestra mensaje de éxito, esperar 2 segundos y cerrar
   useEffect(() => {
     if (messageType === 'success') {
       const timer = setTimeout(() => {
         handleClose();
-      }, 3000);
+      }, 2000);
       
       return () => clearTimeout(timer);
     }
@@ -134,15 +135,23 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       const response = await eventService.createEvent(eventData);
 
       if (response.success && response.data) {
-        setMessage(
-          `¡Evento creado exitosamente! Se desactivaron ${response.data.HorariosDesactivados} horarios.`
-        );
+        // Mensaje de éxito
+        const horariosMsg = response.data.HorariosDesactivados > 0 
+          ? ` Se desactivaron ${response.data.HorariosDesactivados} horarios.`
+          : '';
+        
+        setMessage(`¡Evento creado exitosamente!${horariosMsg}`);
         setMessageType('success');
         
-        if (onSuccess) {
-          onSuccess();
-        }
+        // Llamar callback de éxito DESPUÉS de mostrar el mensaje
+        // El modal se cerrará automáticamente después de 2 segundos
+        setTimeout(() => {
+          if (onSuccess) {
+            onSuccess();
+          }
+        }, 2100);
       } else {
+        // Mensaje de error
         setMessage(response.error || 'Error desconocido al crear el evento');
         setMessageType('error');
       }
@@ -174,6 +183,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       newStartDate.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
       setFechaInicio(newStartDate);
 
+      // Si hora de inicio >= hora fin, ajustar hora fin
       if (newStartDate >= fechaFin) {
         const newEndDate = new Date(newStartDate);
         newEndDate.setHours(newStartDate.getHours() + 1, newStartDate.getMinutes(), 0, 0);
@@ -240,6 +250,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                 }}
                 maxLength={100}
                 placeholderTextColor={colors.text.tertiary}
+                editable={!loading && messageType !== 'success'}
               />
               {errors.nombreEvento && (
                 <Text style={styles.errorText}>{errors.nombreEvento}</Text>
@@ -258,6 +269,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                 textAlignVertical="top"
                 maxLength={500}
                 placeholderTextColor={colors.text.tertiary}
+                editable={!loading && messageType !== 'success'}
               />
             </View>
 
@@ -266,6 +278,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
               <TouchableOpacity
                 style={styles.dateButton}
                 onPress={() => setShowStartDatePicker(true)}
+                disabled={loading || messageType === 'success'}
               >
                 <Icon name="calendar" size={16} color={colors.primary.main} />
                 <Text style={styles.dateButtonText}>{formatDate(fechaInicio)}</Text>
@@ -278,6 +291,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                 <TouchableOpacity
                   style={styles.timeButton}
                   onPress={() => setShowStartTimePicker(true)}
+                  disabled={loading || messageType === 'success'}
                 >
                   <Icon name="clock" size={16} color={colors.primary.main} />
                   <Text style={styles.timeButtonText}>{formatTime(fechaInicio)}</Text>
@@ -292,6 +306,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                     errors.fechaFin && styles.inputError
                   ]}
                   onPress={() => setShowEndTimePicker(true)}
+                  disabled={loading || messageType === 'success'}
                 >
                   <Icon name="clock" size={16} color={colors.primary.main} />
                   <Text style={styles.timeButtonText}>{formatTime(fechaFin)}</Text>
@@ -303,6 +318,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             )}
           </ScrollView>
 
+          {/* Mensaje de éxito o error */}
           {message && (
             <View style={[
               styles.messageContainer,
@@ -315,25 +331,30 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
               />
               <Text style={[
                 styles.messageText,
-                messageType === 'success' ? styles.successText : styles.errorText
+                messageType === 'success' ? styles.successText : styles.errorMessageText
               ]}>
                 {message}
               </Text>
             </View>
           )}
 
+          {/* Botones de acción */}
           <View style={styles.modalFooter}>
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={handleClose}
+              disabled={loading}
             >
               <Text style={styles.cancelButtonText}>Cancelar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+              style={[
+                styles.saveButton, 
+                (loading || messageType === 'success') && styles.saveButtonDisabled
+              ]}
               onPress={handleSave}
-              disabled={loading}
+              disabled={loading || messageType === 'success'}
             >
               {loading ? (
                 <ActivityIndicator color={colors.text.inverse} />
@@ -343,6 +364,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             </TouchableOpacity>
           </View>
 
+          {/* Date/Time Pickers */}
           {showStartDatePicker && (
             <DateTimePicker
               value={fechaInicio}
@@ -497,22 +519,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  infoBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.states.info + '15',
-    padding: spacing.md,
-    borderRadius: 8,
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-
-  infoText: {
-    ...typography.styles.caption,
-    color: colors.states.info,
-    flex: 1,
-  },
-
   errorText: {
     ...typography.styles.caption,
     color: colors.states.error,
@@ -545,6 +551,10 @@ const styles = StyleSheet.create({
 
   successText: {
     color: colors.states.success,
+  },
+
+  errorMessageText: {
+    color: colors.states.error,
   },
 
   modalFooter: {

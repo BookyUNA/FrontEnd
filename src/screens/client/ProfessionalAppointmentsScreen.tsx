@@ -100,7 +100,7 @@ export const ProfessionalAppointmentsScreen: React.FC<ProfessionalAppointmentsSc
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [selectedFilter, setSelectedFilter] = useState<FilterStatus>('Pendiente');
+  const [selectedFilter, setSelectedFilter] = useState<FilterStatus>('Todas');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [isRejectionModalVisible, setIsRejectionModalVisible] = useState<boolean>(false);
@@ -329,7 +329,7 @@ const handleCancelRejection = () => {
   );
 
   const renderFilterTabs = () => {
-    const filters: FilterStatus[] = ['Pendiente', 'Confirmada', 'Todas', 'Completada', 'Rechazada', 'Cancelada'];
+    const filters: FilterStatus[] = ['Todas', 'Pendiente', 'Confirmada', 'Completada', 'Rechazada', 'Cancelada'];
     const counts = appointmentService.getAppointmentCountByStatus(appointments);
 
     return (

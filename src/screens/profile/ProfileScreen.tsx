@@ -1053,54 +1053,70 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: spacing['4xl'],
+    paddingVertical: spacing['4xl'] + spacing.xl,
   },
 
   loadingText: {
     ...typography.styles.body,
     color: colors.text.secondary,
     textAlign: 'center',
-    marginTop: spacing.md,
+    marginTop: spacing.md + 2,
+    fontSize: 15,
   },
 
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.xl + spacing.lg,
+    paddingVertical: spacing['4xl'],
   },
 
   errorTitle: {
     ...typography.styles.h2,
     color: colors.text.primary,
     textAlign: 'center',
-    marginVertical: spacing.lg,
+    marginVertical: spacing.lg + 4,
+    fontSize: 22,
+    fontWeight: typography.fontWeight.bold,
   },
 
   errorMessage: {
     ...typography.styles.body,
     color: colors.text.secondary,
     textAlign: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.xl + spacing.lg,
+    lineHeight: 24,
+    fontSize: 15,
   },
 
   header: {
     paddingTop: spacing['8xl'],
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xl + 4,
     alignItems: 'center',
+    backgroundColor: colors.primary.light + '08',
+    marginHorizontal: -spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderBottomLeftRadius: spacing.xl,
+    borderBottomRightRadius: spacing.xl,
+    marginBottom: spacing.md,
   },
 
   title: {
     ...typography.styles.h1,
     color: colors.text.primary,
     textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.sm + 2,
+    fontSize: 32,
+    letterSpacing: -0.5,
   },
 
   subtitle: {
     ...typography.styles.body,
     color: colors.text.secondary,
     textAlign: 'center',
+    fontSize: 15,
+    lineHeight: 22,
   },
 
   userInfoSection: {
@@ -1110,27 +1126,37 @@ const styles = StyleSheet.create({
   avatarSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl + 4,
+    paddingHorizontal: spacing.lg + 4,
     backgroundColor: colors.background.secondary,
-    borderRadius: spacing.md,
+    borderRadius: spacing.md + 2,
     marginBottom: spacing.lg,
+    shadowColor: colors.shadow.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
 
   avatarContainer: {
     position: 'relative',
-    marginRight: spacing.lg,
+    marginRight: spacing.lg + 4,
   },
 
   avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.background.primary,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: colors.primary.light + '20',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: colors.border.light,
+    borderWidth: 4,
+    borderColor: colors.primary.main + '40',
+    shadowColor: colors.primary.main,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
 
   basicInfo: {
@@ -1141,144 +1167,195 @@ const styles = StyleSheet.create({
     ...typography.styles.h2,
     color: colors.text.primary,
     marginBottom: spacing.xs,
+    fontSize: 22,
+    fontWeight: typography.fontWeight.bold,
+    letterSpacing: -0.3,
   },
 
   roleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    backgroundColor: colors.primary.main + '15',
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.sm + 4,
+    borderRadius: spacing.lg,
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
   },
 
   userRole: {
     ...typography.styles.caption,
     color: colors.primary.main,
     marginLeft: spacing.xs,
-    fontWeight: 'bold',
+    fontWeight: typography.fontWeight.bold,
+    fontSize: 12,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 
   readOnlySection: {
     backgroundColor: colors.background.secondary,
-    borderRadius: spacing.md,
-    padding: spacing.lg,
+    borderRadius: spacing.md + 2,
+    padding: spacing.lg + 4,
     marginBottom: spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
 
   readOnlyFieldContainer: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.md + 2,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light + '40',
   },
 
   readOnlyFieldHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm + 2,
+    gap: spacing.sm,
   },
 
   readOnlyFieldLabel: {
     ...typography.styles.caption,
     color: colors.text.secondary,
-    marginLeft: spacing.xs,
-    fontWeight: 'bold',
+    fontWeight: typography.fontWeight.bold,
     textTransform: 'uppercase',
+    fontSize: 11,
+    letterSpacing: 0.8,
   },
 
   readOnlyFieldValue: {
     ...typography.styles.body,
     color: colors.text.primary,
-    fontWeight: '500',
+    fontWeight: typography.fontWeight.medium,
+    fontSize: 15,
+    lineHeight: 22,
   },
 
   ratingContainer: {
     flexDirection: 'column',
-    gap: spacing.xs,
+    gap: spacing.xs + 2,
   },
 
   ratingStars: {
     flexDirection: 'row',
-    gap: spacing.xs / 2,
+    gap: spacing.xs,
   },
 
   ratingText: {
     ...typography.styles.body,
     color: colors.text.primary,
-    fontWeight: '500',
+    fontWeight: typography.fontWeight.medium,
+    fontSize: 14,
   },
 
   editableSection: {
-    marginBottom: spacing['2xl'],
+    marginBottom: spacing['2xl'] + spacing.md,
+    backgroundColor: colors.background.secondary,
+    borderRadius: spacing.md + 2,
+    padding: spacing.lg + 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
 
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.lg,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
+    marginBottom: spacing.lg + 4,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary.main + '20',
   },
 
   sectionTitle: {
     ...typography.styles.h3,
     color: colors.text.primary,
-    marginLeft: spacing.sm,
+    marginLeft: spacing.sm + 2,
+    fontSize: 17,
+    fontWeight: typography.fontWeight.bold,
+    letterSpacing: -0.2,
   },
 
   fieldContainer: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.lg + 2,
   },
 
   fieldLabel: {
     ...typography.styles.label,
     color: colors.text.primary,
-    marginBottom: spacing.sm,
-    fontWeight: 'bold',
+    marginBottom: spacing.sm + 2,
+    fontWeight: typography.fontWeight.bold,
+    fontSize: 13,
+    letterSpacing: 0.3,
   },
 
   textInput: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border.light,
-    borderRadius: spacing.sm,
-    padding: spacing.md,
+    borderRadius: spacing.md,
+    padding: spacing.md + 2,
     fontSize: typography.fontSize.base,
     color: colors.text.primary,
     backgroundColor: colors.background.primary,
-    minHeight: 48,
+    minHeight: 52,
+    shadowColor: colors.primary.main,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 1,
   },
 
   textInputMultiline: {
-    minHeight: 100,
-    paddingTop: spacing.md,
+    minHeight: 110,
+    paddingTop: spacing.md + 2,
   },
 
   disabledInput: {
     backgroundColor: colors.background.secondary,
     color: colors.text.secondary,
+    borderColor: colors.border.light + '60',
+    shadowOpacity: 0,
   },
 
   inputError: {
     borderColor: colors.states.error,
+    borderWidth: 2,
+    shadowColor: colors.states.error,
+    shadowOpacity: 0.2,
   },
 
   errorText: {
     ...typography.styles.caption,
     color: colors.states.error,
-    marginTop: spacing.xs,
+    marginTop: spacing.xs + 2,
+    fontSize: 12,
+    fontWeight: typography.fontWeight.medium,
   },
 
   characterCount: {
     ...typography.styles.caption,
     color: colors.text.secondary,
     textAlign: 'right',
-    marginTop: spacing.xs,
+    marginTop: spacing.xs + 2,
+    fontSize: 11,
   },
 
   actionButtonsContainer: {
-    paddingVertical: spacing.xl,
-    paddingBottom: spacing['4xl'],
+    paddingVertical: spacing.xl + 4,
+    paddingBottom: spacing['4xl'] + spacing.xl,
+    gap: spacing.md,
   },
 
   editButtonsRow: {
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing.md + 2,
     marginBottom: spacing.lg,
   },
 
@@ -1291,58 +1368,84 @@ const styles = StyleSheet.create({
   },
 
   professionalButtonContainer: {
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
+    paddingVertical: spacing.xs,
   },
 
   planButtonContainer: {
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
+    paddingVertical: spacing.xs,
   },
 
   logoutContainer: {
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.light,
   },
 
   professionSelector: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: colors.background.primary,
+    borderWidth: 2,
+    borderColor: colors.border.light,
+    borderRadius: spacing.md,
+    padding: spacing.md + 2,
+    minHeight: 52,
+    shadowColor: colors.primary.main,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 1,
   },
 
   professionSelectorText: {
     flex: 1,
     color: colors.text.primary,
     fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.medium,
   },
 
   professionSelectorPlaceholder: {
     color: colors.text.secondary,
+    fontWeight: typography.fontWeight.normal,
   },
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: colors.overlay.dark,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'flex-end',
   },
 
   modalContent: {
     backgroundColor: colors.background.primary,
-    borderTopLeftRadius: spacing.lg,
-    borderTopRightRadius: spacing.lg,
+    borderTopLeftRadius: spacing.xl + 4,
+    borderTopRightRadius: spacing.xl + 4,
     maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
   },
 
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
+    padding: spacing.lg + 4,
+    borderBottomWidth: 2,
     borderBottomColor: colors.border.light,
+    backgroundColor: colors.background.secondary,
   },
 
   modalTitle: {
     ...typography.styles.h3,
     color: colors.text.primary,
+    fontSize: 18,
+    fontWeight: typography.fontWeight.bold,
   },
 
   modalList: {
@@ -1353,95 +1456,125 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.lg,
+    padding: spacing.lg + 2,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
+    borderBottomColor: colors.border.light + '50',
+    backgroundColor: colors.background.primary,
   },
 
   modalItemSelected: {
-    backgroundColor: colors.primary.light + '20',
+    backgroundColor: colors.primary.light + '25',
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary.main,
   },
 
   modalItemText: {
     ...typography.styles.body,
     color: colors.text.primary,
     flex: 1,
+    fontSize: 15,
   },
 
   modalItemTextSelected: {
     color: colors.primary.main,
-    fontWeight: 'bold',
+    fontWeight: typography.fontWeight.bold,
   },
-professionalRatingSection: {
-  marginTop: spacing.lg,
-  paddingTop: spacing.lg,
-  borderTopWidth: 1,
-  borderTopColor: colors.border.light,
-},
 
-professionalRatingHeader: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: spacing.md,
-  gap: spacing.sm,
-},
+  professionalRatingSection: {
+    marginTop: spacing.lg + 4,
+    paddingTop: spacing.lg + 4,
+    paddingHorizontal: spacing.md + 4,
+    paddingBottom: spacing.md + 4,
+    borderTopWidth: 2,
+    borderTopColor: colors.primary.main + '30',
+    backgroundColor: colors.primary.light + '08',
+    borderRadius: spacing.md,
+    marginHorizontal: -spacing.lg,
+    marginLeft: -spacing.lg - 4,
+    marginRight: -spacing.lg - 4,
+  },
 
-professionalRatingIconContainer: {
-  width: 32,
-  height: 32,
-  borderRadius: 16,
-  backgroundColor: colors.primary.main + '15',
-  alignItems: 'center',
-  justifyContent: 'center',
-},
+  professionalRatingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md + 4,
+    gap: spacing.sm + 2,
+  },
 
-professionalRatingTitle: {
-  ...typography.styles.h3,
-  color: colors.text.primary,
-  fontWeight: typography.fontWeight.semibold,
-  fontSize: 16,
-},
+  professionalRatingIconContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.primary.main + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary.main,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
 
-professionalRatingContent: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: spacing.lg,
-  marginBottom: spacing.md,
-},
+  professionalRatingTitle: {
+    ...typography.styles.h3,
+    color: colors.text.primary,
+    fontWeight: typography.fontWeight.bold,
+    fontSize: 18,
+    letterSpacing: -0.2,
+  },
 
-professionalRatingScore: {
-  fontSize: 42,
-  fontWeight: typography.fontWeight.bold,
-  color: colors.primary.main,
-  lineHeight: 48,
-},
+  professionalRatingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg + 4,
+    marginBottom: spacing.md + 2,
+    backgroundColor: colors.background.secondary,
+    padding: spacing.lg,
+    borderRadius: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
 
-professionalRatingStars: {
-  flex: 1,
-  gap: spacing.xs,
-},
+  professionalRatingScore: {
+    fontSize: 48,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary.main,
+    lineHeight: 52,
+    letterSpacing: -1,
+  },
 
-professionalRatingMax: {
-  ...typography.styles.body,
-  color: colors.text.secondary,
-  fontSize: 13,
-  marginTop: spacing.xs / 2,
-},
+  professionalRatingStars: {
+    flex: 1,
+    gap: spacing.xs + 2,
+  },
 
-professionalRatingDescription: {
-  flexDirection: 'row',
-  alignItems: 'flex-start',
-  gap: spacing.sm,
-  backgroundColor: colors.background.primary,
-  padding: spacing.sm,
-  borderRadius: spacing.xs,
-},
+  professionalRatingMax: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    fontSize: 14,
+    marginTop: spacing.xs,
+    fontWeight: typography.fontWeight.medium,
+  },
 
-professionalRatingDescriptionText: {
-  ...typography.styles.caption,
-  color: colors.text.secondary,
-  flex: 1,
-  lineHeight: 16,
-  fontSize: 11,
-},
+  professionalRatingDescription: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm + 2,
+    backgroundColor: colors.background.secondary,
+    padding: spacing.md,
+    borderRadius: spacing.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary.main,
+  },
+
+  professionalRatingDescriptionText: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    flex: 1,
+    lineHeight: 18,
+    fontSize: 12,
+  },
 });

@@ -9,7 +9,7 @@ import { authService } from '../auth/authService';
 export type AppointmentStatus = 
   | 'Pendiente' 
   | 'Confirmada' 
-  | 'Rechazada' 
+  | 'Denegada'
   | 'Cancelada' 
   | 'Completada';
 
@@ -178,11 +178,10 @@ const normalizeEstado = (estado: string): AppointmentStatus => {
   
   if (estadoLower.includes('pendiente')) return 'Pendiente';
   if (estadoLower.includes('confirmada') || estadoLower.includes('aceptada')) return 'Confirmada';
-  if (estadoLower.includes('rechazada')) return 'Rechazada';
+  if (estadoLower.includes('denegada') || estadoLower.includes('rechazada')) return 'Denegada';  // CAMBIO
   if (estadoLower.includes('cancelada')) return 'Cancelada';
   if (estadoLower.includes('completada') || estadoLower.includes('finalizada')) return 'Completada';
   
-  // Por defecto, retornar el estado como viene (con validación de tipo)
   return 'Pendiente';
 };
 
@@ -945,15 +944,15 @@ async rateProfessional(
   }
 
   getAppointmentCountByStatus(appointments: Appointment[]): Record<AppointmentStatus | 'Todas', number> {
-    return {
-      Todas: appointments.length,
-      Pendiente: appointments.filter(a => a.estado === 'Pendiente').length,
-      Confirmada: appointments.filter(a => a.estado === 'Confirmada').length,
-      Rechazada: appointments.filter(a => a.estado === 'Rechazada').length,
-      Cancelada: appointments.filter(a => a.estado === 'Cancelada').length,
-      Completada: appointments.filter(a => a.estado === 'Completada').length,
-    };
-  }
+  return {
+    Todas: appointments.length,
+    Pendiente: appointments.filter(a => a.estado === 'Pendiente').length,
+    Confirmada: appointments.filter(a => a.estado === 'Confirmada').length,
+    Denegada: appointments.filter(a => a.estado === 'Denegada').length,   
+    Cancelada: appointments.filter(a => a.estado === 'Cancelada').length,
+    Completada: appointments.filter(a => a.estado === 'Completada').length,
+  };
+}
 }
 
 export const appointmentService = new AppointmentService();

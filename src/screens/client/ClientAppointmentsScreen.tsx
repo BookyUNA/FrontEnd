@@ -72,7 +72,7 @@ const getStatusColor = (status: AppointmentStatus): string => {
   switch (status.toLowerCase()) {
     case 'pendiente': return colors.states.warning;
     case 'confirmada': return colors.states.success;
-    case 'rechazada': return colors.states.error;
+    case 'denegada': return colors.states.error;  // CAMBIO
     case 'cancelada': return colors.text.secondary;
     case 'completada': return colors.primary.main;
     default: return colors.text.secondary;
@@ -83,7 +83,7 @@ const getStatusIcon = (status: AppointmentStatus): string => {
   switch (status.toLowerCase()) {
     case 'pendiente': return 'clock';
     case 'confirmada': return 'check-circle';
-    case 'rechazada': return 'times-circle';
+    case 'denegada': return 'times-circle';  // CAMBIO
     case 'cancelada': return 'ban';
     case 'completada': return 'check-double';
     default: return 'question-circle';
@@ -439,7 +439,7 @@ const getMenuOptions = (): MenuOption[] => {
   );
 
   const renderFilterTabs = () => {
-    const filters: FilterStatus[] = ['Todas', 'Pendiente', 'Confirmada', 'Completada', 'Rechazada', 'Cancelada'];
+    const filters: FilterStatus[] = ['Todas', 'Pendiente', 'Confirmada', 'Completada', 'Denegada', 'Cancelada'];  
     const counts = appointmentService.getAppointmentCountByStatus(appointments);
 
     return (
@@ -1166,21 +1166,31 @@ const styles = StyleSheet.create({
 
   header: {
     paddingTop: spacing['8xl'],
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xl + 4,
     alignItems: 'center',
+    backgroundColor: colors.primary.light + '08',
+    marginHorizontal: -spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderBottomLeftRadius: spacing.xl,
+    borderBottomRightRadius: spacing.xl,
+    marginBottom: spacing.md,
   },
 
   title: {
     ...typography.styles.h1,
     color: colors.text.primary,
     textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.sm + 2,
+    fontSize: 32,
+    letterSpacing: -0.5,
   },  
 
   subtitle: {
     ...typography.styles.body,
     color: colors.text.secondary,
     textAlign: 'center',
+    fontSize: 15,
+    lineHeight: 22,
   },
 
   filterContainer: {
@@ -1195,25 +1205,36 @@ const styles = StyleSheet.create({
   filterTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md + 4,
     backgroundColor: colors.background.secondary,
-    borderRadius: spacing.lg,
-    borderWidth: 1,
+    borderRadius: spacing.lg + 4,
+    borderWidth: 1.5,
     borderColor: colors.border.light,
-    gap: spacing.xs,
+    gap: spacing.xs + 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
 
   filterTabActive: {
     backgroundColor: colors.primary.main,
     borderColor: colors.primary.main,
+    shadowColor: colors.primary.main,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   filterTabText: {
     ...typography.styles.body,
     color: colors.text.primary,
-    fontWeight: typography.fontWeight.medium,
+    fontWeight: typography.fontWeight.semibold,
     fontSize: 14,
+    letterSpacing: 0.2,
   },
 
   filterTabTextActive: {
@@ -1223,16 +1244,16 @@ const styles = StyleSheet.create({
 
   filterBadge: {
     backgroundColor: colors.border.light,
-    borderRadius: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    minWidth: 24,
+    borderRadius: spacing.sm + 2,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 3,
+    minWidth: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   filterBadgeActive: {
-    backgroundColor: colors.primary.contrast + '30',
+    backgroundColor: colors.primary.contrast + '40',
   },
 
   filterBadgeText: {
@@ -1253,22 +1274,23 @@ const styles = StyleSheet.create({
 
   appointmentCard: {
     backgroundColor: colors.background.secondary,
-    borderRadius: spacing.md,
+    borderRadius: spacing.md + 2,
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border.light,
     shadowColor: colors.shadow.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+    marginBottom: spacing.xs,
   },
 
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
+    alignItems: 'flex-start',
+    marginBottom: spacing.md + 2,
     gap: spacing.sm,
   },
 
@@ -1281,29 +1303,34 @@ const styles = StyleSheet.create({
 
   serviceName: {
     ...typography.styles.h3,
+    fontSize: 17,
+    lineHeight: 23,
     color: colors.text.primary,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: typography.fontWeight.bold,
     flex: 1,
   },
 
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: spacing.sm,
-    gap: spacing.xs,
+    paddingVertical: spacing.xs + 3,
+    paddingHorizontal: spacing.md + 2,
+    borderRadius: 14,
+    gap: spacing.sm,
+    minWidth: 95,
+    justifyContent: 'center',
   },
 
   statusText: {
     ...typography.styles.caption,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: typography.fontWeight.bold,
     fontSize: 11,
+    letterSpacing: 0.3,
   },
 
   cardContent: {
-    marginBottom: spacing.md,
-    gap: spacing.xs,
+    marginBottom: spacing.lg,
+    gap: spacing.sm + 2,
   },
 
   professionalInfo: {
@@ -1315,7 +1342,8 @@ const styles = StyleSheet.create({
   professionalName: {
     ...typography.styles.body,
     color: colors.text.primary,
-    fontWeight: typography.fontWeight.medium,
+    fontWeight: typography.fontWeight.semibold,
+    fontSize: 15,
     flex: 1,
   },
 
@@ -1354,12 +1382,18 @@ const styles = StyleSheet.create({
 
   priceContainer: {
     alignItems: 'flex-end',
+    backgroundColor: colors.primary.light + '15',
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: 10,
   },
 
   price: {
-    ...typography.styles.h3,
+    ...typography.styles.h2,
     color: colors.primary.main,
     fontWeight: typography.fontWeight.bold,
+    fontSize: 19,
+    letterSpacing: -0.5,
   },
 
   pastIndicator: {
@@ -1367,11 +1401,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.sm,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    backgroundColor: colors.states.warning + '20',
-    borderRadius: spacing.sm,
-    gap: spacing.xs,
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.states.warning + '25',
+    borderRadius: 8,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.states.warning + '40',
   },
 
   pastIndicatorText: {
@@ -1385,22 +1421,25 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: spacing['4xl'],
-    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing['4xl'] + spacing.xl,
+    paddingHorizontal: spacing.xl + spacing.md,
   },
 
   emptyTitle: {
     ...typography.styles.h2,
     color: colors.text.primary,
     textAlign: 'center',
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
+    marginTop: spacing.lg + 4,
+    marginBottom: spacing.md,
+    fontSize: 22,
   },
 
   emptyMessage: {
     ...typography.styles.body,
     color: colors.text.secondary,
     textAlign: 'center',
+    lineHeight: 24,
+    fontSize: 15,
   },
 
   modalOverlay: {
@@ -1490,9 +1529,13 @@ const styles = StyleSheet.create({
 
   modalContent: {
     backgroundColor: colors.background.primary,
-    borderTopLeftRadius: spacing.xl,
-    borderTopRightRadius: spacing.xl,
+    borderTopLeftRadius: spacing.xl + 4,
+    borderTopRightRadius: spacing.xl + 4,
     maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
 
   modalHeader: {
@@ -1518,11 +1561,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: spacing.md,
+    paddingVertical: spacing.lg + 2,
+    paddingHorizontal: spacing.xl + 4,
+    borderRadius: 18,
     marginBottom: spacing.xl,
-    gap: spacing.sm,
+    gap: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
 
   modalStatusText: {
@@ -1532,15 +1580,19 @@ const styles = StyleSheet.create({
 
   modalSection: {
     marginBottom: spacing.xl,
+    paddingBottom: spacing.md + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light + '60',
   },
 
   modalSectionTitle: {
     ...typography.styles.label,
     color: colors.text.primary,
     fontWeight: typography.fontWeight.bold,
-    marginBottom: spacing.md,
+    marginBottom: spacing.md + 2,
     textTransform: 'uppercase',
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: 1,
   },
 
   modalField: {
@@ -1560,197 +1612,223 @@ const styles = StyleSheet.create({
     ...typography.styles.body,
     color: colors.text.primary,
     backgroundColor: colors.background.secondary,
-    padding: spacing.md,
-    borderRadius: spacing.sm,
-    lineHeight: 22,
+    padding: spacing.md + 4,
+    borderRadius: spacing.md,
+    lineHeight: 24,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary.light,
   },
 
   modalFooter: {
-    padding: spacing.lg,
+    padding: spacing.lg + 4,
     borderTopWidth: 1,
     borderTopColor: colors.border.light,
+    backgroundColor: colors.background.secondary + '40',
   },
 
-cancelModalContent: {
-  backgroundColor: colors.background.primary,
-  borderTopLeftRadius: spacing.xl,
-  borderTopRightRadius: spacing.xl,
-  maxHeight: '85%',
-},
+  cancelModalContent: {
+    backgroundColor: colors.background.primary,
+    borderTopLeftRadius: spacing.xl + 4,
+    borderTopRightRadius: spacing.xl + 4,
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
 
-cancelWarning: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: colors.states.warning + '15',
-  padding: spacing.lg,
-  borderRadius: spacing.md,
-  marginBottom: spacing.lg,
-  gap: spacing.md,
-},
+  cancelWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.states.warning + '15',
+    padding: spacing.lg,
+    borderRadius: spacing.md,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+  },
 
-cancelWarningText: {
-  ...typography.styles.body,
-  color: colors.states.warning,
-  fontWeight: typography.fontWeight.semibold,
-  flex: 1,
-},
+  cancelWarningText: {
+    ...typography.styles.body,
+    color: colors.states.warning,
+    fontWeight: typography.fontWeight.semibold,
+    flex: 1,
+  },
 
-cancellationInput: {
-  ...typography.styles.body,
-  color: colors.text.primary,
-  backgroundColor: colors.background.secondary,
-  borderWidth: 1,
-  borderColor: colors.border.light,
-  borderRadius: spacing.sm,
-  padding: spacing.md,
-  minHeight: 100,
-  maxHeight: 150,
-},
+  cancellationInput: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    backgroundColor: colors.background.secondary,
+    borderWidth: 2,
+    borderColor: colors.border.light,
+    borderRadius: spacing.md,
+    padding: spacing.md + 2,
+    minHeight: 110,
+    maxHeight: 160,
+    shadowColor: colors.primary.main,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
 
-characterCount: {
-  ...typography.styles.caption,
-  color: colors.text.tertiary,
-  textAlign: 'right',
-  marginTop: spacing.xs,
-},  
+  characterCount: {
+    ...typography.styles.caption,
+    color: colors.text.tertiary,
+    textAlign: 'right',
+    marginTop: spacing.xs,
+  },  
 
-ratingModalContent: {
-  backgroundColor: colors.background.primary,
-  borderTopLeftRadius: spacing.xl,
-  borderTopRightRadius: spacing.xl,
-  maxHeight: '80%',
-},
+  ratingModalContent: {
+    backgroundColor: colors.background.primary,
+    borderTopLeftRadius: spacing.xl + 4,
+    borderTopRightRadius: spacing.xl + 4,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
 
-ratingModalBody: {
-  alignItems: 'center',
-},
+  ratingModalBody: {
+    alignItems: 'center',
+  },
 
-ratingProfessionalInfo: {
-  alignItems: 'center',
-  paddingVertical: spacing.xl,
-  borderBottomWidth: 1,
-  borderBottomColor: colors.border.light,
-  width: '100%',
-},
+  ratingProfessionalInfo: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+    width: '100%',
+  },
 
-ratingProfessionalName: {
-  ...typography.styles.h2,
-  color: colors.text.primary,
-  fontWeight: typography.fontWeight.bold,
-  marginTop: spacing.md,
-  textAlign: 'center',
-},
+  ratingProfessionalName: {
+    ...typography.styles.h2,
+    color: colors.text.primary,
+    fontWeight: typography.fontWeight.bold,
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
 
-ratingProfession: {
-  ...typography.styles.body,
-  color: colors.text.secondary,
-  marginTop: spacing.xs,
-  textAlign: 'center',
-},
+  ratingProfession: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+  },
 
-ratingServiceName: {
-  ...typography.styles.caption,
-  color: colors.primary.main,
-  marginTop: spacing.sm,
-  fontWeight: typography.fontWeight.semibold,
-  textAlign: 'center',
-},
+  ratingServiceName: {
+    ...typography.styles.caption,
+    color: colors.primary.main,
+    marginTop: spacing.sm,
+    fontWeight: typography.fontWeight.semibold,
+    textAlign: 'center',
+  },
 
-ratingSection: {
-  width: '100%',
-  paddingVertical: spacing.xl,
-  alignItems: 'center',
-},
+  ratingSection: {
+    width: '100%',
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+  },
 
-ratingTitle: {
-  ...typography.styles.h3,
-  color: colors.text.primary,
-  fontWeight: typography.fontWeight.semibold,
-  textAlign: 'center',
-  marginBottom: spacing.xs,
-},
+  ratingTitle: {
+    ...typography.styles.h3,
+    color: colors.text.primary,
+    fontWeight: typography.fontWeight.semibold,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
 
-ratingSubtitle: {
-  ...typography.styles.body,
-  color: colors.text.secondary,
-  textAlign: 'center',
-  marginBottom: spacing.xl,
-},
+  ratingSubtitle: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+  },
 
-starsContainer: {
-  flexDirection: 'row',
-  justifyContent: 'center',
-  alignItems: 'center',
-  gap: spacing.sm,
-  paddingVertical: spacing.lg,
-},
+  starsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+  },
 
-starButton: {
-  padding: spacing.xs,
-},
+  starButton: {
+    padding: spacing.xs,
+  },
 
-ratingFeedback: {
-  marginTop: spacing.lg,
-  paddingVertical: spacing.md,
-  paddingHorizontal: spacing.xl,
-  backgroundColor: colors.background.secondary,
-  borderRadius: spacing.md,
-},
+  ratingFeedback: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    backgroundColor: colors.background.secondary,
+    borderRadius: spacing.md,
+  },
 
-ratingFeedbackText: {
-  ...typography.styles.h3,
-  color: colors.text.primary,
-  fontWeight: typography.fontWeight.semibold,
-  textAlign: 'center',
-},
+  ratingFeedbackText: {
+    ...typography.styles.h3,
+    color: colors.text.primary,
+    fontWeight: typography.fontWeight.semibold,
+    textAlign: 'center',
+  },
 
-ratingInfoContainer: {
-  paddingTop: spacing.sm,
-  marginTop: spacing.sm,
-  borderTopWidth: 1,
-  borderTopColor: colors.border.light,
-  gap: spacing.xs,
-},
+  ratingInfoContainer: {
+    paddingTop: spacing.md,
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.light,
+    backgroundColor: colors.primary.light + '08',
+    borderRadius: 8,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
 
-ratingInfo: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: spacing.xs,
-},
+  ratingInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
 
-ratingLabel: {
-  ...typography.styles.caption,
-  color: colors.text.secondary,
-  fontSize: 11,
-  fontWeight: typography.fontWeight.medium,
-},
+  ratingLabel: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    fontSize: 12,
+    fontWeight: typography.fontWeight.semibold,
+  },
 
-ratingValue: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: spacing.sm,
-  marginLeft: spacing.lg + spacing.xs,
-},
+  ratingValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginLeft: spacing.lg + spacing.xs,
+  },
 
-ratingNumber: {
-  ...typography.styles.caption,
-  color: colors.primary.main,
-  fontSize: 12,
-  fontWeight: typography.fontWeight.bold,
-},
+  ratingNumber: {
+    ...typography.styles.body,
+    color: colors.primary.main,
+    fontSize: 16,
+    fontWeight: typography.fontWeight.bold,
+    backgroundColor: colors.primary.light + '25',
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
 
-modalRatingContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: spacing.md,
-  backgroundColor: colors.background.secondary,
-  padding: spacing.md,
-  borderRadius: spacing.sm,
-},
+  modalRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md + 2,
+    backgroundColor: colors.primary.light + '12',
+    padding: spacing.md + 4,
+    borderRadius: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary.main,
+  },
 
-modalRatingValue: {
-  ...typography.styles.h3,
-  color: colors.primary.main,
-  fontWeight: typography.fontWeight.bold,
-},
+  modalRatingValue: {
+    ...typography.styles.h3,
+    color: colors.primary.main,
+    fontWeight: typography.fontWeight.bold,
+    fontSize: 18,
+  },
 });

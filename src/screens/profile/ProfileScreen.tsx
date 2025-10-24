@@ -123,6 +123,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [ratingData, setRatingData] = useState<{
+  calificacionPromedio: number;
+  totalCalificaciones: number;
+  isLoading: boolean;
+}>({
+  calificacionPromedio: 0,
+  totalCalificaciones: 0,
+  isLoading: false,
+});
   
   // Estados para perfil profesional
   const [isEditingProfessional, setIsEditingProfessional] = useState<boolean>(false);
@@ -143,13 +152,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // Estados de validación
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [professionalErrors, setProfessionalErrors] = useState<ProfessionalValidationErrors>({});
-  const [ratingData, setRatingData] = useState<{
-    calificacionPromedio: number;
-    isLoading: boolean;
-  }>({
-    calificacionPromedio: 0,
-    isLoading: false,
-  });
   // =============================================
   // EFECTOS Y CARGA DE DATOS
   // =============================================
@@ -206,8 +208,7 @@ const loadUserProfile = async () => {
 
     console.log('📱 ProfileScreen: Perfil procesado y establecido correctamente');
     
-    // AÑADIR ESTO: Cargar calificación si es profesional y tiene IdPerfil
-    if (apiProfile.IdPerfil && userRole === 'Profesional') {
+    if (apiProfile.IdPerfil && profile.role === 'Profesional') {
       await loadProfessionalRating(apiProfile.IdPerfil);
     }
     
@@ -532,31 +533,39 @@ const loadUserProfile = async () => {
     );
   };
 
-  const loadProfessionalRating = async (idPerfil: number) => {
+const loadProfessionalRating = async (idPerfil: number) => {
   if (!idPerfil || idPerfil <= 0) {
-    console.log('⭐ ProfessionalProfileScreen: IdPerfil inválido');
+    console.log('⭐ ProfileScreen: IdPerfil inválido');
     return;
   }
 
   setRatingData(prev => ({ ...prev, isLoading: true }));
 
   try {
+    console.log('⭐ ProfileScreen: Cargando calificación del perfil:', idPerfil);
+    
     const result = await userService.getProfessionalRating(idPerfil);
 
     if (result.success && result.calificacionPromedio !== undefined) {
+      console.log('⭐ ProfileScreen: Calificación obtenida:', result.calificacionPromedio);
       setRatingData({
         calificacionPromedio: result.calificacionPromedio,
+        totalCalificaciones: 0, // La API no devuelve este valor, pero lo dejamos por si se agrega después
         isLoading: false,
       });
     } else {
+      console.log('⭐ ProfileScreen: No se pudo obtener calificación');
       setRatingData({
         calificacionPromedio: 0,
+        totalCalificaciones: 0,
         isLoading: false,
       });
     }
   } catch (error) {
+    console.error('⭐ ProfileScreen: Error al cargar calificación:', error);
     setRatingData({
       calificacionPromedio: 0,
+      totalCalificaciones: 0,
       isLoading: false,
     });
   }
@@ -728,6 +737,48 @@ const loadUserProfile = async () => {
             </>
           )}
         </View>
+
+        {userRole === 'Profesional' && !ratingData.isLoading && (
+        <View style={styles.professionalRatingSection}>
+          <View style={styles.professionalRatingHeader}>
+            <View style={styles.professionalRatingIconContainer}>
+              <Icon name="award" size={18} color={colors.primary.main} solid />
+            </View>
+            <Text style={styles.professionalRatingTitle}>Tu Calificación</Text>
+          </View>
+          
+          {ratingData.calificacionPromedio > 0 ? (
+            <>
+              <View style={styles.professionalRatingContent}>
+                <Text style={styles.professionalRatingScore}>
+                  {ratingData.calificacionPromedio.toFixed(1)}
+                </Text>
+                <View style={styles.professionalRatingStars}>
+                  {renderRatingStars(ratingData.calificacionPromedio, 18)}
+                  <Text style={styles.professionalRatingMax}>de 5.0</Text>
+                </View>
+              </View>
+              
+              <View style={styles.professionalRatingDescription}>
+                <Icon name="info-circle" size={12} color={colors.text.secondary} />
+                <Text style={styles.professionalRatingDescriptionText}>
+                  Calificación promedio basada en evaluaciones de clientes
+                </Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.professionalNoRatingContent}>
+              <Icon name="star" size={32} color={colors.border.light} />
+              <Text style={styles.professionalNoRatingText}>
+                Aún no has recibido calificaciones
+              </Text>
+              <Text style={styles.professionalNoRatingSubtext}>
+                Completa tus primeros servicios para recibir evaluaciones de tus clientes
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
       </View>
     );
   };
@@ -1480,101 +1531,131 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
   },
 
-  professionalRatingSection: {
-    marginTop: spacing.lg + 4,
-    paddingTop: spacing.lg + 4,
-    paddingHorizontal: spacing.md + 4,
-    paddingBottom: spacing.md + 4,
-    borderTopWidth: 2,
-    borderTopColor: colors.primary.main + '30',
-    backgroundColor: colors.primary.light + '08',
-    borderRadius: spacing.md,
-    marginHorizontal: -spacing.lg,
-    marginLeft: -spacing.lg - 4,
-    marginRight: -spacing.lg - 4,
-  },
+professionalRatingSection: {
+  marginTop: spacing.lg + 4,
+  paddingTop: spacing.lg + 4,
+  paddingHorizontal: spacing.md + 4,
+  paddingBottom: spacing.md + 4,
+  borderTopWidth: 2,
+  borderTopColor: colors.primary.main + '30',
+  backgroundColor: colors.primary.light + '08',
+  borderRadius: spacing.md,
+  marginHorizontal: -spacing.lg,
+  marginLeft: -spacing.lg - 4,
+  marginRight: -spacing.lg - 4,
+},
 
-  professionalRatingHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md + 4,
-    gap: spacing.sm + 2,
-  },
+professionalRatingHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: spacing.md + 4,
+  gap: spacing.sm + 2,
+},
 
-  professionalRatingIconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.primary.main + '20',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.primary.main,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
+professionalRatingIconContainer: {
+  width: 38,
+  height: 38,
+  borderRadius: 19,
+  backgroundColor: colors.primary.main + '20',
+  alignItems: 'center',
+  justifyContent: 'center',
+  shadowColor: colors.primary.main,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  elevation: 3,
+},
 
-  professionalRatingTitle: {
-    ...typography.styles.h3,
-    color: colors.text.primary,
-    fontWeight: typography.fontWeight.bold,
-    fontSize: 18,
-    letterSpacing: -0.2,
-  },
+professionalRatingTitle: {
+  ...typography.styles.h3,
+  color: colors.text.primary,
+  fontWeight: typography.fontWeight.bold,
+  fontSize: 18,
+  letterSpacing: -0.2,
+},
 
-  professionalRatingContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg + 4,
-    marginBottom: spacing.md + 2,
-    backgroundColor: colors.background.secondary,
-    padding: spacing.lg,
-    borderRadius: spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
+professionalRatingContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: spacing.lg + 4,
+  marginBottom: spacing.md + 2,
+  backgroundColor: colors.background.secondary,
+  padding: spacing.lg,
+  borderRadius: spacing.md,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 2,
+},
 
-  professionalRatingScore: {
-    fontSize: 48,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.primary.main,
-    lineHeight: 52,
-    letterSpacing: -1,
-  },
+professionalRatingScore: {
+  fontSize: 48,
+  fontWeight: typography.fontWeight.bold,
+  color: colors.primary.main,
+  lineHeight: 52,
+  letterSpacing: -1,
+},
 
-  professionalRatingStars: {
-    flex: 1,
-    gap: spacing.xs + 2,
-  },
+professionalRatingStars: {
+  flex: 1,
+  gap: spacing.xs + 2,
+},
 
-  professionalRatingMax: {
-    ...typography.styles.body,
-    color: colors.text.secondary,
-    fontSize: 14,
-    marginTop: spacing.xs,
-    fontWeight: typography.fontWeight.medium,
-  },
+professionalRatingMax: {
+  ...typography.styles.body,
+  color: colors.text.secondary,
+  fontSize: 14,
+  marginTop: spacing.xs,
+  fontWeight: typography.fontWeight.medium,
+},
 
-  professionalRatingDescription: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm + 2,
-    backgroundColor: colors.background.secondary,
-    padding: spacing.md,
-    borderRadius: spacing.sm,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary.main,
-  },
+professionalRatingDescription: {
+  flexDirection: 'row',
+  alignItems: 'flex-start',
+  gap: spacing.sm + 2,
+  backgroundColor: colors.background.secondary,
+  padding: spacing.md,
+  borderRadius: spacing.sm,
+  borderLeftWidth: 3,
+  borderLeftColor: colors.primary.main,
+},
 
-  professionalRatingDescriptionText: {
-    ...typography.styles.caption,
-    color: colors.text.secondary,
-    flex: 1,
-    lineHeight: 18,
-    fontSize: 12,
-  },
+professionalRatingDescriptionText: {
+  ...typography.styles.caption,
+  color: colors.text.secondary,
+  flex: 1,
+  lineHeight: 18,
+  fontSize: 12,
+},
+
+professionalNoRatingContent: {
+  alignItems: 'center',
+  paddingVertical: spacing.xl + spacing.lg,
+  paddingHorizontal: spacing.lg,
+  backgroundColor: colors.background.secondary,
+  borderRadius: spacing.md,
+  borderWidth: 1,
+  borderColor: colors.border.light,
+  borderStyle: 'dashed',
+},
+
+professionalNoRatingText: {
+  ...typography.styles.body,
+  color: colors.text.primary,
+  fontWeight: typography.fontWeight.semibold,
+  fontSize: 16,
+  marginTop: spacing.md,
+  textAlign: 'center',
+},
+
+professionalNoRatingSubtext: {
+  ...typography.styles.caption,
+  color: colors.text.secondary,
+  fontSize: 13,
+  marginTop: spacing.sm,
+  textAlign: 'center',
+  lineHeight: 20,
+  paddingHorizontal: spacing.md,
+},
 });

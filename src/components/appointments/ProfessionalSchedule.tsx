@@ -1,6 +1,6 @@
 /**
  * Componente de Horario del Profesional - Booky
- * Muestra el calendario diario con citas y slots disponibles
+ * Muestra el calendario diario con citas, eventos y slots disponibles
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -20,13 +20,18 @@ import Icon from 'react-native-vector-icons/FontAwesome5';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
-import { appointmentService, Appointment } from '../../services/Appointment/AppointmentService';
+import { 
+  appointmentService, 
+  Appointment, 
+  ProfessionalEvent, 
+  WorkingSchedule 
+} from '../../services/Appointment/AppointmentService';
 import { CreateEventModal } from '../../components/appointments/CreateEventModal';
 import { ConfigureScheduleModal } from '../../components/appointments/ConfigureScheduleModal';
 
 const SLOT_DURATION = 30;
-const START_HOUR = 7;
-const END_HOUR = 18;
+const DEFAULT_START_HOUR = 7;
+const DEFAULT_END_HOUR = 18;
 const SLOT_HEIGHT = 60;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -36,10 +41,16 @@ interface TimeSlot {
   minute: number;
   isAvailable: boolean;
   appointment?: Appointment;
+  event?: ProfessionalEvent;
+}
+
+interface DaySchedule {
+  startHour: number;
+  endHour: number;
+  isConfigured: boolean;
 }
 
 export const ProfessionalSchedule: React.FC = () => {
-  // Crear fecha en hora de Costa Rica (UTC-6)
   const getCostaRicaDate = () => {
     const now = new Date();
     const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -55,7 +66,14 @@ export const ProfessionalSchedule: React.FC = () => {
 
   const [selectedDate, setSelectedDate] = useState<Date>(getCostaRicaDate());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [events, setEvents] = useState<ProfessionalEvent[]>([]);
+  const [schedules, setSchedules] = useState<WorkingSchedule[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [daySchedule, setDaySchedule] = useState<DaySchedule>({
+    startHour: DEFAULT_START_HOUR,
+    endHour: DEFAULT_END_HOUR,
+    isConfigured: false,
+  });
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<Date>(getCostaRicaDate());
@@ -67,7 +85,7 @@ export const ProfessionalSchedule: React.FC = () => {
   const fabRotation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    loadAppointments();
+    loadAllData();
     
     const timer = setInterval(() => {
       setCurrentTime(getCostaRicaDate());
@@ -77,10 +95,10 @@ export const ProfessionalSchedule: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    updateDaySchedule();
     generateTimeSlots();
-  }, [selectedDate, appointments]);
+  }, [selectedDate, appointments, events, schedules]);
 
-  // Animación del botón flotante
   useEffect(() => {
     Animated.timing(fabRotation, {
       toValue: fabMenuVisible ? 1 : 0,
@@ -89,16 +107,32 @@ export const ProfessionalSchedule: React.FC = () => {
     }).start();
   }, [fabMenuVisible]);
 
-  const loadAppointments = async () => {
+  /**
+   * Carga todas las citas, eventos y horarios del profesional
+   */
+  const loadAllData = async () => {
     try {
       setLoading(true);
-      const response = await appointmentService.getProfessionalAppointments();
       
-      if (response.success && response.data) {
-        setAppointments(response.data);
+      const [appointmentsResponse, eventsResponse, schedulesResponse] = await Promise.all([
+        appointmentService.getProfessionalAppointments(),
+        appointmentService.getProfessionalEvents(),
+        appointmentService.getProfessionalSchedules(),
+      ]);
+      
+      if (appointmentsResponse.success && appointmentsResponse.data) {
+        setAppointments(appointmentsResponse.data);
+      }
+
+      if (eventsResponse.success && eventsResponse.data) {
+        setEvents(eventsResponse.data);
+      }
+
+      if (schedulesResponse.success && schedulesResponse.data) {
+        setSchedules(schedulesResponse.data);
       }
     } catch (error) {
-      console.log('Error al cargar citas:', error);
+      console.log('Error al cargar datos:', error);
     } finally {
       setLoading(false);
     }
@@ -106,22 +140,72 @@ export const ProfessionalSchedule: React.FC = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadAppointments();
+    await loadAllData();
     setRefreshing(false);
   };
 
+  /**
+   * Actualiza el horario configurado para el día seleccionado
+   */
+  const updateDaySchedule = () => {
+    const selectedDateStr = selectedDate.toDateString();
+    
+    const daySchedules = schedules.filter(schedule => {
+      const scheduleDate = new Date(schedule.fechaDiaSemana);
+      return scheduleDate.toDateString() === selectedDateStr && schedule.estado === 'Activa';
+    });
+
+    if (daySchedules.length === 0) {
+      setDaySchedule({
+        startHour: DEFAULT_START_HOUR,
+        endHour: DEFAULT_END_HOUR,
+        isConfigured: false,
+      });
+      return;
+    }
+
+    const parseTime = (timeString: string): number => {
+      const [hours] = timeString.split(':').map(Number);
+      return hours;
+    };
+
+    const minStartHour = Math.min(...daySchedules.map(s => parseTime(s.horaInicio)));
+    const maxEndHour = Math.max(...daySchedules.map(s => parseTime(s.horaFin)));
+
+    setDaySchedule({
+      startHour: minStartHour,
+      endHour: maxEndHour,
+      isConfigured: true,
+    });
+  };
+
+  /**
+   * Genera los slots de tiempo basados en las citas y eventos del día
+   */
   const generateTimeSlots = () => {
     const slots: TimeSlot[] = [];
-    const totalSlots = ((END_HOUR - START_HOUR) * 60) / SLOT_DURATION;
+    const { startHour, endHour, isConfigured } = daySchedule;
 
+    if (!isConfigured) {
+      setTimeSlots([]);
+      return;
+    }
+
+    const totalSlots = ((endHour - startHour) * 60) / SLOT_DURATION;
     const selectedDateStr = selectedDate.toDateString();
+
     const dayAppointments = appointments.filter(apt => {
       const aptDateStr = apt.fechaCita.toDateString();
-       return aptDateStr === selectedDateStr && apt.estado !== 'Cancelada' && apt.estado !== 'Denegada';  // CAMBIO
-  });
+      return aptDateStr === selectedDateStr && apt.estado !== 'Cancelada' && apt.estado !== 'Denegada';
+    });
+
+    const dayEvents = events.filter(event => {
+      const eventDateStr = event.fechaHoraInicio.toDateString();
+      return eventDateStr === selectedDateStr && event.estado === 'Activo';
+    });
 
     for (let i = 0; i < totalSlots; i++) {
-      const hour = START_HOUR + Math.floor((i * SLOT_DURATION) / 60);
+      const hour = startHour + Math.floor((i * SLOT_DURATION) / 60);
       const minute = (i * SLOT_DURATION) % 60;
       
       const slotTime = new Date(selectedDate);
@@ -133,19 +217,32 @@ export const ProfessionalSchedule: React.FC = () => {
         return slotTime >= aptStart && slotTime < aptEnd;
       });
 
+      const event = dayEvents.find(evt => {
+        const eventStart = evt.fechaHoraInicio;
+        const eventEnd = evt.fechaHoraFin;
+        return slotTime >= eventStart && slotTime < eventEnd;
+      });
+
       const isOccupiedByPreviousAppointment = dayAppointments.some(apt => {
         const aptStart = apt.fechaCita;
         const aptEnd = new Date(aptStart.getTime() + apt.duracionMinutos * 60000);
         return slotTime > aptStart && slotTime < aptEnd;
       });
 
-      if (!isOccupiedByPreviousAppointment) {
+      const isOccupiedByPreviousEvent = dayEvents.some(evt => {
+        const eventStart = evt.fechaHoraInicio;
+        const eventEnd = evt.fechaHoraFin;
+        return slotTime > eventStart && slotTime < eventEnd;
+      });
+
+      if (!isOccupiedByPreviousAppointment && !isOccupiedByPreviousEvent) {
         slots.push({
           time: slotTime,
           hour,
           minute,
-          isAvailable: !appointment,
+          isAvailable: !appointment && !event,
           appointment,
+          event,
         });
       }
     }
@@ -187,17 +284,21 @@ export const ProfessionalSchedule: React.FC = () => {
     const now = getCostaRicaDate();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
+    const { startHour, endHour } = daySchedule;
 
-    if (currentHour < START_HOUR || currentHour >= END_HOUR) return null;
+    if (currentHour < startHour || currentHour >= endHour) return null;
 
-    const minutesSinceStart = (currentHour - START_HOUR) * 60 + currentMinute;
+    const minutesSinceStart = (currentHour - startHour) * 60 + currentMinute;
     const slotIndex = Math.floor(minutesSinceStart / SLOT_DURATION);
     const minuteIntoSlot = minutesSinceStart % SLOT_DURATION;
     
     return slotIndex * SLOT_HEIGHT + (minuteIntoSlot / SLOT_DURATION) * SLOT_HEIGHT;
   };
 
-  const getAppointmentHeight = (durationMinutes: number): number => {
+  /**
+   * Calcula la altura de un bloque basado en su duración
+   */
+  const getBlockHeight = (durationMinutes: number): number => {
     return (durationMinutes / SLOT_DURATION) * SLOT_HEIGHT;
   };
 
@@ -219,9 +320,9 @@ export const ProfessionalSchedule: React.FC = () => {
   };
 
   const handleConfigureSchedule = () => {
-  setFabMenuVisible(false);
-  setConfigureScheduleModalVisible(true);
-};
+    setFabMenuVisible(false);
+    setConfigureScheduleModalVisible(true);
+  };
 
   const handleCreateEvent = () => {
     setFabMenuVisible(false);
@@ -229,9 +330,12 @@ export const ProfessionalSchedule: React.FC = () => {
   };
 
   const handleEventSuccess = () => {
-    loadAppointments();
+    loadAllData();
   };
 
+  /**
+   * Renderiza un slot de tiempo (cita o evento)
+   */
   const renderTimeSlot = (slot: TimeSlot, index: number) => {
     if (slot.appointment) {
       const isFirstSlot = index === 0 || 
@@ -240,7 +344,7 @@ export const ProfessionalSchedule: React.FC = () => {
 
       if (!isFirstSlot) return null;
 
-      const height = getAppointmentHeight(slot.appointment.duracionMinutos);
+      const height = getBlockHeight(slot.appointment.duracionMinutos);
       const statusColor = getStatusColor(slot.appointment.estado);
 
       return (
@@ -288,6 +392,56 @@ export const ProfessionalSchedule: React.FC = () => {
       );
     }
 
+    if (slot.event) {
+      const isFirstSlot = index === 0 || 
+        !timeSlots[index - 1].event || 
+        timeSlots[index - 1].event?.idEvento !== slot.event.idEvento;
+
+      if (!isFirstSlot) return null;
+
+      const durationMinutes = (slot.event.fechaHoraFin.getTime() - slot.event.fechaHoraInicio.getTime()) / 60000;
+      const height = getBlockHeight(durationMinutes);
+
+      return (
+        <View
+          key={`event-${slot.event.idEvento}`}
+          style={[
+            styles.eventSlot,
+            { minHeight: height },
+          ]}
+        >
+          <View style={styles.eventIndicator} />
+          
+          <View style={styles.eventContent}>
+            <View style={styles.eventHeader}>
+              <Text style={styles.eventTime}>
+                {formatTime(slot.hour, slot.minute)}
+              </Text>
+              <View style={styles.eventBadge}>
+                <Icon name="calendar" size={10} color={colors.text.inverse} />
+                <Text style={styles.eventBadgeText}>Evento</Text>
+              </View>
+            </View>
+
+            <Text style={styles.eventName}>
+              {slot.event.nombreEvento}
+            </Text>
+
+            <Text style={styles.eventDescription} numberOfLines={2}>
+              {slot.event.descripcion}
+            </Text>
+
+            <View style={styles.durationContainer}>
+              <Icon name="clock" size={11} color={colors.text.secondary} />
+              <Text style={styles.duration}>
+                {Math.round(durationMinutes)}min
+              </Text>
+            </View>
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View key={`slot-${index}`} style={styles.emptySlot}>
         <Text style={styles.slotTime}>
@@ -298,12 +452,11 @@ export const ProfessionalSchedule: React.FC = () => {
     );
   };
 
-  const fabRotationDegrees = fabRotation.interpolate({
+  const currentTimePos = getCurrentTimePosition();
+  const fabRotate = fabRotation.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '45deg'],
   });
-
-  const currentTimePosition = getCurrentTimePosition();
 
   if (loading) {
     return (
@@ -320,7 +473,7 @@ export const ProfessionalSchedule: React.FC = () => {
         <TouchableOpacity onPress={() => changeDate(-1)} style={styles.navButton}>
           <Icon name="chevron-left" size={20} color={colors.text.primary} />
         </TouchableOpacity>
-
+        
         <View style={styles.dateContainer}>
           <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
           {!isToday(selectedDate) && (
@@ -335,92 +488,85 @@ export const ProfessionalSchedule: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={true}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[colors.primary.main]}
-            tintColor={colors.primary.main}
-          />
-        }
-      >
-        <View style={styles.slotsContainer}>
-          {timeSlots.map((slot, index) => renderTimeSlot(slot, index))}
-        </View>
-
-        {currentTimePosition !== null && (
-          <View 
-            style={[
-              styles.currentTimeLine,
-              { top: currentTimePosition }
-            ]}
+      {!daySchedule.isConfigured ? (
+        <View style={styles.noScheduleContainer}>
+          <Icon name="calendar-times" size={48} color={colors.text.tertiary} />
+          <Text style={styles.noScheduleTitle}>Horario no configurado</Text>
+          <Text style={styles.noScheduleText}>
+            Este día aún no tiene un horario configurado.
+          </Text>
+          <TouchableOpacity 
+            style={styles.configureButton}
+            onPress={handleConfigureSchedule}
           >
-            <View style={styles.currentTimeDot} />
-            <View style={styles.currentTimeLineBar} />
-            <Text style={styles.currentTimeText}>
-              {formatTime(currentTime.getHours(), currentTime.getMinutes())}
-            </Text>
+            <Icon name="cog" size={16} color={colors.text.inverse} />
+            <Text style={styles.configureButtonText}>Configurar horario</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.scrollView}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          <View style={styles.slotsContainer}>
+            {timeSlots.map((slot, index) => renderTimeSlot(slot, index))}
           </View>
-        )}
-      </ScrollView>
 
-      <View style={styles.legend}>
-        <Text style={styles.legendTitle}>Horario:</Text>
-        <Text style={styles.legendText}>
-          {formatTime(START_HOUR, 0)} - {formatTime(END_HOUR, 0)}
-        </Text>
-      </View>
+          {currentTimePos !== null && (
+            <View style={[styles.currentTimeLine, { top: currentTimePos }]}>
+              <View style={styles.currentTimeDot} />
+              <View style={styles.currentTimeLineBar} />
+              <Text style={styles.currentTimeText}>
+                {formatTime(currentTime.getHours(), currentTime.getMinutes())}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
 
-      {/* Botón flotante principal */}
-      <TouchableOpacity
+      <TouchableOpacity 
         style={styles.fab}
         onPress={toggleFabMenu}
         activeOpacity={0.8}
       >
-        <Animated.View style={{ transform: [{ rotate: fabRotationDegrees }] }}>
+        <Animated.View style={{ transform: [{ rotate: fabRotate }] }}>
           <Icon name="plus" size={24} color={colors.text.inverse} />
         </Animated.View>
       </TouchableOpacity>
 
-      {/* Menú de opciones del FAB */}
       <Modal
         visible={fabMenuVisible}
-        transparent={true}
+        transparent
         animationType="fade"
         onRequestClose={() => setFabMenuVisible(false)}
       >
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.fabMenuOverlay}
           activeOpacity={1}
           onPress={() => setFabMenuVisible(false)}
         >
           <View style={styles.fabMenuContainer}>
-            {/* Opción: Crear Evento */}
-            <TouchableOpacity
-              style={styles.fabMenuItem}
-              onPress={handleCreateEvent}
-              activeOpacity={0.7}
-            >
-              <View style={styles.fabMenuIconContainer}>
-                <Icon name="calendar-plus" size={20} color={colors.text.inverse} />
-              </View>
-              <Text style={styles.fabMenuText}>Crear Evento</Text>
-            </TouchableOpacity>
-
-            {/* Opción: Configurar Horario */}
-            <TouchableOpacity
+            <TouchableOpacity 
               style={styles.fabMenuItem}
               onPress={handleConfigureSchedule}
-              activeOpacity={0.7}
             >
               <View style={styles.fabMenuIconContainer}>
-                <Icon name="cog" size={20} color={colors.text.inverse} />
+                <Icon name="cog" size={18} color={colors.primary.main} />
               </View>
-              <Text style={styles.fabMenuText}>Configurar Horario</Text>
+              <Text style={styles.fabMenuText}>Configurar horario</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.fabMenuItem}
+              onPress={handleCreateEvent}
+            >
+              <View style={styles.fabMenuIconContainer}>
+                <Icon name="calendar-plus" size={18} color={colors.primary.main} />
+              </View>
+              <Text style={styles.fabMenuText}>Crear evento</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -430,8 +576,8 @@ export const ProfessionalSchedule: React.FC = () => {
         visible={createEventModalVisible}
         onClose={() => setCreateEventModalVisible(false)}
         onSuccess={handleEventSuccess}
-        selectedDate={selectedDate}
       />
+
       <ConfigureScheduleModal
         visible={configureScheduleModalVisible}
         onClose={() => setConfigureScheduleModalVisible(false)}
@@ -494,6 +640,43 @@ const styles = StyleSheet.create({
 
   todayButtonText: {
     ...typography.styles.caption,
+    color: colors.text.inverse,
+    fontWeight: '600',
+  },
+
+  noScheduleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    gap: spacing.md,
+  },
+
+  noScheduleTitle: {
+    ...typography.styles.h2,
+    color: colors.text.primary,
+    textAlign: 'center',
+  },
+
+  noScheduleText: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    textAlign: 'center',
+  },
+
+  configureButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.primary.main,
+    borderRadius: 8,
+    marginTop: spacing.md,
+  },
+
+  configureButtonText: {
+    ...typography.styles.body,
     color: colors.text.inverse,
     fontWeight: '600',
   },
@@ -604,12 +787,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  appointmentFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
   durationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -628,6 +805,70 @@ const styles = StyleSheet.create({
     color: colors.primary.main,
     fontWeight: '700',
     fontSize: 15,
+  },
+
+  eventSlot: {
+    backgroundColor: colors.primary.light,
+    borderRadius: 8,
+    marginBottom: spacing.sm,
+    overflow: 'hidden',
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary.main,
+    flexDirection: 'row',
+  },
+
+  eventIndicator: {
+    width: 4,
+    backgroundColor: colors.primary.main,
+  },
+
+  eventContent: {
+    flex: 1,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+
+  eventHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  eventTime: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    fontWeight: '600',
+    fontSize: 13,
+  },
+
+  eventBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    backgroundColor: colors.primary.main,
+    borderRadius: 10,
+  },
+
+  eventBadgeText: {
+    ...typography.styles.caption,
+    color: colors.text.inverse,
+    fontWeight: '600',
+    fontSize: 11,
+  },
+
+  eventName: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    fontWeight: '600',
+    fontSize: 15,
+  },
+
+  eventDescription: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    fontSize: 13,
   },
 
   currentTimeLine: {
@@ -684,7 +925,6 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
 
-  // Estilos del botón flotante
   fab: {
     position: 'absolute',
     bottom: spacing.xl,
@@ -702,7 +942,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
 
-  // Estilos del menú del FAB
   fabMenuOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

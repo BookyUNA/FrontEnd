@@ -198,7 +198,7 @@ const handleConfirmAppointment = async () => {
           try {
             console.log('📅 Confirmando cita:', selectedAppointment.idCita);
             
-            const result = await appointmentService.approveOrRejectAppointment(
+            const result = await appointmentService.approveOrDenyAppointment(
               selectedAppointment.idCita,
               true
             );
@@ -267,7 +267,7 @@ const handleConfirmRejection = async () => {
   try {
     console.log('📅 Denegando cita:', selectedAppointment.idCita);  // CAMBIO
     
-    const result = await appointmentService.approveOrRejectAppointment(
+    const result = await appointmentService.approveOrDenyAppointment(
       selectedAppointment.idCita,
       false,
       rejectionReason.trim()

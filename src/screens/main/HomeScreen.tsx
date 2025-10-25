@@ -6,20 +6,26 @@
 import React, { useState } from 'react';
 import {
   View,
+  Text,
   StyleSheet,
+  Alert,
 } from 'react-native';
 
+import Icon from 'react-native-vector-icons/FontAwesome5';
+import { SafeContainer } from '../../components/ui/SafeContainer';
+import { Logo } from '../../components/ui/Logo';
+import { Button } from '../../components/forms/Button';
 import { BottomNavigationBar, BottomNavTabType } from '../../components/navigation/BottomNavigationBar';
 import { ProfileScreen } from '../profile/ProfileScreen';
 import { ServicesScreen } from '../services/ServicesScreen';
 import { ProfessionalServicesScreen } from '../client/ProfessionalServicesScreen';
 import { ProfessionalSchedule } from '../../components/appointments/ProfessionalSchedule';
-import { ClientHomeScreen } from '../client/ClientHomeScreen';  // IMPORTAR EL NUEVO COMPONENTE
 import { colors } from '../../styles/colors';
+import { typography } from '../../styles/typography';
+import { spacing } from '../../styles/spacing';
 import { authService } from '../../services/auth/authService';
 import { ClientAppointmentsScreen } from '../client/ClientAppointmentsScreen';
 import { ProfessionalAppointmentsScreen } from '../client/ProfessionalAppointmentsScreen';
-import { SafeContainer } from '../../components/ui/SafeContainer';
 
 interface HomeScreenProps {
   navigation?: any;
@@ -101,22 +107,46 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
   const handleCreateService = () => {
     if (navigation?.navigate) {
       navigation.navigate('CreateService');
+    } else {
+      Alert.alert(
+        'Crear Servicio',
+        'La funcionalidad para crear servicios estará disponible próximamente.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
   const renderProfessionalHomeContent = () => (
-    <SafeContainer>
+    <View style={styles.container}>
+      <View style={styles.scheduleHeader}>
+        <Text style={styles.scheduleTitle}>Mi Horario</Text>
+      </View>
+
       <View style={styles.scheduleContainer}>
         <ProfessionalSchedule />
       </View>
-    </SafeContainer>
+    </View>
   );
 
-  // REEMPLAZAR renderClientHomeContent con el nuevo componente
   const renderClientHomeContent = () => (
-    <ClientHomeScreen 
-      navigation={navigation} 
-    />
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Logo size="medium" showTagline />
+        <Text style={styles.welcomeTitle}>
+          ¡Bienvenido Cliente!
+        </Text>
+      </View>
+
+      <View style={styles.content}>
+        <Text style={styles.message}>
+          🚧 Aplicación en construcción
+        </Text>
+        <Icon name="search" size={50} color={colors.text.primary} />
+        <Text style={styles.description}>
+          Pronto podrás buscar y reservar servicios profesionales.
+        </Text>
+      </View>
+    </View>
   );
 
   const renderContent = () => {
@@ -208,7 +238,61 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  container: {
+    flex: 1,
+  },
+
+  scheduleHeader: {
+  alignItems: 'center',
+  paddingTop: spacing['6xl'],
+  paddingBottom: spacing.md,
+  backgroundColor: colors.background.secondary,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border.light,
+},
+
+  scheduleTitle: {
+    ...typography.styles.h2,
+    color: colors.text.primary,
+    marginTop: spacing.sm,
+  },
+
   scheduleContainer: {
     flex: 1,
+  },
+
+  header: {
+    alignItems: 'center',
+    paddingTop: spacing['8xl'],
+    paddingBottom: spacing['2xl'],
+  },
+
+  welcomeTitle: {
+    ...typography.styles.h1,
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+  },
+
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+
+  message: {
+    ...typography.styles.h2,
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+
+  description: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xl,
+    marginTop: spacing.lg,
   },
 });

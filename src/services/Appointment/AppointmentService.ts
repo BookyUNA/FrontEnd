@@ -1,6 +1,6 @@
 /**
  * Servicio de Citas - Booky
- * Gestión de citas para clientes
+ * Gestión de citas, eventos y horarios para profesionales y clientes
  */
 
 import { API_CONFIG } from '../../config/api';
@@ -52,23 +52,56 @@ export interface Appointment {
   motivoCancelacion: string | null;
   fechaSolicitud: Date;
   fechaRespuesta: Date | null;
-  // Información del usuario (cliente)
   cedulaUsuario: string;
   nombreUsuario: string;
   emailUsuario: string;
   telefonoUsuario: string;
-  // Información del profesional
   profesion: string;
   descripcionPerfil: string;
   direccion: string;
   nombreProfesional: string;
   emailProfesional: string;
   telefonoProfesional: string;
-  // Información del servicio
   nombreServicio: string;
   idProfesional: number;  
   calificacionPromedio: number;  
   estadoCalificacion: 'Calificada' | 'No Calificada';  
+}
+
+export interface ApiEvento {
+  IdEvento: number;
+  NombreEvento: string;
+  Descripcion: string;
+  FechaHoraInicio: string;
+  FechaHoraFin: string;
+  Estado: string;
+  FechaCreacion: string;
+}
+
+export interface ProfessionalEvent {
+  idEvento: number;
+  nombreEvento: string;
+  descripcion: string;
+  fechaHoraInicio: Date;
+  fechaHoraFin: Date;
+  estado: string;
+  fechaCreacion: Date;
+}
+
+export interface ApiHorario {
+  IdHorario: number;
+  FechaDiaSemana: string;
+  HoraInicio: string;
+  HoraFin: string;
+  Estado: string;
+}
+
+export interface WorkingSchedule {
+  idHorario: number;
+  fechaDiaSemana: Date;
+  horaInicio: string;
+  horaFin: string;
+  estado: string;
 }
 
 export interface ApiError {
@@ -78,6 +111,18 @@ export interface ApiError {
 
 export interface ListarCitasClienteResponse {
   Citas: ApiCita[];
+  error: ApiError[] | null;
+  resultado: boolean;
+}
+
+export interface EventosProfesionalResponse {
+  Eventos: ApiEvento[];
+  error: ApiError[] | null;
+  resultado: boolean;
+}
+
+export interface HorariosProfesionalResponse {
+  Horarios: ApiHorario[];
   error: ApiError[] | null;
   resultado: boolean;
 }
@@ -107,7 +152,6 @@ export interface ServiceResponse<T> {
  * Mapea una cita de la API al modelo local
  */
 const mapApiCitaToAppointment = (apiCita: ApiCita): Appointment => {
-  // Generar un ID único basado en los datos de la cita
   const id = `${apiCita.CedulaUsuario}-${apiCita.FechaCita}-${apiCita.NombreServicio}`;
   
   return {
@@ -136,6 +180,34 @@ const mapApiCitaToAppointment = (apiCita: ApiCita): Appointment => {
     idProfesional: apiCita.IdProfesional, 
     calificacionPromedio: apiCita.CalificacionPromedio, 
     estadoCalificacion: apiCita.EstadoCalificacion === 'Calificada' ? 'Calificada' : 'No Calificada', 
+  };
+};
+
+/**
+ * Mapea un evento de la API al modelo local
+ */
+const mapApiEventoToProfessionalEvent = (apiEvento: ApiEvento): ProfessionalEvent => {
+  return {
+    idEvento: apiEvento.IdEvento,
+    nombreEvento: apiEvento.NombreEvento,
+    descripcion: apiEvento.Descripcion,
+    fechaHoraInicio: new Date(apiEvento.FechaHoraInicio),
+    fechaHoraFin: new Date(apiEvento.FechaHoraFin),
+    estado: apiEvento.Estado,
+    fechaCreacion: new Date(apiEvento.FechaCreacion),
+  };
+};
+
+/**
+ * Mapea un horario de la API al modelo local
+ */
+const mapApiHorarioToWorkingSchedule = (apiHorario: ApiHorario): WorkingSchedule => {
+  return {
+    idHorario: apiHorario.IdHorario,
+    fechaDiaSemana: new Date(apiHorario.FechaDiaSemana),
+    horaInicio: apiHorario.HoraInicio,
+    horaFin: apiHorario.HoraFin,
+    estado: apiHorario.Estado,
   };
 };
 
@@ -178,7 +250,7 @@ const normalizeEstado = (estado: string): AppointmentStatus => {
   
   if (estadoLower.includes('pendiente')) return 'Pendiente';
   if (estadoLower.includes('confirmada') || estadoLower.includes('aceptada')) return 'Confirmada';
-  if (estadoLower.includes('denegada') || estadoLower.includes('rechazada')) return 'Denegada';  // CAMBIO
+  if (estadoLower.includes('denegada') || estadoLower.includes('rechazada')) return 'Denegada';
   if (estadoLower.includes('cancelada')) return 'Cancelada';
   if (estadoLower.includes('completada') || estadoLower.includes('finalizada')) return 'Completada';
   
@@ -274,6 +346,8 @@ class AppointmentService {
       };
 
     } catch (error: any) {
+      console.log('📅 AppointmentService: Error al obtener citas:', error);
+
       if (error.name === 'AbortError') {
         return {
           success: false,
@@ -300,129 +374,341 @@ class AppointmentService {
   }
 
   /**
- * Lista todas las citas del profesional autenticado
- */
-async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
-  try {
-    console.log('📅 AppointmentService: Obteniendo citas del profesional...');
+   * Lista todas las citas del profesional autenticado
+   */
+  async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
+    try {
+      console.log('📅 AppointmentService: Obteniendo citas del profesional...');
 
-    const token = await authService.getToken();
-    if (!token) {
-      console.log('📅 AppointmentService: No hay token disponible');
-      return {
-        success: false,
-        error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
-      };
-    }
-
-    const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.LISTAR_CITAS_PROFESIONAL}`;
-    console.log('📅 AppointmentService: URL:', url);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({}),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    console.log('📅 AppointmentService: Status de respuesta:', response.status);
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        console.log('📅 AppointmentService: Token inválido o expirado');
+      const token = await authService.getToken();
+      if (!token) {
+        console.log('📅 AppointmentService: No hay token disponible');
         return {
           success: false,
-          error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+          error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
         };
       }
 
-      const errorText = await response.text();
-      console.log('📅 AppointmentService: Error HTTP:', errorText);
+      const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.LISTAR_CITAS_PROFESIONAL}`;
+      console.log('📅 AppointmentService: URL:', url);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      console.log('📅 AppointmentService: Status de respuesta:', response.status);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          return {
+            success: false,
+            error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+          };
+        }
+
+        return {
+          success: false,
+          error: `Error al obtener las citas (${response.status}). Intenta de nuevo.`,
+        };
+      }
+
+      const data: ListarCitasClienteResponse = await response.json();
+      console.log('📅 AppointmentService: Datos recibidos:', data);
+
+      if (!data || typeof data.resultado !== 'boolean') {
+        return {
+          success: false,
+          error: 'Respuesta inválida del servidor. Intenta de nuevo.',
+        };
+      }
+
+      if (!data.resultado || (data.error && data.error.length > 0)) {
+        const errorMessage = data.error && data.error.length > 0 
+          ? data.error[0].Message 
+          : 'No se pudieron obtener las citas';
+        
+        return {
+          success: false,
+          error: errorMessage,
+        };
+      }
+
+      const appointments: Appointment[] = (data.Citas || []).map(mapApiCitaToAppointment);
+      
+      console.log('📅 AppointmentService: Citas procesadas:', appointments.length);
       
       return {
-        success: false,
-        error: `Error al obtener las citas (${response.status}). Intenta de nuevo.`,
+        success: true,
+        data: appointments,
       };
-    }
 
-    const data: ListarCitasClienteResponse = await response.json();
-    console.log('📅 AppointmentService: Datos recibidos:', data);
+    } catch (error: any) {
+      console.log('📅 AppointmentService: Error al obtener citas:', error);
 
-    if (!data || typeof data.resultado !== 'boolean') {
-      console.log('📅 AppointmentService: Respuesta inválida del servidor');
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'La solicitud tardó demasiado. Verifica tu conexión a internet.',
+          isNetworkError: true,
+        };
+      }
+
+      if (error.message?.toLowerCase().includes('network') || 
+          error.message?.toLowerCase().includes('fetch')) {
+        return {
+          success: false,
+          error: 'Error de conexión. Verifica tu conexión a internet e intenta de nuevo.',
+          isNetworkError: true,
+        };
+      }
+
       return {
         success: false,
-        error: 'Respuesta inválida del servidor. Intenta de nuevo.',
+        error: 'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+        isNetworkError: false,
       };
     }
-
-    if (!data.resultado || (data.error && data.error.length > 0)) {
-      const errorMessage = data.error && data.error.length > 0 
-        ? data.error[0].Message 
-        : 'No se pudieron obtener las citas';
-      
-      console.log('📅 AppointmentService: Error en la respuesta:', errorMessage);
-      return {
-        success: false,
-        error: errorMessage,
-      };
-    }
-
-    const appointments: Appointment[] = (data.Citas || []).map(mapApiCitaToAppointment);
-    
-    console.log('📅 AppointmentService: Citas procesadas:', appointments.length);
-    
-    return {
-      success: true,
-      data: appointments,
-    };
-
-  } catch (error: any) {
-    console.log('📅 AppointmentService: Error en getProfessionalAppointments:', error);
-
-    if (error.name === 'AbortError') {
-      return {
-        success: false,
-        error: 'La solicitud tardó demasiado. Verifica tu conexión a internet.',
-        isNetworkError: true,
-      };
-    }
-
-    if (error.message?.toLowerCase().includes('network') || 
-        error.message?.toLowerCase().includes('fetch')) {
-      return {
-        success: false,
-        error: 'Error de conexión. Verifica tu conexión a internet e intenta de nuevo.',
-        isNetworkError: true,
-      };
-    }
-
-    return {
-      success: false,
-      error: 'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
-      isNetworkError: false,
-    };
   }
-}
 
+  /**
+   * Obtiene todos los eventos del profesional autenticado
+   */
+  async getProfessionalEvents(): Promise<ServiceResponse<ProfessionalEvent[]>> {
+    try {
+      console.log('📅 AppointmentService: Obteniendo eventos del profesional...');
+
+      const token = await authService.getToken();
+      if (!token) {
+        console.log('📅 AppointmentService: No hay token disponible');
+        return {
+          success: false,
+          error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
+        };
+      }
+
+      const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.EVENTOS_PROFESIONAL}`;
+      console.log('📅 AppointmentService: URL:', url);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      console.log('📅 AppointmentService: Status de respuesta:', response.status);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          return {
+            success: false,
+            error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+          };
+        }
+
+        return {
+          success: false,
+          error: `Error al obtener los eventos (${response.status}). Intenta de nuevo.`,
+        };
+      }
+
+      const data: EventosProfesionalResponse = await response.json();
+      console.log('📅 AppointmentService: Datos recibidos:', data);
+
+      if (!data || typeof data.resultado !== 'boolean') {
+        return {
+          success: false,
+          error: 'Respuesta inválida del servidor. Intenta de nuevo.',
+        };
+      }
+
+      if (!data.resultado || (data.error && data.error.length > 0)) {
+        const errorMessage = data.error && data.error.length > 0 
+          ? data.error[0].Message 
+          : 'No se pudieron obtener los eventos';
+        
+        return {
+          success: false,
+          error: errorMessage,
+        };
+      }
+
+      const events: ProfessionalEvent[] = (data.Eventos || []).map(mapApiEventoToProfessionalEvent);
+      
+      console.log('📅 AppointmentService: Eventos procesados:', events.length);
+      
+      return {
+        success: true,
+        data: events,
+      };
+
+    } catch (error: any) {
+      console.log('📅 AppointmentService: Error al obtener eventos:', error);
+
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'La solicitud tardó demasiado. Verifica tu conexión a internet.',
+          isNetworkError: true,
+        };
+      }
+
+      if (error.message?.toLowerCase().includes('network') || 
+          error.message?.toLowerCase().includes('fetch')) {
+        return {
+          success: false,
+          error: 'Error de conexión. Verifica tu conexión a internet e intenta de nuevo.',
+          isNetworkError: true,
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+        isNetworkError: false,
+      };
+    }
+  }
+
+  /**
+   * Obtiene los horarios configurados del profesional autenticado
+   */
+  async getProfessionalSchedules(): Promise<ServiceResponse<WorkingSchedule[]>> {
+    try {
+      console.log('📅 AppointmentService: Obteniendo horarios del profesional...');
+
+      const token = await authService.getToken();
+      if (!token) {
+        console.log('📅 AppointmentService: No hay token disponible');
+        return {
+          success: false,
+          error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
+        };
+      }
+
+      const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.HORARIOS_PROFESIONAL}`;
+      console.log('📅 AppointmentService: URL:', url);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      console.log('📅 AppointmentService: Status de respuesta:', response.status);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          return {
+            success: false,
+            error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+          };
+        }
+
+        return {
+          success: false,
+          error: `Error al obtener los horarios (${response.status}). Intenta de nuevo.`,
+        };
+      }
+
+      const data: HorariosProfesionalResponse = await response.json();
+      console.log('📅 AppointmentService: Datos recibidos:', data);
+
+      if (!data || typeof data.resultado !== 'boolean') {
+        return {
+          success: false,
+          error: 'Respuesta inválida del servidor. Intenta de nuevo.',
+        };
+      }
+
+      if (!data.resultado || (data.error && data.error.length > 0)) {
+        const errorMessage = data.error && data.error.length > 0 
+          ? data.error[0].Message 
+          : 'No se pudieron obtener los horarios';
+        
+        return {
+          success: false,
+          error: errorMessage,
+        };
+      }
+
+      const schedules: WorkingSchedule[] = (data.Horarios || []).map(mapApiHorarioToWorkingSchedule);
+      
+      console.log('📅 AppointmentService: Horarios procesados:', schedules.length);
+      
+      return {
+        success: true,
+        data: schedules,
+      };
+
+    } catch (error: any) {
+      console.log('📅 AppointmentService: Error al obtener horarios:', error);
+
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'La solicitud tardó demasiado. Verifica tu conexión a internet.',
+          isNetworkError: true,
+        };
+      }
+
+      if (error.message?.toLowerCase().includes('network') || 
+          error.message?.toLowerCase().includes('fetch')) {
+        return {
+          success: false,
+          error: 'Error de conexión. Verifica tu conexión a internet e intenta de nuevo.',
+          isNetworkError: true,
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+        isNetworkError: false,
+      };
+    }
+  }
+
+  /**
+   * Reprograma una cita existente
+   */
   async rescheduleAppointment(
-    appointment: Appointment,
-    newDate: Date
+    idCita: number,
+    nuevaFecha: Date
   ): Promise<ServiceResponse<boolean>> {
     try {
-      console.log('📅 AppointmentService: Reprogramando cita...', { 
-        idCita: appointment.idCita,
-        newDate 
-      });
+      console.log('📅 AppointmentService: Reprogramando cita...', { idCita, nuevaFecha });
 
       const token = await authService.getToken();
       if (!token) {
@@ -436,8 +722,8 @@ async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
       console.log('📅 AppointmentService: URL:', url);
 
       const requestBody: ReprogramarCitaRequest = {
-        IdCita: appointment.idCita,
-        NuevaFechaCita: newDate.toISOString(),
+        IdCita: idCita,
+        NuevaFechaCita: nuevaFecha.toISOString(),
       };
 
       console.log('📅 AppointmentService: Request body:', requestBody);
@@ -469,7 +755,7 @@ async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
         }
 
         const errorText = await response.text();
-        console.log('📅 AppointmentService: Error response:', errorText);
+        console.log('📅 AppointmentService: Error HTTP:', errorText);
         
         return {
           success: false,
@@ -492,6 +778,7 @@ async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
           ? data.error[0].Message 
           : 'No se pudo reprogramar la cita';
         
+        console.log('📅 AppointmentService: Error en la respuesta:', errorMessage);
         return {
           success: false,
           error: errorMessage,
@@ -506,7 +793,7 @@ async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
       };
 
     } catch (error: any) {
-      console.log('📅 AppointmentService: Error al reprogramar:', error);
+      console.log('📅 AppointmentService: Error al reprogramar cita:', error);
 
       if (error.name === 'AbortError') {
         return {
@@ -533,150 +820,158 @@ async getProfessionalAppointments(): Promise<ServiceResponse<Appointment[]>> {
     }
   }
 
-/**
- * Aprueba o deniega una cita como profesional
- */
-async approveOrRejectAppointment(
-  idCita: number,
-  approved: boolean,
-  rejectionReason?: string
-): Promise<ServiceResponse<boolean>> {
-  try {
-    console.log('📅 AppointmentService: Procesando decisión de cita...', { 
-      idCita,
-      approved,
-      rejectionReason 
-    });
+  /**
+   * Aprueba o deniega una cita pendiente
+   */
+  async approveOrDenyAppointment(
+    idCita: number,
+    aprobada: boolean,
+    motivoRechazo?: string
+  ): Promise<ServiceResponse<boolean>> {
+    try {
+      console.log('📅 AppointmentService: Procesando cita...', { 
+        idCita, 
+        aprobada,
+        motivoRechazo 
+      });
 
-    const token = await authService.getToken();
-    if (!token) {
-      return {
-        success: false,
-        error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
-      };
-    }
-
-    const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.APROBAR_DENEGAR_CITA}`;
-    console.log('📅 AppointmentService: URL:', url);
-
-    const requestBody: AprobarDenegarCitaRequest = {
-      IdCita: idCita,
-      Aprobada: approved,
-    };
-
-    // Solo incluir motivo de rechazo si la cita fue rechazada
-    if (!approved && rejectionReason && rejectionReason.trim()) {
-      requestBody.MotivoRechazo = rejectionReason.trim();
-    }
-
-    console.log('📅 AppointmentService: Request body:', requestBody);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    console.log('📅 AppointmentService: Status de respuesta:', response.status);
-
-    if (!response.ok) {
-      if (response.status === 401) {
+      if (!aprobada && (!motivoRechazo || motivoRechazo.trim() === '')) {
         return {
           success: false,
-          error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+          error: 'Debes proporcionar un motivo de rechazo.',
         };
       }
 
-      const errorText = await response.text();
-      console.log('📅 AppointmentService: Error HTTP:', errorText);
+      const token = await authService.getToken();
+      if (!token) {
+        return {
+          success: false,
+          error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
+        };
+      }
+
+      const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.APROBAR_DENEGAR_CITA}`;
+      console.log('📅 AppointmentService: URL:', url);
+
+      const requestBody: AprobarDenegarCitaRequest = {
+        IdCita: idCita,
+        Aprobada: aprobada,
+        ...(motivoRechazo && { MotivoRechazo: motivoRechazo.trim() }),
+      };
+
+      console.log('📅 AppointmentService: Request body:', requestBody);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      console.log('📅 AppointmentService: Status de respuesta:', response.status);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          return {
+            success: false,
+            error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+          };
+        }
+
+        const errorText = await response.text();
+        console.log('📅 AppointmentService: Error HTTP:', errorText);
+        
+        return {
+          success: false,
+          error: `Error al procesar la cita (${response.status}). Intenta de nuevo.`,
+        };
+      }
+
+      const data: AprobarDenegarCitaResponse = await response.json();
+      console.log('📅 AppointmentService: Respuesta recibida:', data);
+
+      if (!data || typeof data.resultado !== 'boolean') {
+        return {
+          success: false,
+          error: 'Respuesta inválida del servidor. Intenta de nuevo.',
+        };
+      }
+
+      if (!data.resultado || (data.error && data.error.length > 0)) {
+        const errorMessage = data.error && data.error.length > 0 
+          ? data.error[0].Message 
+          : 'No se pudo procesar la cita';
+        
+        console.log('📅 AppointmentService: Error en la respuesta:', errorMessage);
+        return {
+          success: false,
+          error: errorMessage,
+        };
+      }
+
+      console.log(`📅 AppointmentService: Cita ${aprobada ? 'aprobada' : 'denegada'} exitosamente`);
       
       return {
-        success: false,
-        error: `Error al procesar la cita (${response.status}). Intenta de nuevo.`,
+        success: true,
+        data: true,
       };
-    }
 
-    const data: AprobarDenegarCitaResponse = await response.json();
-    console.log('📅 AppointmentService: Respuesta recibida:', data);
+    } catch (error: any) {
+      console.log('📅 AppointmentService: Error al procesar cita:', error);
 
-    if (!data || typeof data.resultado !== 'boolean') {
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'La solicitud tardó demasiado. Verifica tu conexión a internet.',
+          isNetworkError: true,
+        };
+      }
+
+      if (error.message?.toLowerCase().includes('network') || 
+          error.message?.toLowerCase().includes('fetch')) {
+        return {
+          success: false,
+          error: 'Error de conexión. Verifica tu conexión a internet e intenta de nuevo.',
+          isNetworkError: true,
+        };
+      }
+
       return {
         success: false,
-        error: 'Respuesta inválida del servidor. Intenta de nuevo.',
+        error: 'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+        isNetworkError: false,
       };
     }
-
-    if (!data.resultado || (data.error && data.error.length > 0)) {
-      const errorMessage = data.error && data.error.length > 0 
-        ? data.error[0].Message 
-        : approved 
-          ? 'No se pudo confirmar la cita' 
-          : 'No se pudo rechazar la cita';
-      
-      console.log('📅 AppointmentService: Error en la respuesta:', errorMessage);
-      return {
-        success: false,
-        error: errorMessage,
-      };
-    }
-
-    console.log(`📅 AppointmentService: Cita ${approved ? 'confirmada' : 'rechazada'} exitosamente`);
-    
-    return {
-      success: true,
-      data: true,
-    };
-
-  } catch (error: any) {
-    console.log('📅 AppointmentService: Error al procesar decisión:', error);
-
-    if (error.name === 'AbortError') {
-      return {
-        success: false,
-        error: 'La solicitud tardó demasiado. Verifica tu conexión a internet.',
-        isNetworkError: true,
-      };
-    }
-
-    if (error.message?.toLowerCase().includes('network') || 
-        error.message?.toLowerCase().includes('fetch')) {
-      return {
-        success: false,
-        error: 'Error de conexión. Verifica tu conexión a internet e intenta de nuevo.',
-        isNetworkError: true,
-      };
-    }
-
-    return {
-      success: false,
-      error: 'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
-      isNetworkError: false,
-    };
   }
-}  
 
-/**
- * Cancela una cita como cliente
- */
-async cancelAppointment(
-  idCita: number,
-  cancellationReason: string
-): Promise<ServiceResponse<boolean>> {
+  /**
+   * Cancela una cita existente
+   */
+  async cancelAppointment(
+    idCita: number,
+    cancellationReason: string
+  ): Promise<ServiceResponse<boolean>> {
   try {
     console.log('📅 AppointmentService: Cancelando cita...', { 
-      idCita,
+      idCita, 
       cancellationReason 
     });
+
+    if (!cancellationReason || cancellationReason.trim() === '') {
+      return {
+        success: false,
+        error: 'Debes proporcionar un motivo de cancelación.',
+      };
+    }
 
     const token = await authService.getToken();
     if (!token) {
@@ -788,136 +1083,135 @@ async cancelAppointment(
   }
 }
 
-/**
- * Califica al profesional después de completar una cita
- */
-async rateProfessional(
-  idCita: number,
-  rating: number
-): Promise<ServiceResponse<boolean>> {
-  try {
-    console.log('📅 AppointmentService: Calificando profesional...', { 
-      idCita,
-      rating 
-    });
+  /**
+   * Califica al profesional después de completar una cita
+   */
+  async rateProfessional(
+    idCita: number,
+    rating: number
+  ): Promise<ServiceResponse<boolean>> {
+    try {
+      console.log('📅 AppointmentService: Calificando profesional...', { 
+        idCita,
+        rating 
+      });
 
-    // Validar que la calificación esté entre 1 y 5
-    if (rating < 1 || rating > 5) {
-      return {
-        success: false,
-        error: 'La calificación debe estar entre 1 y 5 estrellas.',
-      };
-    }
-
-    const token = await authService.getToken();
-    if (!token) {
-      return {
-        success: false,
-        error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
-      };
-    }
-
-    const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CALIFICAR_PROFESIONAL}`;
-    console.log('📅 AppointmentService: URL:', url);
-
-    const requestBody: CalificarProfesionalRequest = {
-      IdCita: idCita,
-      Calificacion: rating,
-    };
-
-    console.log('📅 AppointmentService: Request body:', requestBody);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    console.log('📅 AppointmentService: Status de respuesta:', response.status);
-
-    if (!response.ok) {
-      if (response.status === 401) {
+      if (rating < 1 || rating > 5) {
         return {
           success: false,
-          error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+          error: 'La calificación debe estar entre 1 y 5 estrellas.',
         };
       }
 
-      const errorText = await response.text();
-      console.log('📅 AppointmentService: Error HTTP:', errorText);
+      const token = await authService.getToken();
+      if (!token) {
+        return {
+          success: false,
+          error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
+        };
+      }
+
+      const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CALIFICAR_PROFESIONAL}`;
+      console.log('📅 AppointmentService: URL:', url);
+
+      const requestBody: CalificarProfesionalRequest = {
+        IdCita: idCita,
+        Calificacion: rating,
+      };
+
+      console.log('📅 AppointmentService: Request body:', requestBody);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      console.log('📅 AppointmentService: Status de respuesta:', response.status);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          return {
+            success: false,
+            error: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+          };
+        }
+
+        const errorText = await response.text();
+        console.log('📅 AppointmentService: Error HTTP:', errorText);
+        
+        return {
+          success: false,
+          error: `Error al calificar al profesional (${response.status}). Intenta de nuevo.`,
+        };
+      }
+
+      const data: CalificarProfesionalResponse = await response.json();
+      console.log('📅 AppointmentService: Respuesta recibida:', data);
+
+      if (!data || typeof data.resultado !== 'boolean') {
+        return {
+          success: false,
+          error: 'Respuesta inválida del servidor. Intenta de nuevo.',
+        };
+      }
+
+      if (!data.resultado || (data.error && data.error.length > 0)) {
+        const errorMessage = data.error && data.error.length > 0 
+          ? data.error[0].Message 
+          : 'No se pudo calificar al profesional';
+        
+        console.log('📅 AppointmentService: Error en la respuesta:', errorMessage);
+        return {
+          success: false,
+          error: errorMessage,
+        };
+      }
+
+      console.log('📅 AppointmentService: Profesional calificado exitosamente');
       
       return {
-        success: false,
-        error: `Error al calificar al profesional (${response.status}). Intenta de nuevo.`,
+        success: true,
+        data: true,
       };
-    }
 
-    const data: CalificarProfesionalResponse = await response.json();
-    console.log('📅 AppointmentService: Respuesta recibida:', data);
+    } catch (error: any) {
+      console.log('📅 AppointmentService: Error al calificar profesional:', error);
 
-    if (!data || typeof data.resultado !== 'boolean') {
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'La solicitud tardó demasiado. Verifica tu conexión a internet.',
+          isNetworkError: true,
+        };
+      }
+
+      if (error.message?.toLowerCase().includes('network') || 
+          error.message?.toLowerCase().includes('fetch')) {
+        return {
+          success: false,
+          error: 'Error de conexión. Verifica tu conexión a internet e intenta de nuevo.',
+          isNetworkError: true,
+        };
+      }
+
       return {
         success: false,
-        error: 'Respuesta inválida del servidor. Intenta de nuevo.',
+        error: 'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+        isNetworkError: false,
       };
     }
-
-    if (!data.resultado || (data.error && data.error.length > 0)) {
-      const errorMessage = data.error && data.error.length > 0 
-        ? data.error[0].Message 
-        : 'No se pudo calificar al profesional';
-      
-      console.log('📅 AppointmentService: Error en la respuesta:', errorMessage);
-      return {
-        success: false,
-        error: errorMessage,
-      };
-    }
-
-    console.log('📅 AppointmentService: Profesional calificado exitosamente');
-    
-    return {
-      success: true,
-      data: true,
-    };
-
-  } catch (error: any) {
-    console.log('📅 AppointmentService: Error al calificar profesional:', error);
-
-    if (error.name === 'AbortError') {
-      return {
-        success: false,
-        error: 'La solicitud tardó demasiado. Verifica tu conexión a internet.',
-        isNetworkError: true,
-      };
-    }
-
-    if (error.message?.toLowerCase().includes('network') || 
-        error.message?.toLowerCase().includes('fetch')) {
-      return {
-        success: false,
-        error: 'Error de conexión. Verifica tu conexión a internet e intenta de nuevo.',
-        isNetworkError: true,
-      };
-    }
-
-    return {
-      success: false,
-      error: 'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
-      isNetworkError: false,
-    };
   }
-}
 
   /**
    * Filtra citas por estado
@@ -933,7 +1227,7 @@ async rateProfessional(
   }
 
   /**
-   * Ordena citas por fecha (más recientes primero)
+   * Ordena citas por fecha
    */
   sortAppointmentsByDate(appointments: Appointment[], ascending = false): Appointment[] {
     return [...appointments].sort((a, b) => {
@@ -943,16 +1237,19 @@ async rateProfessional(
     });
   }
 
+  /**
+   * Cuenta las citas por estado
+   */
   getAppointmentCountByStatus(appointments: Appointment[]): Record<AppointmentStatus | 'Todas', number> {
-  return {
-    Todas: appointments.length,
-    Pendiente: appointments.filter(a => a.estado === 'Pendiente').length,
-    Confirmada: appointments.filter(a => a.estado === 'Confirmada').length,
-    Denegada: appointments.filter(a => a.estado === 'Denegada').length,   
-    Cancelada: appointments.filter(a => a.estado === 'Cancelada').length,
-    Completada: appointments.filter(a => a.estado === 'Completada').length,
-  };
-}
+    return {
+      Todas: appointments.length,
+      Pendiente: appointments.filter(a => a.estado === 'Pendiente').length,
+      Confirmada: appointments.filter(a => a.estado === 'Confirmada').length,
+      Denegada: appointments.filter(a => a.estado === 'Denegada').length,   
+      Cancelada: appointments.filter(a => a.estado === 'Cancelada').length,
+      Completada: appointments.filter(a => a.estado === 'Completada').length,
+    };
+  }
 }
 
 export const appointmentService = new AppointmentService();

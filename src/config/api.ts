@@ -36,6 +36,8 @@ export const API_CONFIG = {
     CREAR_EVENTO: '/CrearEvento',
     AGREGAR_HORARIOS: '/AgregarHorarios', 
     OBTENER_CALIFICACION_PROMEDIO: '/ObtenerCalficacionPromedio',
+    EVENTOS_PROFESIONAL: '/EventosProfesional',
+    HORARIOS_PROFESIONAL: '/HorariosProfesional',
   },
   TIMEOUT: 10000, // 10 segundos
 } as const;

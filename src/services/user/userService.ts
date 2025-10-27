@@ -151,7 +151,7 @@ export interface EditProfessionalProfileResult {
 }
 
 export interface ObtenerCalificacionPromedioRequest {
-  IdPerfil: number;
+  IdProfesional: number;
 }
 
 export interface ObtenerCalificacionPromedioResponse {
@@ -750,10 +750,10 @@ async getProfessionalRating(idPerfil: number): Promise<CalificacionPromedioResul
     }
 
     const requestData: ObtenerCalificacionPromedioRequest = { 
-      IdPerfil: idPerfil 
+      IdProfesional: idPerfil 
     };
 
-    console.log('⭐ UserService: Solicitando calificación para perfil:', idPerfil);
+    console.log('⭐ UserService: Solicitando calificación para profesional:', idPerfil);
 
     const response = await apiService.post<ObtenerCalificacionPromedioResponse>(
       API_CONFIG.ENDPOINTS.OBTENER_CALIFICACION_PROMEDIO,
@@ -783,10 +783,16 @@ async getProfessionalRating(idPerfil: number): Promise<CalificacionPromedioResul
 
     // Verificar si la consulta fue exitosa según la API
     if (data.resultado === true) {
+      console.log('⭐ UserService: Respuesta completa:', JSON.stringify(data, null, 2));
       console.log('⭐ UserService: ✅ Calificación obtenida exitosamente:', data.CalificacionPromedio);
+      console.log('⭐ UserService: Tipo de dato de calificación:', typeof data.CalificacionPromedio);
+      
+      const calificacion = data.CalificacionPromedio !== null ? parseFloat(data.CalificacionPromedio.toString()) : 0;
+      console.log('⭐ UserService: Calificación parseada:', calificacion);
+      
       return {
         success: true,
-        calificacionPromedio: data.CalificacionPromedio || 0,
+        calificacionPromedio: calificacion,
       };
     }
 

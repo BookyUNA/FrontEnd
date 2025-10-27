@@ -157,8 +157,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // =============================================
 
   useEffect(() => {
-    loadUserProfile();
-    loadUserRoleFromToken();
+    const initializeProfile = async () => {
+      try {
+        await loadUserProfile(); // Esta función ahora maneja tanto el perfil como el rol
+      } catch (error) {
+        console.error('Error al inicializar perfil:', error);
+      }
+    };
+
+    initializeProfile();
   }, []);
 
   const loadUserRoleFromToken = async () => {
@@ -190,8 +197,19 @@ const loadUserProfile = async () => {
     const apiProfile = await userService.getProfile();
     console.log('📱 ProfileScreen: Perfil obtenido:', apiProfile);
     
+    // Obtener el rol del token
+    const token = await authService.getToken();
+    const roleFromToken = token ? jwtDecoder.getUserRole(token) : null;
+    console.log('📱 ProfileScreen: Rol desde token:', roleFromToken);
+
     const profile = mapApiProfileToUserProfile(apiProfile);
     setUserProfile(profile);
+    
+    // Actualizar el rol
+    if (roleFromToken) {
+      setUserRole(roleFromToken);
+      console.log('📱 ProfileScreen: Rol actualizado a:', roleFromToken);
+    }
 
     // Inicializar datos editables de usuario
     setEditData({
@@ -208,8 +226,19 @@ const loadUserProfile = async () => {
 
     console.log('📱 ProfileScreen: Perfil procesado y establecido correctamente');
     
-    if (apiProfile.IdPerfil && profile.role === 'Profesional') {
-      await loadProfessionalRating(apiProfile.IdPerfil);
+    // Verificar calificación
+    if (roleFromToken === 'Profesional' && apiProfile.CalificacionPromedio !== null) {
+      console.log('📱 ProfileScreen: Estableciendo calificación:', apiProfile.CalificacionPromedio);
+      setRatingData({
+        calificacionPromedio: parseFloat(apiProfile.CalificacionPromedio.toString()),
+        totalCalificaciones: apiProfile.TotalCalificaciones || 0,
+        isLoading: false
+      });
+    } else {
+      console.log('📱 ProfileScreen: No hay calificación para mostrar:', { 
+        role: roleFromToken, 
+        calificacion: apiProfile.CalificacionPromedio 
+      });
     }
     
   } catch (error: any) {
@@ -534,8 +563,15 @@ const loadUserProfile = async () => {
   };
 
 const loadProfessionalRating = async (idPerfil: number) => {
+  console.log('⭐ ProfileScreen: Intentando cargar calificación. ID:', idPerfil, 'Role:', userRole);
+  
   if (!idPerfil || idPerfil <= 0) {
-    console.log('⭐ ProfileScreen: IdPerfil inválido');
+    console.log('⭐ ProfileScreen: IdPerfil inválido:', idPerfil);
+    return;
+  }
+
+  if (userRole !== 'Profesional') {
+    console.log('⭐ ProfileScreen: No se carga calificación - Usuario no es profesional');
     return;
   }
 
@@ -545,16 +581,22 @@ const loadProfessionalRating = async (idPerfil: number) => {
     console.log('⭐ ProfileScreen: Cargando calificación del perfil:', idPerfil);
     
     const result = await userService.getProfessionalRating(idPerfil);
+    console.log('⭐ ProfileScreen: Resultado de calificación:', JSON.stringify(result, null, 2));
 
     if (result.success && result.calificacionPromedio !== undefined) {
       console.log('⭐ ProfileScreen: Calificación obtenida:', result.calificacionPromedio);
+      console.log('⭐ ProfileScreen: Tipo de dato de calificación:', typeof result.calificacionPromedio);
+      
+      const calificacion = parseFloat(result.calificacionPromedio.toString());
+      console.log('⭐ ProfileScreen: Calificación convertida:', calificacion);
+      
       setRatingData({
-        calificacionPromedio: result.calificacionPromedio,
-        totalCalificaciones: 0, // La API no devuelve este valor, pero lo dejamos por si se agrega después
+        calificacionPromedio: calificacion,
+        totalCalificaciones: 0,
         isLoading: false,
       });
     } else {
-      console.log('⭐ ProfileScreen: No se pudo obtener calificación');
+      console.log('⭐ ProfileScreen: No se pudo obtener calificación. Error:', result.error);
       setRatingData({
         calificacionPromedio: 0,
         totalCalificaciones: 0,
@@ -705,35 +747,6 @@ const loadProfessionalRating = async (idPerfil: number) => {
               {userProfile.profesion && renderReadOnlyField('Profesión', userProfile.profesion, 'briefcase')}
               {userProfile.descripcion && renderReadOnlyField('Descripción', userProfile.descripcion, 'info-circle')}
               {userProfile.direccion && renderReadOnlyField('Dirección', userProfile.direccion, 'map-marker-alt')}
-              
-              {/* AÑADIR ESTA SECCIÓN DE CALIFICACIÓN */}
-              {!ratingData.isLoading && ratingData.calificacionPromedio > 0 && (
-                <View style={styles.professionalRatingSection}>
-                  <View style={styles.professionalRatingHeader}>
-                    <View style={styles.professionalRatingIconContainer}>
-                      <Icon name="award" size={18} color={colors.primary.main} solid />
-                    </View>
-                    <Text style={styles.professionalRatingTitle}>Tu Calificación</Text>
-                  </View>
-                  
-                  <View style={styles.professionalRatingContent}>
-                    <Text style={styles.professionalRatingScore}>
-                      {ratingData.calificacionPromedio.toFixed(1)}
-                    </Text>
-                    <View style={styles.professionalRatingStars}>
-                      {renderRatingStars(ratingData.calificacionPromedio, 18)}
-                      <Text style={styles.professionalRatingMax}>de 5.0</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.professionalRatingDescription}>
-                    <Icon name="info-circle" size={12} color={colors.text.secondary} />
-                    <Text style={styles.professionalRatingDescriptionText}>
-                      Calificación promedio basada en evaluaciones de clientes
-                    </Text>
-                  </View>
-                </View>
-              )}
             </>
           )}
         </View>
@@ -747,6 +760,10 @@ const loadProfessionalRating = async (idPerfil: number) => {
             <Text style={styles.professionalRatingTitle}>Tu Calificación</Text>
           </View>
           
+          {(() => {
+            console.log('⭐ Valor de calificación:', ratingData.calificacionPromedio);
+            return null;
+          })()}
           {ratingData.calificacionPromedio > 0 ? (
             <>
               <View style={styles.professionalRatingContent}>

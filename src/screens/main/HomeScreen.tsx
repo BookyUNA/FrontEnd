@@ -26,6 +26,7 @@ import { spacing } from '../../styles/spacing';
 import { authService } from '../../services/auth/authService';
 import { ClientAppointmentsScreen } from '../client/ClientAppointmentsScreen';
 import { ProfessionalAppointmentsScreen } from '../client/ProfessionalAppointmentsScreen';
+import { ClientHomeScreen } from '../client/ClientHomeScreen';
 
 interface HomeScreenProps {
   navigation?: any;
@@ -117,36 +118,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout }) 
   };
 
   const renderProfessionalHomeContent = () => (
-    <View style={styles.container}>
-      <View style={styles.scheduleHeader}>
-        <Text style={styles.scheduleTitle}>Mi Horario</Text>
-      </View>
+    <SafeContainer>
+      <View style={styles.container}>
+        <View style={styles.scheduleHeader}>
+          <Text style={styles.scheduleTitle}>Mi Horario</Text>
+        </View>
 
-      <View style={styles.scheduleContainer}>
-        <ProfessionalSchedule />
+        <View style={styles.scheduleContainer}>
+          <ProfessionalSchedule />
+        </View>
       </View>
-    </View>
+    </SafeContainer>
   );
 
   const renderClientHomeContent = () => (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Logo size="medium" showTagline />
-        <Text style={styles.welcomeTitle}>
-          ¡Bienvenido Cliente!
-        </Text>
-      </View>
-
-      <View style={styles.content}>
-        <Text style={styles.message}>
-          🚧 Aplicación en construcción
-        </Text>
-        <Icon name="search" size={50} color={colors.text.primary} />
-        <Text style={styles.description}>
-          Pronto podrás buscar y reservar servicios profesionales.
-        </Text>
-      </View>
-    </View>
+        <ClientHomeScreen 
+      navigation={navigation} 
+    />
   );
 
   const renderContent = () => {

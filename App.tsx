@@ -9,6 +9,8 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { colors } from "./src/styles/colors";
+import { typography } from "./src/styles/typography";
 
 import { LoginScreen } from "./src/screens/auth/LoginScreen";
 import { RegisterScreen } from "./src/screens/user/RegisterScreen";
@@ -16,6 +18,9 @@ import { EmailVerificationScreen } from "./src/screens/user/EmailVerificationScr
 import { HomeScreen } from "./src/screens/main/HomeScreen";
 import { ForgotPasswordScreen } from "./src/screens/auth/ForgotPasswordScreen";
 import { ResetPasswordScreen } from "./src/screens/auth/ResetPasswordScreen";
+import { ClientAppointmentsScreen } from "./src/screens/client/ClientAppointmentsScreen";
+import { ProfessionalAppointmentsScreen } from "./src/screens/client/ProfessionalAppointmentsScreen";
+import { ProfileScreen } from "./src/screens/profile/ProfileScreen";
 import { CreateServiceScreen } from "./src/screens/services/CreateServiceScreen";
 import { EditServiceScreen } from "./src/screens/services/EditServiceScreen";
 import { ProfessionalServicesScreen } from "./src/screens/client/ProfessionalServicesScreen";
@@ -25,8 +30,6 @@ import { RescheduleAppointmentScreen } from "./src/screens/client/RescheduleAppo
 
 import { authService } from "./src/services/auth/authService";
 import { SafeContainer } from "./src/components/ui/SafeContainer";
-import { colors } from "./src/styles/colors";
-import { typography } from "./src/styles/typography";
 
 export type RootStackParamList = {
   Login: { email?: string; verified?: boolean } | undefined;
@@ -41,6 +44,9 @@ export type RootStackParamList = {
   PlanSelection: undefined;
   PaymentGateway: { plan: { id: string; name: string; price: string; color: string } } | undefined;
   RescheduleAppointment: { appointment: any } | undefined;
+  ClientAppointments: undefined;
+  Profile: undefined;
+  ProfessionalAppointments: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -178,6 +184,54 @@ function App(): React.JSX.Element {
               component={RescheduleAppointmentScreen}
               options={{ 
                 title: "Reprogramar Cita",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
+            />
+
+            <Stack.Screen 
+              name="ClientAppointments" 
+              component={ClientAppointmentsScreen}
+              options={{ 
+                title: "Mis Citas",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
+            />
+
+            <Stack.Screen 
+              name="ProfessionalAppointments" 
+              component={ProfessionalAppointmentsScreen}
+              options={{ 
+                title: "Citas",
+                headerStyle: {
+                  backgroundColor: colors.background.primary,
+                },
+                headerTintColor: colors.primary.main,
+                headerTitleStyle: {
+                  ...typography.styles.h2,
+                  color: colors.text.primary,
+                },
+              }}
+            />
+
+            <Stack.Screen 
+              name="Profile" 
+              component={ProfileScreen}
+              options={{ 
+                title: "Mi Perfil",
                 headerStyle: {
                   backgroundColor: colors.background.primary,
                 },

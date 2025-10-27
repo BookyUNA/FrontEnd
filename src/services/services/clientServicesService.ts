@@ -19,6 +19,11 @@ export interface ServicioCliente {
   fechaCreacion: string;
   nombreProfesional: string;
   profesion: string;
+  // Opcionales: algunos endpoints pueden devolver identificador del profesional y calificación
+  IdProfesional?: number;
+  idProfesional?: number;
+  calificacionPromedio?: number;
+  totalCalificaciones?: number;
 }
 
 export interface Error {

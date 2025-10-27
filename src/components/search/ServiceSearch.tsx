@@ -31,6 +31,7 @@ import {
   ServicioCliente, 
   SearchServicesResult 
 } from '../../services/services/clientServicesService';
+import { userService } from '../../services/user/userService';
 
 interface ServiceSearchProps {
   onServiceSelect?: (service: ServicioCliente) => void;
@@ -330,9 +331,27 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
   /**
    * Manejar selección de servicio
    */
-  const handleServicePress = (service: ServicioCliente) => {
+  const handleServicePress = async (service: ServicioCliente) => {
+    // If parent provided a handler, enrich the service with professional rating (if possible)
     if (onServiceSelect) {
-      onServiceSelect(service);
+      try {
+        const enriched: any = { ...service };
+
+        // Try to find a professional id in the service (API may return IdProfesional or idProfesional)
+        const profId = (service as any).IdProfesional ?? (service as any).idProfesional ?? (service as any).id_profesional;
+
+        if (profId) {
+          const ratingResult = await userService.getProfessionalRating(Number(profId));
+          if (ratingResult.success && typeof ratingResult.calificacionPromedio === 'number') {
+            enriched.calificacionPromedio = ratingResult.calificacionPromedio;
+          }
+        }
+
+        onServiceSelect(enriched);
+      } catch (error) {
+        console.warn('Error al obtener calificación del profesional:', error);
+        onServiceSelect(service);
+      }
     } else {
       Alert.alert(
         service.nombreServicio,

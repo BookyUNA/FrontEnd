@@ -26,6 +26,10 @@ export const ProfessionalServicesScreen: React.FC<ProfessionalServicesScreenProp
   const [showBookingModal, setShowBookingModal] = useState(false);
 
   const handleServiceSelect = (service: ServicioCliente) => {
+    const ratingLine = (service as any).calificacionPromedio !== undefined
+      ? `\nCalificación: ${(service as any).calificacionPromedio.toFixed(1)} / 5.0`
+      : '';
+
     Alert.alert(
       'Servicio Seleccionado',
       `${service.nombreServicio}\n\n` +
@@ -34,6 +38,7 @@ export const ProfessionalServicesScreen: React.FC<ProfessionalServicesScreenProp
       `Duración: ${service.duracionMinutos} minutos\n` +
       `Precio: ${service.precio.toFixed(2)}` +
       (service.permiteDescuento ? `\nDescuento disponible: ${service.porcentajeDescuento}%` : '') +
+      ratingLine +
       `\n\nDescripción: ${service.descripcion}`,
       [
         { text: 'Cerrar', style: 'cancel' },

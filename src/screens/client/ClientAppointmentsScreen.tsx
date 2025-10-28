@@ -1289,7 +1289,7 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: spacing.md + 2,
     gap: spacing.sm,
   },
@@ -1356,7 +1356,7 @@ const styles = StyleSheet.create({
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border.light,
@@ -1597,7 +1597,7 @@ const styles = StyleSheet.create({
 
   modalField: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },

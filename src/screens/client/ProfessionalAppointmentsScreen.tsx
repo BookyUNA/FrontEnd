@@ -426,20 +426,21 @@ const handleCancelRejection = () => {
           )}
         </View>
 
-        {appointment.calificacionPromedio > 0 && (
-            <View style={styles.ratingInfoContainer}>
-              <View style={styles.ratingInfo}>
-                <Icon name="award" size={12} color={colors.primary.main} />
-                <Text style={styles.ratingLabel}>Calificación promedio:</Text>
-              </View>
-              <View style={styles.ratingValue}>
-                {renderRatingStars(appointment.calificacionPromedio, 14)}
-                <Text style={styles.ratingNumber}>
-                  {appointment.calificacionPromedio.toFixed(1)}
-                </Text>
-              </View>
+        {/* Para el histórico no mostramos la calificación numérica, solo si fue calificada */}
+        {appointment.estado === 'Completada' && (
+          <View style={styles.ratingInfoContainer}>
+            <View style={styles.ratingInfoCentered}>
+              <Icon
+                name={appointment.estadoCalificacion === 'Calificada' ? 'star' : 'star-half-alt'}
+                size={14}
+                color={appointment.estadoCalificacion === 'Calificada' ? colors.states.warning : colors.text.secondary}
+              />
+              <Text style={styles.ratingLabel}>
+                {appointment.estadoCalificacion === 'Calificada' ? 'Calificada por el cliente' : 'Pendiente de calificación'}
+              </Text>
             </View>
-          )}
+          </View>
+        )}
 
         <View style={styles.cardFooter}>
           <View style={styles.dateTimeContainer}>
@@ -616,17 +617,7 @@ const handleCancelRejection = () => {
                 </View>
               </View>
 
-              {selectedAppointment.calificacionPromedio > 0 && (
-                <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Tu Calificación Promedio</Text>
-                  <View style={styles.modalRatingContainer}>
-                    {renderRatingStars(selectedAppointment.calificacionPromedio, 18)}
-                    <Text style={styles.modalRatingValue}>
-                      {selectedAppointment.calificacionPromedio.toFixed(1)} de 5.0
-                    </Text>
-                  </View>
-                </View>
-              )}
+              {/* No mostrar la calificación numérica en el detalle histórico; se muestra el estado de calificación más abajo. */}
 
               {selectedAppointment.estado === 'Completada' && (
                 <View style={styles.modalSection}>
@@ -1000,7 +991,7 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: spacing.md + 2,
     gap: spacing.sm,
   },
@@ -1073,7 +1064,7 @@ const styles = StyleSheet.create({
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border.light,
@@ -1264,7 +1255,7 @@ const styles = StyleSheet.create({
 
   modalField: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },
@@ -1422,6 +1413,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+  },
+
+  ratingInfoCentered: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: spacing.sm,
   },
 
   ratingLabel: {

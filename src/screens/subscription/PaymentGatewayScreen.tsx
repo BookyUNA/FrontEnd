@@ -27,6 +27,7 @@ import { authService } from '../../services/auth/authService';
 
 interface PaymentGatewayScreenProps {
   navigation?: any;
+  onLogout?: () => void;
   route?: {
     params?: {
       plan?: {
@@ -42,6 +43,7 @@ interface PaymentGatewayScreenProps {
 
 export const PaymentGatewayScreen: React.FC<PaymentGatewayScreenProps> = ({ 
   navigation, 
+  onLogout,
   route 
 }) => {
   const selectedPlan = route?.params?.plan;
@@ -88,7 +90,7 @@ export const PaymentGatewayScreen: React.FC<PaymentGatewayScreenProps> = ({
       const userData = await authService.getUserData();
       if (userData) {
         // Prellenar algunos campos basados en el token
-        setEmail('')// Usar ID como base para email
+        setEmail(''); // Usar ID como base para email
         setName(''); // El usuario debe ingresar su nombre
         setPhone(''); // El usuario debe ingresar su teléfono
       }
@@ -292,9 +294,10 @@ export const PaymentGatewayScreen: React.FC<PaymentGatewayScreenProps> = ({
                         { text: 'Más Tarde', style: 'cancel' },
                         {
                           text: 'Cerrar Sesión',
-                          onPress: async () => {
-                            await authService.logout();
-                            navigation?.navigate('Login');
+                          onPress: () => {
+                            if (onLogout) {
+                              onLogout();
+                            }
                           }
                         }
                       ]

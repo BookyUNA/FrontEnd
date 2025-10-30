@@ -30,6 +30,7 @@ import { authService } from '../../services/auth/authService';
 
 interface PlanSelectionScreenProps {
   navigation?: any;
+  onLogout?: () => void;
 }
 
 interface PlanData {
@@ -124,7 +125,7 @@ const ADDITIONAL_SERVICES: AdditionalService[] = [
 // COMPONENTE PRINCIPAL
 // =============================================
 
-export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ navigation }) => {
+export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ navigation, onLogout }) => {
   
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedPlan, setSelectedPlan] = useState<PlanType | null>('free'); // Preseleccionar plan gratuito
@@ -257,9 +258,10 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
                       { text: 'Más Tarde', style: 'cancel' },
                       {
                         text: 'Cerrar Sesión',
-                        onPress: async () => {
-                          await authService.logout();
-                          navigation?.navigate('Login');
+                        onPress: () => {
+                          if (onLogout) {
+                            onLogout();
+                          }
                         }
                       }
                     ]

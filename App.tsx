@@ -30,6 +30,7 @@ import { RescheduleAppointmentScreen } from "./src/screens/client/RescheduleAppo
 
 import { authService } from "./src/services/auth/authService";
 import { SafeContainer } from "./src/components/ui/SafeContainer";
+import { PlanType } from "./src/services/professionals";
 
 export type RootStackParamList = {
   Login: { email?: string; verified?: boolean } | undefined;
@@ -42,7 +43,7 @@ export type RootStackParamList = {
   EditService: { service: any } | undefined;
   ProfessionalServices: undefined;
   PlanSelection: undefined;
-  PaymentGateway: { plan: { id: string; name: string; price: string; color: string } } | undefined;
+  PaymentGateway: { plan: { id: PlanType; name: string; price: string; priceInColones: number; color: string } } | undefined;
   RescheduleAppointment: { appointment: any } | undefined;
   ClientAppointments: undefined;
   Profile: undefined;
@@ -75,6 +76,20 @@ function App(): React.JSX.Element {
     }
   };
 
+  // Función de logout que maneja el estado de autenticación
+  const handleLogout = async () => {
+    try {
+      console.log("🚪 App: Iniciando proceso de logout...");
+      await authService.logout();
+      setIsAuthenticated(false);
+      console.log("🚪 App: Logout completado, usuario desautenticado");
+    } catch (error) {
+      console.warn("🚪 App: Error en logout, pero desautenticando usuario:", error);
+      // Incluso si hay error, desautenticar al usuario
+      setIsAuthenticated(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <SafeContainer>
@@ -94,7 +109,7 @@ function App(): React.JSX.Element {
               {(props) => (
                 <HomeScreen 
                   {...props} 
-                  onLogout={() => setIsAuthenticated(false)} 
+                  onLogout={handleLogout} 
                 />
               )}
             </Stack.Screen>
@@ -149,7 +164,6 @@ function App(): React.JSX.Element {
 
             <Stack.Screen 
               name="PlanSelection" 
-              component={PlanSelectionScreen}
               options={{ 
                 title: "Planes de Suscripción",
                 headerStyle: {
@@ -161,11 +175,17 @@ function App(): React.JSX.Element {
                   color: colors.text.primary,
                 },
               }}
-            />
+            >
+              {(props) => (
+                <PlanSelectionScreen 
+                  {...props} 
+                  onLogout={handleLogout} 
+                />
+              )}
+            </Stack.Screen>
 
             <Stack.Screen 
               name="PaymentGateway" 
-              component={PaymentGatewayScreen}
               options={{ 
                 title: "Pasarela de Pago",
                 headerStyle: {
@@ -177,7 +197,14 @@ function App(): React.JSX.Element {
                   color: colors.text.primary,
                 },
               }}
-            />
+            >
+              {(props) => (
+                <PaymentGatewayScreen 
+                  {...props} 
+                  onLogout={handleLogout} 
+                />
+              )}
+            </Stack.Screen>
 
             <Stack.Screen 
               name="RescheduleAppointment" 
@@ -229,7 +256,6 @@ function App(): React.JSX.Element {
 
             <Stack.Screen 
               name="Profile" 
-              component={ProfileScreen}
               options={{ 
                 title: "Mi Perfil",
                 headerStyle: {
@@ -241,7 +267,14 @@ function App(): React.JSX.Element {
                   color: colors.text.primary,
                 },
               }}
-            />
+            >
+              {(props) => (
+                <ProfileScreen 
+                  {...props} 
+                  onLogout={handleLogout} 
+                />
+              )}
+            </Stack.Screen>
           </>
         ) : (
           <>

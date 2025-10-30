@@ -189,20 +189,20 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
       // Obtener información del plan gratuito
       const freePlan = paymentService.getPlanInfo('free');
       
-      // Datos de pago vacíos para plan gratuito
-      const emptyPaymentData = {
-        cardNumber: '',
-        cardHolder: '',
-        expiryDate: '',
-        cvv: '',
-        email: '',
-        name: '',
-        phone: '',
+      // Datos dummy válidos para evitar validación (no se usarán en plan gratuito)
+      const dummyPaymentData = {
+        cardNumber: '4111111111111111', // Número de tarjeta de prueba válido
+        cardHolder: 'Plan Gratuito',
+        expiryDate: '12/30',
+        cvv: '123',
+        email: 'plan@gratuito.com',
+        name: 'Plan Gratuito',
+        phone: '+50612345678',
       };
 
-      // Procesar "pago" del plan gratuito
+      // El método detecta internamente que es plan gratuito y usa IdPagoOnvo = 0
       const result = await paymentService.processPaymentAndAssignPlan(
-        emptyPaymentData,
+        dummyPaymentData,
         freePlan
       );
 
@@ -220,11 +220,11 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
                 // Navegar de vuelta
                 navigation?.goBack();
                 
-                // Sugerir re-login para actualizar token
+                // Logout obligatorio para actualizar token
                 setTimeout(() => {
                   Alert.alert(
                     'Plan Actualizado',
-                    'Tu plan ha sido actualizado exitosamente. Debes cerrar sesión para acceder a todas las funciones de tu nuevo plan.',
+                    'Tu plan ha sido actualizado exitosamente. Debes cerrar sesión ahora para acceder a todas las funciones de tu nuevo plan.',
                     [
                       {
                         text: 'Cerrar Sesión',

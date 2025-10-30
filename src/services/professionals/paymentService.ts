@@ -224,7 +224,7 @@ class PaymentService {
 
       // Realizar petición a la API
       const response = await apiService.post<PaymentResponse>(
-        'api/OnvoCompleto',
+        '/OnvoCompleto',
         paymentRequest,
         token
       );
@@ -276,7 +276,7 @@ class PaymentService {
     currency: paymentResponse.currency || 'CRC',
     createdAt: paymentResponse.fechaCreacion,
     };
-    
+
       return {
         success: paymentStatus === 'Completado',
         paymentStatus,
@@ -324,7 +324,7 @@ class PaymentService {
 
       // Realizar petición
       const response = await apiService.post<AssignPlanResponse>(
-        'api/Planes/AsignarPlan',
+        '/Planes/AsignarPlan',
         assignRequest,
         token
       );

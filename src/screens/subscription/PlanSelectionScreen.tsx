@@ -1,7 +1,8 @@
 /**
- * Pantalla de Selección de Plan - Booky
+ * Pantalla de Selección de Plan - Booky (ACTUALIZADA)
  * Sistema de reservas para profesionales independientes
  * Pantalla para seleccionar y gestionar planes de suscripción
+ * Integrada con paymentService para manejo real de pagos
  */
 
 import React, { useState, useEffect } from 'react';
@@ -20,6 +21,8 @@ import { Button } from '../../components/forms/Button';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
+import { paymentService, PlanType } from '../../services/professionals';
+import { authService } from '../../services/auth/authService';
 
 // =============================================
 // INTERFACES Y TIPOS
@@ -30,9 +33,10 @@ interface PlanSelectionScreenProps {
 }
 
 interface PlanData {
-  id: string;
+  id: PlanType;
   name: string;
   price: string;
+  priceInColones: number; // Precio real en colones para el API
   originalPrice?: string;
   discount?: string;
   isPopular?: boolean;
@@ -59,6 +63,7 @@ const PLANS_DATA: PlanData[] = [
     id: 'free',
     name: 'Plan Gratuito',
     price: 'Gratis',
+    priceInColones: 0,
     isFree: true,
     color: colors.states.success,
     description: 'Ideal para profesionales que están comenzando o tienen pocos servicios y quieran contar con una herramienta eficiente.',
@@ -73,6 +78,7 @@ const PLANS_DATA: PlanData[] = [
     id: 'basic',
     name: 'Plan Básico',
     price: '$9.99/mes',
+    priceInColones: 5995, // Aproximadamente $9.99 en colones
     originalPrice: '$99/año',
     discount: '17% descuento',
     color: colors.primary.main,
@@ -89,6 +95,7 @@ const PLANS_DATA: PlanData[] = [
     id: 'premium',
     name: 'Plan Premium',
     price: '$39.99/mes',
+    priceInColones: 23995, // Aproximadamente $39.99 en colones
     originalPrice: '$399/año',
     discount: '17% descuento',
     color: colors.states.warning,
@@ -120,18 +127,52 @@ const ADDITIONAL_SERVICES: AdditionalService[] = [
 export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ navigation }) => {
   
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>('free'); // Preseleccionar plan gratuito
+  const [selectedPlan, setSelectedPlan] = useState<PlanType | null>('free'); // Preseleccionar plan gratuito
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [expandedPlans, setExpandedPlans] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'plans' | 'services'>('plans');
+  const [isUpdatingPlan, setIsUpdatingPlan] = useState<boolean>(false);
+  const [currentUserPlan, setCurrentUserPlan] = useState<number | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-
-    return () => clearTimeout(timer);
+    loadInitialData();
   }, []);
+
+  // Cargar datos iniciales
+  const loadInitialData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Obtener plan actual del usuario
+      const isProfessional = await authService.isProfessional();
+      if (isProfessional) {
+        const planId = await authService.getUserPlanId();
+        setCurrentUserPlan(planId);
+        
+        // Preseleccionar el plan actual
+        switch (planId) {
+          case 1:
+            setSelectedPlan('free');
+            break;
+          case 2:
+            setSelectedPlan('basic');
+            break;
+          case 3:
+            setSelectedPlan('premium');
+            break;
+          default:
+            setSelectedPlan('free');
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error al cargar datos iniciales:', error);
+    } finally {
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 800);
+    }
+  };
 
   // Manejar expansión/contracción de planes
   const handlePlanToggle = (planId: string) => {
@@ -143,7 +184,7 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
   };
 
   // Manejar selección de plan
-  const handlePlanSelect = (planId: string) => {
+  const handlePlanSelect = (planId: PlanType) => {
     setSelectedPlan(planId);
     console.log('Plan seleccionado:', planId);
   };
@@ -157,6 +198,97 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
     );
   };
 
+  // Confirmar selección de plan gratuito
+  const handleFreePlanSelection = async () => {
+    if (currentUserPlan === 1) {
+      Alert.alert(
+        'Plan Actual',
+        'Ya tienes el plan gratuito activado.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    setIsUpdatingPlan(true);
+
+    try {
+      console.log('💳 Activando plan gratuito...');
+
+      // Obtener información del plan gratuito
+      const freePlan = paymentService.getPlanInfo('free');
+      
+      // Datos de pago vacíos para plan gratuito
+      const emptyPaymentData = {
+        cardNumber: '',
+        cardHolder: '',
+        expiryDate: '',
+        cvv: '',
+        email: '',
+        name: '',
+        phone: '',
+      };
+
+      // Procesar "pago" del plan gratuito
+      const result = await paymentService.processPaymentAndAssignPlan(
+        emptyPaymentData,
+        freePlan
+      );
+
+      if (result.success) {
+        Alert.alert(
+          '¡Plan Gratuito Activado!',
+          result.message,
+          [
+            {
+              text: 'Continuar',
+              onPress: () => {
+                // Refrescar datos locales
+                setCurrentUserPlan(1);
+                
+                // Navegar de vuelta
+                navigation?.goBack();
+                
+                // Sugerir re-login para actualizar token
+                setTimeout(() => {
+                  Alert.alert(
+                    'Plan Actualizado',
+                    'Tu plan ha sido actualizado. Te recomendamos cerrar y volver a iniciar sesión para acceder a todas las funciones actualizadas.',
+                    [
+                      { text: 'Más Tarde', style: 'cancel' },
+                      {
+                        text: 'Cerrar Sesión',
+                        onPress: async () => {
+                          await authService.logout();
+                          navigation?.navigate('Login');
+                        }
+                      }
+                    ]
+                  );
+                }, 1000);
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          result.message || 'No se pudo activar el plan gratuito. Intenta nuevamente.',
+          [{ text: 'Intentar Nuevamente' }]
+        );
+      }
+
+    } catch (error: any) {
+      console.error('Error en selección de plan gratuito:', error);
+      Alert.alert(
+        'Error Inesperado',
+        'Ocurrió un error al activar el plan gratuito. Verifica tu conexión e intenta nuevamente.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsUpdatingPlan(false);
+    }
+  };
+
   // Confirmar selección de plan
   const handleConfirmPlanSelection = () => {
     const selectedPlanData = PLANS_DATA.find(plan => plan.id === selectedPlan);
@@ -166,20 +298,32 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
       return;
     }
 
-    if (selectedPlanData.isFree) {
+    // Verificar si es el plan actual
+    const currentPlanNumber = currentUserPlan;
+    const selectedPlanNumber = selectedPlanData.id === 'free' ? 1 : selectedPlanData.id === 'basic' ? 2 : 3;
+    
+    if (currentPlanNumber === selectedPlanNumber) {
       Alert.alert(
-        'Plan Gratuito',
-        'El plan gratuito no requiere pago. Se activará automáticamente.',
+        'Plan Actual',
+        `Ya tienes el ${selectedPlanData.name} activado.`,
         [{ text: 'OK' }]
       );
       return;
     }
 
+    // Plan gratuito: activar directamente
+    if (selectedPlanData.isFree) {
+      handleFreePlanSelection();
+      return;
+    }
+
+    // Planes de pago: navegar a pasarela de pago
     navigation?.navigate('PaymentGateway', {
       plan: {
         id: selectedPlanData.id,
         name: selectedPlanData.name,
         price: selectedPlanData.price,
+        priceInColones: selectedPlanData.priceInColones,
         color: selectedPlanData.color,
       },
     });
@@ -211,8 +355,8 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
           text: 'Confirmar', 
           onPress: () => {
             Alert.alert(
-              'Servicios Contratados',
-              'Funcionalidad de procesamiento de pago en desarrollo.',
+              'Servicios Adicionales',
+              'Funcionalidad de servicios adicionales en desarrollo.',
               [{ text: 'OK' }]
             );
           }
@@ -238,6 +382,15 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
           : 'Potencia tu negocio con servicios adicionales'
         }
       </Text>
+      
+      {currentUserPlan && (
+        <View style={styles.currentPlanContainer}>
+          <Icon name="info-circle" size={16} color={colors.primary.main} />
+          <Text style={styles.currentPlanText}>
+            Plan actual: {currentUserPlan === 1 ? 'Gratuito' : currentUserPlan === 2 ? 'Básico' : 'Premium'}
+          </Text>
+        </View>
+      )}
     </View>
   );
 
@@ -292,6 +445,7 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
   const renderPlanCard = (plan: PlanData) => {
     const isSelected = selectedPlan === plan.id;
     const isExpanded = expandedPlans.includes(plan.id);
+    const isCurrentPlan = currentUserPlan === (plan.id === 'free' ? 1 : plan.id === 'basic' ? 2 : 3);
     
     return (
       <View
@@ -299,9 +453,14 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
         style={[
           styles.planCard,
           isSelected && styles.planCardSelected,
-          plan.isPopular && styles.popularPlan
+          isCurrentPlan && styles.currentPlanCard
         ]}
       >
+        {isCurrentPlan && (
+          <View style={styles.currentPlanBadge}>
+            <Text style={styles.currentPlanBadgeText}>Plan Actual</Text>
+          </View>
+        )}
 
         <TouchableOpacity
           style={styles.planHeaderTouchable}
@@ -311,7 +470,7 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
           <View style={styles.planHeader}>
             <View style={[styles.planIcon, { backgroundColor: plan.color }]}>
               <Icon 
-                name={plan.isFree ? 'gift' : plan.isPopular ? 'crown' : 'diamond'} 
+                name={plan.isFree ? 'gift' : plan.id === 'premium' ? 'crown' : 'diamond'} 
                 size={24} 
                 color={colors.background.primary} 
               />
@@ -365,19 +524,20 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
               style={[
                 styles.selectPlanButton,
                 { backgroundColor: plan.color },
-                isSelected && styles.selectedPlanButton
+                isSelected && styles.selectedPlanButton,
+                isCurrentPlan && styles.currentPlanButton
               ]}
               onPress={() => handlePlanSelect(plan.id)}
               activeOpacity={0.8}
             >
               <Icon 
-                name={isSelected ? "check-circle" : "circle"} 
+                name={isCurrentPlan ? "check-circle" : isSelected ? "check-circle" : "circle"} 
                 size={18} 
                 color={colors.background.primary} 
                 style={styles.selectButtonIcon}
               />
               <Text style={styles.selectPlanButtonText}>
-                {isSelected ? 'Plan Seleccionado' : 'Seleccionar Plan'}
+                {isCurrentPlan ? 'Plan Actual' : isSelected ? 'Plan Seleccionado' : 'Seleccionar Plan'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -432,10 +592,11 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
   const renderPlanActionButton = () => (
     <View style={styles.actionContainer}>
       <Button
-        title="Actualizar Plan"
+        title={isUpdatingPlan ? "Procesando..." : "Actualizar Plan"}
         onPress={handleConfirmPlanSelection}
         variant="primary"
         fullWidth
+        disabled={isUpdatingPlan}
         icon="credit-card"
         iconPosition="left"
       />
@@ -528,6 +689,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
+  currentPlanContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary.main + '20',
+    borderRadius: spacing.sm,
+  },
+
+  currentPlanText: {
+    ...typography.styles.caption,
+    color: colors.primary.main,
+    marginLeft: spacing.xs,
+    fontWeight: typography.fontWeight.medium,
+  },
+
   // Pestañas
   tabsContainer: {
     flexDirection: 'row',
@@ -568,13 +746,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.semibold,
   },
 
-  title: {
-    ...typography.styles.h1,
-    color: colors.text.primary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-
   subtitle: {
     ...typography.styles.body,
     color: colors.text.secondary,
@@ -606,20 +777,31 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
+  currentPlanCard: {
+    borderColor: colors.states.success,
+    backgroundColor: colors.states.success + '05',
+  },
+
+  currentPlanBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: colors.states.success,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: spacing.xs,
+    zIndex: 1,
+  },
+
+  currentPlanBadgeText: {
+    ...typography.styles.caption,
+    color: colors.background.primary,
+    fontWeight: typography.fontWeight.semibold,
+    fontSize: 10,
+  },
+
   planHeaderTouchable: {
     padding: spacing.lg,
-  },
-
-  popularPlan: {
-    // Estilo removido - ya no se usa
-  },
-
-  popularBadge: {
-    // Estilo removido - ya no se usa
-  },
-
-  popularBadgeText: {
-    // Estilo removido - ya no se usa
   },
 
   planHeader: {
@@ -690,10 +872,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.semibold,
   },
 
-  selectedIndicator: {
-    marginLeft: spacing.sm,
-  },
-
   // Botón de selección de plan
   selectPlanButton: {
     flexDirection: 'row',
@@ -707,6 +885,10 @@ const styles = StyleSheet.create({
 
   selectedPlanButton: {
     opacity: 0.8,
+  },
+
+  currentPlanButton: {
+    backgroundColor: colors.states.success,
   },
 
   selectButtonIcon: {
@@ -758,21 +940,6 @@ const styles = StyleSheet.create({
   // Servicios adicionales
   additionalServicesContainer: {
     marginBottom: spacing['3xl'],
-  },
-
-  sectionTitle: {
-    ...typography.styles.h2,
-    color: colors.text.primary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-
-  sectionSubtitle: {
-    ...typography.styles.body,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.lg,
   },
 
   serviceCard: {

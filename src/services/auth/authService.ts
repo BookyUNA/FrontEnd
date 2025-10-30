@@ -2,7 +2,8 @@
  * Servicio de Autenticación - Booky (ACTUALIZADO)
  * Actualizado con hash SHA256 para contraseñas, storage simple y logout completo
  * Incluye funcionalidad de recuperación de contraseña
- * NUEVO: Decodificación de JWT y manejo de roles de usuario
+ * Decodificación de JWT y manejo de roles de usuario
+ * NUEVO: Soporte para planId de usuarios profesionales
  */
 
 import { apiService } from '../api/apiService';
@@ -17,6 +18,7 @@ export interface LoginResult {
   success: boolean;
   token?: string;
   userRole?: string;
+  userPlanId?: number; // ID del plan para profesionales
   userData?: DecodedUserData;
   error?: string;
   isNetworkError?: boolean;
@@ -38,7 +40,7 @@ class AuthService {
   /**
    * Iniciar sesión con email y contraseña
    * La contraseña se hashea con SHA256 antes de enviarla
-   * ACTUALIZADO: Ahora decodifica el JWT y guarda el rol del usuario
+   * Decodifica el JWT y guarda el rol del usuario y planId (si es profesional)
    */
   async login(credentials: LoginFormData): Promise<LoginResult> {
     try {
@@ -97,7 +99,7 @@ class AuthService {
       if (loginResponse.resultado && loginResponse.token) {
         console.log('🔐 Login exitoso, token recibido');
         
-        // ✅ DECODIFICAR JWT y extraer datos del usuario
+        // DECODIFICAR JWT y extraer datos del usuario
         const userData = jwtDecoder.extractUserData(loginResponse.token);
         
         if (!userData) {
@@ -120,10 +122,11 @@ class AuthService {
         console.log('🔐 Datos del usuario decodificados:', {
           userId: userData.userId,
           role: userData.role,
+          planId: userData.planId,
           expiresAt: new Date(userData.expiresAt * 1000).toISOString()
         });
         
-        // ✅ GUARDAR TOKEN en memoria
+        // GUARDAR TOKEN en memoria
         try {
           await storageService.saveAuthToken(loginResponse.token);
           console.log('🔐 Token guardado en memoria exitosamente');
@@ -132,7 +135,7 @@ class AuthService {
           // No fallar el login por error de storage
         }
 
-        // ✅ GUARDAR ROL en memoria
+        // GUARDAR ROL en memoria
         try {
           await storageService.saveUserRole(userData.role);
           console.log('🔐 Rol guardado en memoria exitosamente:', userData.role);
@@ -140,11 +143,24 @@ class AuthService {
           console.log('🔐 Error al guardar rol:', storageError);
           // No fallar el login por error de storage
         }
+
+        // GUARDAR PLAN ID en memoria (solo para profesionales)
+        if (userData.role === 'Profesional') {
+          try {
+            const planId = userData.planId || 1; // Usar 1 por defecto si no viene
+            await storageService.saveUserPlanId(planId);
+            console.log('📋 Plan ID guardado en memoria exitosamente:', planId);
+          } catch (storageError) {
+            console.log('📋 Error al guardar plan ID:', storageError);
+            // No fallar el login por error de storage
+          }
+        }
         
         return {
           success: true,
           token: loginResponse.token,
           userRole: userData.role,
+          userPlanId: userData.planId,
           userData: userData,
         };
       }
@@ -179,7 +195,7 @@ class AuthService {
 
   /**
    * Cerrar sesión - Implementación completa con endpoint
-   * ACTUALIZADO: Limpia también el rol del usuario
+   * Limpia token, rol y plan ID del usuario
    */
   async logout(): Promise<LogoutResult> {
     try {
@@ -227,9 +243,9 @@ class AuthService {
         console.log('🚪 Error del servidor:', errorMessage, '- Limpiando datos locales de todas formas');
       }
 
-      // ✅ SIEMPRE LIMPIAR TODOS LOS DATOS de memoria, sin importar la respuesta del servidor
+      // SIEMPRE LIMPIAR TODOS LOS DATOS de memoria, sin importar la respuesta del servidor
       await storageService.clearAll();
-      console.log('🚪 Token y rol eliminados de memoria exitosamente');
+      console.log('🚪 Token, rol y plan ID eliminados de memoria exitosamente');
       
       console.log('🚪 Usuario deslogueado completamente');
       
@@ -267,7 +283,7 @@ class AuthService {
 
   /**
    * Obtener rol del usuario actual
-   * NUEVO: Método para obtener el rol desde storage o decodificando el token
+   * Método para obtener el rol desde storage o decodificando el token
    */
   async getUserRole(): Promise<string | null> {
     try {
@@ -306,8 +322,58 @@ class AuthService {
   }
 
   /**
+   * Obtener plan ID del usuario actual (solo para profesionales)
+   * Método para obtener el planId desde storage o decodificando el token
+   */
+  async getUserPlanId(): Promise<number | null> {
+    try {
+      // Primero verificar que sea profesional
+      const userRole = await this.getUserRole();
+      if (userRole !== 'Profesional') {
+        console.log('📋 Usuario no es profesional, no tiene plan ID');
+        return null;
+      }
+
+      // Intentar obtener desde storage
+      const planIdFromStorage = await storageService.getUserPlanId();
+      
+      if (planIdFromStorage) {
+        console.log('📋 Plan ID obtenido desde storage:', planIdFromStorage);
+        return planIdFromStorage;
+      }
+
+      // Si no hay planId en storage, intentar decodificar token actual
+      const currentToken = await storageService.getAuthToken();
+      
+      if (!currentToken) {
+        console.log('📋 No hay token disponible para obtener plan ID');
+        return null;
+      }
+
+      const planIdFromToken = jwtDecoder.getUserPlanId(currentToken);
+      
+      if (planIdFromToken) {
+        // Guardar planId en storage para próximas consultas
+        await storageService.saveUserPlanId(planIdFromToken);
+        console.log('📋 Plan ID obtenido desde token y guardado en storage:', planIdFromToken);
+        return planIdFromToken;
+      }
+
+      // Si no viene en el token, usar 1 por defecto para profesionales
+      const defaultPlanId = 1;
+      await storageService.saveUserPlanId(defaultPlanId);
+      console.log('📋 Plan ID no encontrado en token, usando valor por defecto:', defaultPlanId);
+      return defaultPlanId;
+      
+    } catch (error) {
+      console.log('📋 Error al obtener plan ID del usuario:', error);
+      return null;
+    }
+  }
+
+  /**
    * Verificar si el usuario actual es profesional
-   * NUEVO: Método de conveniencia para verificar rol profesional
+   * Método de conveniencia para verificar rol profesional
    */
   async isProfessional(): Promise<boolean> {
     try {
@@ -321,7 +387,7 @@ class AuthService {
 
   /**
    * Verificar si el usuario actual es cliente
-   * NUEVO: Método de conveniencia para verificar rol cliente
+   * Método de conveniencia para verificar rol cliente
    */
   async isClient(): Promise<boolean> {
     try {
@@ -334,8 +400,22 @@ class AuthService {
   }
 
   /**
+   * Verificar si el usuario tiene un plan específico
+   * Método de conveniencia para verificar plan del profesional
+   */
+  async hasSpecificPlan(targetPlanId: number): Promise<boolean> {
+    try {
+      const planId = await this.getUserPlanId();
+      return planId === targetPlanId;
+    } catch (error) {
+      console.log('📋 Error al verificar plan específico:', error);
+      return false;
+    }
+  }
+
+  /**
    * Obtener datos completos del usuario desde el token
-   * NUEVO: Método para obtener toda la información del token
+   * Método para obtener toda la información del token
    */
   async getUserData(): Promise<DecodedUserData | null> {
     try {
@@ -352,6 +432,7 @@ class AuthService {
         console.log('👤 Datos del usuario obtenidos:', {
           userId: userData.userId,
           role: userData.role,
+          planId: userData.planId,
           isExpired: userData.isExpired
         });
       }
@@ -366,7 +447,7 @@ class AuthService {
 
   /**
    * Verificar si el token actual es válido (no expirado)
-   * ACTUALIZADO: Usa el decoder para verificar expiración
+   * Usa el decoder para verificar expiración
    */
   async isTokenValid(): Promise<boolean> {
     try {
@@ -381,346 +462,6 @@ class AuthService {
     } catch (error) {
       console.log('🔍 Error al verificar validez del token:', error);
       return false;
-    }
-  }
-
-  /**
-   * Función de debug para verificar el estado completo de autenticación
-   * NUEVO: Función mejorada que muestra token y rol
-   */
-  async debugAuthState(): Promise<void> {
-    console.log('🔍 === DEBUG ESTADO AUTENTICACIÓN ===');
-    
-    const token = await storageService.getAuthToken();
-    const role = await storageService.getUserRole();
-    const isAuth = await this.isAuthenticated();
-    const isValidToken = await this.isTokenValid();
-    const userData = await this.getUserData();
-    
-    console.log('- Token existe:', !!token);
-    console.log('- Token preview:', token ? token.substring(0, 20) + '...' : 'null');
-    console.log('- Rol guardado:', role);
-    console.log('- ¿Autenticado?:', isAuth);
-    console.log('- ¿Token válido?:', isValidToken);
-    
-    if (userData) {
-      console.log('- Datos del token:');
-      console.log('  - User ID:', userData.userId);
-      console.log('  - Rol desde token:', userData.role);
-      console.log('  - ¿Expirado?:', userData.isExpired);
-      console.log('  - Expira en:', new Date(userData.expiresAt * 1000).toISOString());
-    }
-
-    if (token) {
-      jwtDecoder.debugToken(token);
-    }
-
-    await storageService.debugStorage();
-    
-    console.log('🔍 === FIN DEBUG AUTENTICACIÓN ===');
-  }
-
-  // ... resto de métodos anteriores (forgotPassword, resetPassword, etc.)
-  // Los mantengo igual que antes por brevedad
-
-  /**
-   * Solicitar recuperación de contraseña
-   * Envía email para restablecer contraseña
-   */
-  async forgotPassword(email: string): Promise<ForgotPasswordResult> {
-    try {
-      console.log('🔑 Iniciando proceso de recuperación de contraseña...');
-
-      // Validar que el email esté presente
-      if (!email || email.trim() === '') {
-        return {
-          success: false,
-          error: 'El correo electrónico es obligatorio',
-        };
-      }
-
-      const cleanEmail = email.toLowerCase().trim();
-      console.log('🔑 Preparando solicitud de recuperación para:', cleanEmail);
-
-      const requestData = { email: cleanEmail };
-      const response = await apiService.post(
-        API_CONFIG.ENDPOINTS.FORGOT_PASSWORD,
-        requestData
-      );
-
-      if (!response.success && response.status === 0) {
-        return {
-          success: false,
-          error: 'Error de conexión. Verifica tu conexión a internet.',
-          isNetworkError: true,
-        };
-      }
-
-      const data = response.data as any;
-
-      if (!data) {
-        return {
-          success: false,
-          error: 'Respuesta inválida del servidor',
-        };
-      }
-
-      // Verificar si la operación fue exitosa
-      if (data.resultado === true) {
-        return { success: true };
-      }
-
-      // Extraer mensaje de error si existe
-      let errorMessage = 'Error desconocido';
-      
-      if (data.error && Array.isArray(data.error) && data.error.length > 0) {
-        errorMessage = data.error[0]?.Message || 'Error desconocido';
-      } else if (typeof data.error === 'string') {
-        errorMessage = data.error;
-      }
-      
-      return { success: false, error: errorMessage };
-
-    } catch (error: any) {
-      console.log('🔑 Error inesperado en recuperación de contraseña:', error);
-
-      if (error.message && (error.message.includes('conexión') || error.message.includes('network'))) {
-        return {
-          success: false,
-          error: 'Error de conexión. Verifica tu conexión a internet.',
-          isNetworkError: true,
-        };
-      }
-
-      return {
-        success: false,
-        error: 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
-      };
-    }
-  }
-
-  /**
-   * Restablecer contraseña
-   * Requiere: código recibido por email + nueva contraseña + confirmación
-   */
-  async resetPassword(code: string, newPassword: string, confirmPassword: string): Promise<ForgotPasswordResult> {
-    try {
-      console.log('🔒 Iniciando proceso de reseteo de contraseña...');
-
-      // Validar que todos los datos estén presentes
-      if (!code || !newPassword || !confirmPassword) {
-        return {
-          success: false,
-          error: 'Todos los campos son obligatorios',
-        };
-      }
-
-      // Validar que las contraseñas coincidan
-      if (newPassword !== confirmPassword) {
-        return {
-          success: false,
-          error: 'Las contraseñas no coinciden',
-        };
-      }
-
-      // Validar código de 6 dígitos numéricos
-      if (!/^\d{6}$/.test(code)) {
-        return {
-          success: false,
-          error: 'El código debe tener 6 dígitos numéricos',
-        };
-      }
-
-      // Hashear las contraseñas
-      const hashedNewPassword = hashService.hashPassword(newPassword);
-      const hashedConfirmPassword = hashService.hashPassword(confirmPassword);
-
-      console.log('🔒 Preparando datos de reseteo con contraseñas hasheadas');
-
-      const requestData = {
-        CodigoRecuperacion: code,
-        NuevaContrasenaHash: hashedNewPassword,
-        ConfirmacionContrasenaHash: hashedConfirmPassword,
-      };
-
-      console.log('🔒 Enviando solicitud de reseteo al servidor...');
-
-      const response = await apiService.post(
-        API_CONFIG.ENDPOINTS.RESET_PASSWORD,
-        requestData
-      );
-
-      // Error de red
-      if (!response.success && response.status === 0) {
-        console.log('🔒 Error de red en reseteo de contraseña');
-        return {
-          success: false,
-          error: 'Error de conexión. Verifica tu conexión a internet.',
-          isNetworkError: true,
-        };
-      }
-
-      const data = response.data as any;
-
-      if (!data) {
-        console.log('🔒 Respuesta inválida del servidor');
-        return {
-          success: false,
-          error: 'Respuesta inválida del servidor',
-        };
-      }
-
-      // Verificar si el reseteo fue exitoso
-      if (data.resultado === true) {
-        console.log('🔒 Contraseña reseteada exitosamente');
-        return { success: true };
-      }
-
-      // Extraer mensaje de error si existe
-      let errorMessage = 'Error al cambiar la contraseña';
-      
-      if (data.error && Array.isArray(data.error) && data.error.length > 0) {
-        errorMessage = this.extractErrorMessage(data.error);
-      } else if (typeof data.error === 'string') {
-        errorMessage = data.error;
-      }
-      
-      console.log('🔒 Error al resetear contraseña:', errorMessage);
-      
-      return { 
-        success: false, 
-        error: errorMessage 
-      };
-
-    } catch (error: any) {
-      console.log('🔒 Error inesperado en resetPassword:', error);
-
-      // Verificar si es un error de hash
-      if (error.message && error.message.includes('hashear')) {
-        return {
-          success: false,
-          error: 'Error al procesar las contraseñas',
-        };
-      }
-
-      if (error.message && (error.message.includes('conexión') || error.message.includes('network'))) {
-        return {
-          success: false,
-          error: 'Error de conexión. Verifica tu conexión a internet.',
-          isNetworkError: true,
-        };
-      }
-
-      return {
-        success: false,
-        error: 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.',
-      };
-    }
-  }
-
-  /**
-   * Registrar nuevo usuario
-   * También hashea la contraseña antes de enviarla
-   */
-  async register(userData: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    phone?: string;
-  }): Promise<LoginResult> {
-    try {
-      console.log('📝 Preparando registro de usuario...');
-      
-      // Hashear la contraseña
-      const hashedPassword = hashService.hashPassword(userData.password);
-
-      const registerData = {
-        ...userData,
-        email: userData.email.toLowerCase().trim(),
-        password: hashedPassword,
-      };
-
-      // TODO: Implementar llamada al endpoint de registro
-      console.log('📝 Datos de registro preparados (contraseña hasheada)');
-      
-      return {
-        success: false,
-        error: 'Función de registro no implementada aún',
-      };
-
-    } catch (error: any) {
-      console.log('📝 Error en AuthService.register:', error);
-      return {
-        success: false,
-        error: 'Error al registrar usuario',
-      };
-    }
-  }
-
-  /**
-   * Extraer mensaje de error más específico de la respuesta
-   */
-  private extractErrorMessage(errors: ApiError[]): string {
-    if (!errors || errors.length === 0) {
-      return 'Error desconocido';
-    }
-
-    // Tomar el primer error (generalmente el más relevante)
-    const firstError = errors[0];
-    
-    // Mapear códigos de error conocidos a mensajes más específicos
-    switch (firstError.ErrorCode) {
-      case 1:
-        return 'El correo electrónico y la contraseña son obligatorios';
-      case 20003:
-        return 'Usuario o contraseña incorrectos';
-      case 20001:
-        return 'El usuario no existe';
-      case 20002:
-        return 'La cuenta está desactivada';
-      case 20004:
-        return 'No se encontró una cuenta asociada a este correo electrónico';
-      case 30001:
-        return 'El código de recuperación es inválido o ha expirado';
-      case 30002:
-        return 'El código de recuperación ya fue utilizado';
-      case 30003:
-        return 'Las contraseñas no coinciden';
-      case 30004:
-        return 'La nueva contraseña no cumple con los requisitos de seguridad';
-      case 50001:
-        return 'Error interno del servidor. Intenta más tarde.';
-      default:
-        return firstError.Message || 'Error de autenticación';
-    }
-  }
-
-  /**
-   * Cambiar contraseña
-   * Hashea tanto la contraseña actual como la nueva
-   */
-  async changePassword(currentPassword: string, newPassword: string): Promise<LoginResult> {
-    try {
-      console.log('🔑 Preparando cambio de contraseña...');
-      
-      const hashedCurrentPassword = hashService.hashPassword(currentPassword);
-      const hashedNewPassword = hashService.hashPassword(newPassword);
-
-      // TODO: Implementar llamada al endpoint de cambio de contraseña
-      console.log('🔑 Preparando cambio de contraseña con hashes SHA256');
-      
-      return {
-        success: false,
-        error: 'Función de cambio de contraseña no implementada aún',
-      };
-
-    } catch (error: any) {
-      console.log('🔑 Error en AuthService.changePassword:', error);
-      return {
-        success: false,
-        error: 'Error al cambiar contraseña',
-      };
     }
   }
 
@@ -775,6 +516,70 @@ class AuthService {
       console.log('🧹 Error al limpiar datos:', error);
     }
   }
+
+  /**
+   * Función de debug para verificar el estado completo de autenticación
+   * Función mejorada que muestra token, rol y plan ID
+   */
+  async debugAuthState(): Promise<void> {
+    console.log('🔍 === DEBUG ESTADO AUTENTICACIÓN ===');
+    
+    const token = await storageService.getAuthToken();
+    const role = await storageService.getUserRole();
+    const planId = await storageService.getUserPlanId();
+    const isAuth = await this.isAuthenticated();
+    const isValidToken = await this.isTokenValid();
+    const userData = await this.getUserData();
+    
+    console.log('- Token existe:', !!token);
+    console.log('- Token preview:', token ? token.substring(0, 20) + '...' : 'null');
+    console.log('- Rol guardado:', role);
+    console.log('- Plan ID guardado:', planId);
+    console.log('- ¿Autenticado?:', isAuth);
+    console.log('- ¿Token válido?:', isValidToken);
+    
+    if (userData) {
+      console.log('- Datos del token:');
+      console.log('  - User ID:', userData.userId);
+      console.log('  - Rol desde token:', userData.role);
+      console.log('  - Plan ID desde token:', userData.planId);
+      console.log('  - ¿Expirado?:', userData.isExpired);
+      console.log('  - Expira en:', new Date(userData.expiresAt * 1000).toISOString());
+    }
+
+    if (token) {
+      jwtDecoder.debugToken(token);
+    }
+
+    await storageService.debugStorage();
+    
+    console.log('🔍 === FIN DEBUG AUTENTICACIÓN ===');
+  }
+
+  /**
+   * Extraer mensaje de error de la respuesta del servidor
+   */
+  private extractErrorMessage(errors: ApiError[] | undefined): string {
+    if (!errors || errors.length === 0) {
+      return 'Error desconocido del servidor';
+    }
+
+    const firstError = errors[0];
+    
+    switch (firstError.ErrorCode) {
+      case 20003:
+        return 'Credenciales incorrectas. Verifica tu email y contraseña.';
+      case 1:
+        return 'Datos requeridos faltantes. Verifica tu información.';
+      case 999:
+        return 'Error interno del servidor. Intenta más tarde.';
+      default:
+        return firstError.Message || 'Error de autenticación';
+    }
+  }
+
+  // Métodos adicionales como forgotPassword, resetPassword, changePassword...
+  // (se mantienen igual que en la versión anterior)
 }
 
 // Instancia singleton del servicio

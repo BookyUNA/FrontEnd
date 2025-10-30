@@ -1,13 +1,14 @@
 /**
  * Servicio de Almacenamiento Simple - Booky (ACTUALIZADO)
  * Almacenamiento en memoria (más fácil que AsyncStorage)
- * Ahora incluye almacenamiento del rol del usuario
+ * Incluye almacenamiento del rol del usuario y plan ID para profesionales
  */
 
 class SimpleStorageService {
   // Variables privadas para almacenar datos en memoria
   private authToken: string | null = null;
   private userRole: string | null = null;
+  private userPlanId: number | null = null; // ID del plan para profesionales
   private userData: any = null;
 
   /**
@@ -99,6 +100,44 @@ class SimpleStorageService {
   }
 
   /**
+   * Guardar ID del plan del usuario (solo para profesionales)
+   */
+  async saveUserPlanId(planId: number): Promise<void> {
+    try {
+      this.userPlanId = planId;
+      console.log('📋 Plan ID guardado en memoria:', planId);
+    } catch (error) {
+      console.log('📋 Error al guardar plan ID:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener ID del plan del usuario (solo para profesionales)
+   */
+  async getUserPlanId(): Promise<number | null> {
+    try {
+      return this.userPlanId;
+    } catch (error) {
+      console.log('📋 Error al obtener plan ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Eliminar ID del plan del usuario
+   */
+  async removeUserPlanId(): Promise<void> {
+    try {
+      this.userPlanId = null;
+      console.log('📋 Plan ID eliminado de memoria');
+    } catch (error) {
+      console.log('📋 Error al eliminar plan ID:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Verificar si el usuario tiene un rol específico
    */
   async hasRole(targetRole: string): Promise<boolean> {
@@ -136,6 +175,19 @@ class SimpleStorageService {
   }
 
   /**
+   * Verificar si el usuario tiene un plan específico
+   */
+  async hasPlan(targetPlanId: number): Promise<boolean> {
+    try {
+      const currentPlanId = await this.getUserPlanId();
+      return currentPlanId === targetPlanId;
+    } catch (error) {
+      console.log('📋 Error al verificar plan:', error);
+      return false;
+    }
+  }
+
+  /**
    * Guardar datos del usuario (opcional)
    */
   async saveUserData(userData: any): Promise<void> {
@@ -167,6 +219,7 @@ class SimpleStorageService {
     try {
       this.authToken = null;
       this.userRole = null;
+      this.userPlanId = null;
       this.userData = null;
       console.log('🧹 Todos los datos limpiados de memoria');
     } catch (error) {
@@ -183,6 +236,7 @@ class SimpleStorageService {
     console.log('- Token existe:', !!this.authToken);
     console.log('- Token preview:', this.authToken ? this.authToken.substring(0, 20) + '...' : 'null');
     console.log('- Rol actual:', this.userRole);
+    console.log('- Plan ID:', this.userPlanId);
     console.log('- Datos de usuario:', !!this.userData ? 'Existen' : 'No existen');
     console.log('🔍 === FIN DEBUG STORAGE ===');
   }

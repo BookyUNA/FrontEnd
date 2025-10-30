@@ -253,9 +253,8 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
                 setTimeout(() => {
                   Alert.alert(
                     'Plan Actualizado',
-                    'Tu plan ha sido actualizado. Te recomendamos cerrar y volver a iniciar sesión para acceder a todas las funciones actualizadas.',
+                    'Tu plan ha sido actualizado exitosamente. Debes cerrar sesión ahora para acceder a todas las funciones de tu nuevo plan.',
                     [
-                      { text: 'Más Tarde', style: 'cancel' },
                       {
                         text: 'Cerrar Sesión',
                         onPress: () => {

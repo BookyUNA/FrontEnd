@@ -289,9 +289,8 @@ export const PaymentGatewayScreen: React.FC<PaymentGatewayScreenProps> = ({
                   setTimeout(() => {
                     Alert.alert(
                       'Plan Actualizado',
-                      'Tu plan ha sido actualizado exitosamente. Te recomendamos cerrar y volver a iniciar sesión para acceder a todas las funciones de tu nuevo plan.',
+                      'Tu plan ha sido actualizado exitosamente. Debes cerrar sesión ahora para acceder a todas las funciones de tu nuevo plan.',
                       [
-                        { text: 'Más Tarde', style: 'cancel' },
                         {
                           text: 'Cerrar Sesión',
                           onPress: () => {

@@ -1,6 +1,7 @@
 /**
  * Utilidad para decodificar JWT - Booky
  * Decodifica tokens JWT para extraer información del payload
+ * Actualizado con soporte para IdPlan
  */
 
 // Interfaz para el payload del JWT
@@ -12,12 +13,14 @@ export interface JWTPayload {
   exp: number; // Expiration time
   iss: string; // Issuer
   aud: string; // Audience
+  IdPlan?: string; // ID del plan (solo para profesionales)
 }
 
 // Interfaz simplificada para los datos que nos interesan
 export interface DecodedUserData {
   userId: string;
   role: string;
+  planId?: number; // ID del plan (solo para profesionales)
   issuedAt: number;
   expiresAt: number;
   isExpired: boolean;
@@ -60,6 +63,7 @@ class JWTDecoder {
       console.log('🔍 Token decodificado exitosamente:', {
         userId: parsedPayload.sub,
         role: parsedPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'],
+        planId: parsedPayload.IdPlan,
         expiresAt: new Date(parsedPayload.exp * 1000).toISOString()
       });
 
@@ -85,14 +89,24 @@ class JWTDecoder {
       }
 
       const now = Math.floor(Date.now() / 1000); // Tiempo actual en segundos
+      const userRole = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
       
       const userData: DecodedUserData = {
         userId: payload.sub,
-        role: payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'],
+        role: userRole,
         issuedAt: payload.iat,
         expiresAt: payload.exp,
         isExpired: payload.exp < now
       };
+
+      // Solo agregar planId si el usuario es profesional
+      if (userRole === 'Profesional') {
+        // Convertir IdPlan a número, usar 1 por defecto si no existe
+        const planIdFromToken = payload.IdPlan;
+        userData.planId = planIdFromToken ? parseInt(planIdFromToken, 10) : 1;
+        
+        console.log('🔍 Plan ID extraído para profesional:', userData.planId);
+      }
 
       return userData;
 
@@ -128,6 +142,21 @@ class JWTDecoder {
       return userData ? userData.role : null;
     } catch (error) {
       console.log('🔍 Error al obtener rol:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtiene solo el ID del plan del token (solo para profesionales)
+   * @param token - Token JWT completo
+   * @returns ID del plan o null si hay error o no es profesional
+   */
+  static getUserPlanId(token: string): number | null {
+    try {
+      const userData = this.extractUserData(token);
+      return userData && userData.planId ? userData.planId : null;
+    } catch (error) {
+      console.log('🔍 Error al obtener plan ID:', error);
       return null;
     }
   }
@@ -172,6 +201,7 @@ class JWTDecoder {
       console.log('Payload decodificado:');
       console.log('- User ID:', payload.sub);
       console.log('- Rol:', payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']);
+      console.log('- Plan ID:', payload.IdPlan || 'No disponible');
       console.log('- JWT ID:', payload.jti);
       console.log('- Emitido en:', new Date(payload.iat * 1000).toISOString());
       console.log('- Expira en:', new Date(payload.exp * 1000).toISOString());

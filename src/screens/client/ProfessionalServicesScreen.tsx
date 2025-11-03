@@ -11,6 +11,7 @@ import {
 
 import { ServiceSearch } from '../../components/search/ServiceSearch';
 import { BookingModal } from '../../components/modals/BookingModal';
+import { ServiceDetailsModal } from '../../components/modals/ServiceDetailsModal';
 import { ServicioCliente } from '../../services/services/clientServicesService';
 import { colors } from '../../styles/colors';
 import { spacing } from '../../styles/spacing';
@@ -24,33 +25,22 @@ export const ProfessionalServicesScreen: React.FC<ProfessionalServicesScreenProp
 }) => {
   const [selectedService, setSelectedService] = useState<ServicioCliente | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showServiceDetailsModal, setShowServiceDetailsModal] = useState(false);
 
   const handleServiceSelect = (service: ServicioCliente) => {
-    const ratingLine = (service as any).calificacionPromedio !== undefined
-      ? `\nCalificación: ${(service as any).calificacionPromedio.toFixed(1)} / 5.0`
-      : '';
+    setSelectedService(service);
+    setShowServiceDetailsModal(true);
+  };
 
-    Alert.alert(
-      'Servicio Seleccionado',
-      `${service.nombreServicio}\n\n` +
-      `Profesional: ${service.nombreProfesional}\n` +
-      `Profesión: ${service.profesion}\n` +
-      `Duración: ${service.duracionMinutos} minutos\n` +
-      `Precio: ${service.precio.toFixed(2)}` +
-      (service.permiteDescuento ? `\nDescuento disponible: ${service.porcentajeDescuento}%` : '') +
-      ratingLine +
-      `\n\nDescripción: ${service.descripcion}`,
-      [
-        { text: 'Cerrar', style: 'cancel' },
-        {
-          text: 'Reservar',
-          onPress: () => {
-            setSelectedService(service);
-            setShowBookingModal(true);
-          }
-        }
-      ]
-    );
+  const handleReserveFromModal = (service: ServicioCliente) => {
+    // Primero cerrar el modal de detalles
+    setShowServiceDetailsModal(false);
+    
+    // Luego abrir el modal de reserva con un delay que permita la animación de cierre
+    setTimeout(() => {
+      setSelectedService(service);
+      setShowBookingModal(true);
+    }, 200);
   };
 
   const handleBookingSuccess = (citaId: number) => {
@@ -69,12 +59,30 @@ export const ProfessionalServicesScreen: React.FC<ProfessionalServicesScreenProp
 
   const handleCloseBookingModal = () => {
     setShowBookingModal(false);
-    setSelectedService(null);
+    // Limpiar el servicio seleccionado cuando se cierre el modal de reserva
+    setTimeout(() => {
+      setSelectedService(null);
+    }, 200);
+  };
+
+  const handleCloseServiceDetailsModal = () => {
+    setShowServiceDetailsModal(false);
+    // Limpiar el servicio con delay para permitir animaciones
+    setTimeout(() => {
+      setSelectedService(null);
+    }, 300);
   };
 
   return (
     <View style={styles.container}>
       <ServiceSearch onServiceSelect={handleServiceSelect} />
+      
+      <ServiceDetailsModal
+        visible={showServiceDetailsModal}
+        onClose={handleCloseServiceDetailsModal}
+        service={selectedService}
+        onReserve={handleReserveFromModal}
+      />
       
       <BookingModal
         visible={showBookingModal}

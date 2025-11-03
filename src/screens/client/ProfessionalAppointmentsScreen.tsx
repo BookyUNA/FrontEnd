@@ -627,7 +627,7 @@ const handleCancelRejection = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Detalles</Text>
+              <Text style={styles.modalTitle}>Detalles de cita</Text>
               <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
                 <Icon name="times" size={24} color={colors.text.primary} />
               </TouchableOpacity>
@@ -637,11 +637,16 @@ const handleCancelRejection = () => {
               style={styles.modalBody}
               showsVerticalScrollIndicator={false}
             >
-              <View style={[styles.modalStatusBadge, { backgroundColor: statusColor + '20' }]}>
-                <Icon name={statusIcon} size={20} color={statusColor} solid />
-                <Text style={[styles.modalStatusText, { color: statusColor }]}>
-                  {selectedAppointment.estado}
-                </Text>
+              <View style={styles.modalStatusBadge}>
+                <View style={[styles.statusIconContainer, { backgroundColor: statusColor }]}>
+                  <Icon name={statusIcon} size={18} color="white" solid />
+                </View>
+                <View style={styles.statusTextContainer}>
+                  <Text style={styles.statusLabel}>Estado de la cita</Text>
+                  <Text style={[styles.modalStatusText, { color: statusColor }]}>
+                    {selectedAppointment.estado}
+                  </Text>
+                </View>
               </View>
 
               <View style={styles.modalSection}>
@@ -1332,22 +1337,51 @@ const styles = StyleSheet.create({
   modalStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg + 2,
-    paddingHorizontal: spacing.xl + 4,
-    borderRadius: 18,
+    paddingVertical: spacing.lg + 4,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 16,
     marginBottom: spacing.xl,
-    gap: spacing.md,
+    gap: spacing.md + 2,
+    backgroundColor: colors.background.secondary,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+
+  statusIconContainer: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  statusTextContainer: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+
+  statusLabel: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    fontSize: 11,
+    fontWeight: typography.fontWeight.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
 
   modalStatusText: {
     ...typography.styles.h3,
     fontWeight: typography.fontWeight.bold,
+    fontSize: 17,
+    letterSpacing: 0.3,
   },
 
   modalSection: {

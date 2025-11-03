@@ -144,6 +144,29 @@ export interface ServiceResponse<T> {
   isNetworkError?: boolean;
 }
 
+export interface ReqMetricasCancelacion {
+  IdCita: number;
+}
+
+export interface ResMetricasCancelacion {
+  resultado: boolean;
+  error: ApiError[] | null;
+  Mensaje: string;
+  TotalCitas: number;
+  CitasCanceladas: number;
+  PorcentajeCancelacion: number;
+  CategoriaRiesgo: string;
+  FechaCalculo: string;
+}
+
+export interface CancellationMetrics {
+  totalCitas: number;
+  citasCanceladas: number;
+  porcentajeCancelacion: number;
+  categoriaRiesgo: string;
+  fechaCalculo: Date;
+}
+
 // =============================================
 // FUNCIONES DE MAPEO
 // =============================================
@@ -368,6 +391,92 @@ class AppointmentService {
       return {
         success: false,
         error: 'Ocurrió un error inesperado. Por favor, intenta de nuevo.',
+        isNetworkError: false,
+      };
+    }
+  }
+
+  /**
+ * Obtiene las métricas de cancelación para una cita
+ */
+  async getCancellationMetrics(idCita: number): Promise<ServiceResponse<CancellationMetrics>> {
+    try {
+      console.log('📅 AppointmentService: Obteniendo métricas de cancelación...', { idCita });
+
+      const token = await authService.getToken();
+      if (!token) {
+        return {
+          success: false,
+          error: 'No hay sesión activa. Por favor, inicia sesión nuevamente.',
+        };
+      }
+
+      const url = `${API_CONFIG.BASE_URL}/obtenerPorcentajeCancelacion`;
+      console.log('📅 AppointmentService: URL:', url);
+
+      const requestBody: ReqMetricasCancelacion = {
+        IdCita: idCita,
+      };
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `Error al obtener métricas (${response.status}).`,
+        };
+      }
+
+      const data: ResMetricasCancelacion = await response.json();
+
+      if (!data.resultado || (data.error && data.error.length > 0)) {
+        return {
+          success: false,
+          error: data.error?.[0]?.Message || 'No se pudieron obtener las métricas',
+        };
+      }
+
+      const metrics: CancellationMetrics = {
+        totalCitas: data.TotalCitas,
+        citasCanceladas: data.CitasCanceladas,
+        porcentajeCancelacion: data.PorcentajeCancelacion,
+        categoriaRiesgo: data.CategoriaRiesgo,
+        fechaCalculo: new Date(data.FechaCalculo),
+      };
+
+      return {
+        success: true,
+        data: metrics,
+      };
+
+    } catch (error: any) {
+      console.log('📅 AppointmentService: Error al obtener métricas:', error);
+      
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Tiempo de espera agotado.',
+          isNetworkError: true,
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Error al obtener métricas de cancelación.',
         isNetworkError: false,
       };
     }

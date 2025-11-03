@@ -120,16 +120,6 @@ export const RescheduleAppointmentScreen: React.FC<RescheduleAppointmentScreenPr
       hours = 0;
     }
     
-    // Validar horario laboral (8 AM - 6 PM)
-    if (hours < 8 || hours >= 18) {
-      Alert.alert(
-        'Hora inválida',
-        'Selecciona una hora entre 8:00 AM y 6:00 PM.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-    
     const newTime = new Date();
     newTime.setHours(hours);
     newTime.setMinutes(tempMinute);
@@ -203,7 +193,7 @@ export const RescheduleAppointmentScreen: React.FC<RescheduleAppointmentScreenPr
       });
 
       const result = await appointmentService.rescheduleAppointment(
-        appointment,
+        appointment.idCita,
         newDateTime
       );
 

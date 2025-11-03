@@ -119,17 +119,6 @@ export const BookingModal = ({
       // Redondear a hora exacta o media hora
       const roundedTime = roundToNearestHalfHour(selectedTime);
       
-      // Validar que esté en horario laboral (8 AM - 6 PM)
-      const hours = roundedTime.getHours();
-      if (hours < 8 || hours >= 18) {
-        Alert.alert(
-          'Hora inválida',
-          'Selecciona una hora entre 8:00 AM y 6:00 PM.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-      
       setFormulario(prev => ({ ...prev, hora: roundedTime }));
     }
   };

@@ -80,6 +80,8 @@ export const ProfessionalSchedule: React.FC = () => {
   const [fabMenuVisible, setFabMenuVisible] = useState<boolean>(false);
   const [createEventModalVisible, setCreateEventModalVisible] = useState<boolean>(false);
   const [configureScheduleModalVisible, setConfigureScheduleModalVisible] = useState<boolean>(false);
+  // Estado adicional para controlar cuando los datos han sido cargados completamente
+  const [dataLoaded, setDataLoaded] = useState<boolean>(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const fabRotation = useRef(new Animated.Value(0)).current;
@@ -94,10 +96,19 @@ export const ProfessionalSchedule: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // useEffect separado para actualizar el horario del día solo después de cargar datos
   useEffect(() => {
-    updateDaySchedule();
-    generateTimeSlots();
-  }, [selectedDate, appointments, events, schedules]);
+    if (dataLoaded) {
+      updateDaySchedule();
+    }
+  }, [selectedDate, appointments, events, schedules, dataLoaded]);
+
+  // useEffect separado para generar slots después de actualizar el horario
+  useEffect(() => {
+    if (dataLoaded) {
+      generateTimeSlots();
+    }
+  }, [daySchedule, appointments, events, dataLoaded]);
 
   useEffect(() => {
     Animated.timing(fabRotation, {
@@ -113,6 +124,7 @@ export const ProfessionalSchedule: React.FC = () => {
   const loadAllData = async () => {
     try {
       setLoading(true);
+      setDataLoaded(false);
       
       const [appointmentsResponse, eventsResponse, schedulesResponse] = await Promise.all([
         appointmentService.getProfessionalAppointments(),
@@ -131,8 +143,13 @@ export const ProfessionalSchedule: React.FC = () => {
       if (schedulesResponse.success && schedulesResponse.data) {
         setSchedules(schedulesResponse.data);
       }
+
+      // Marcar que los datos han sido cargados para activar la generación de slots
+      setDataLoaded(true);
     } catch (error) {
       console.log('Error al cargar datos:', error);
+      // Incluso si hay error, marcar como cargado para evitar bucle infinito
+      setDataLoaded(true);
     } finally {
       setLoading(false);
     }
@@ -143,6 +160,8 @@ export const ProfessionalSchedule: React.FC = () => {
     await loadAllData();
     setRefreshing(false);
   };
+
+  // ... resto del código sin cambios
 
   /**
    * Actualiza el horario configurado para el día seleccionado

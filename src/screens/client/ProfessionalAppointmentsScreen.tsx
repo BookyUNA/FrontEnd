@@ -21,7 +21,8 @@ import { Button } from '../../components/forms/Button';
 import { 
   appointmentService, 
   Appointment, 
-  AppointmentStatus 
+  AppointmentStatus,
+  CancellationMetrics
 } from '../../services/Appointment/AppointmentService';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
@@ -106,6 +107,8 @@ export const ProfessionalAppointmentsScreen: React.FC<ProfessionalAppointmentsSc
   const [isRejectionModalVisible, setIsRejectionModalVisible] = useState<boolean>(false);
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [isProcessingRejection, setIsProcessingRejection] = useState<boolean>(false);
+  const [cancellationMetrics, setCancellationMetrics] = useState<CancellationMetrics | null>(null);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(false);
 
   useEffect(() => {
     loadAppointments();
@@ -172,15 +175,35 @@ export const ProfessionalAppointmentsScreen: React.FC<ProfessionalAppointmentsSc
     setSelectedFilter(filter);
   };
 
+  const loadCancellationMetrics = async (idCita: number) => {
+    setIsLoadingMetrics(true);
+    try {
+      const result = await appointmentService.getCancellationMetrics(idCita);
+      if (result.success && result.data) {
+        setCancellationMetrics(result.data);
+      }
+    } catch (error) {
+      console.log('Error cargando métricas:', error);
+    } finally {
+      setIsLoadingMetrics(false);
+    }
+  };
+
   const handleAppointmentPress = (appointment: Appointment) => {
     console.log('📅 ProfessionalAppointmentsScreen: Mostrando detalles de cita:', appointment.id);
     setSelectedAppointment(appointment);
     setIsModalVisible(true);
+    
+    // Cargar métricas si la cita está pendiente
+    if (appointment.estado === 'Pendiente') {
+      loadCancellationMetrics(appointment.idCita);
+    }
   };
 
   const handleCloseModal = () => {
     setIsModalVisible(false);
     setSelectedAppointment(null);
+    setCancellationMetrics(null);
   };
 
 const handleConfirmAppointment = async () => {
@@ -211,7 +234,7 @@ const handleConfirmAppointment = async () => {
                   text: 'Entendido',
                   onPress: () => {
                     handleCloseModal();
-                    loadAppointments(); // Recargar lista de citas
+                    loadAppointments();
                   }
                 }]
               );
@@ -254,7 +277,7 @@ const handleConfirmRejection = async () => {
   if (!rejectionReason.trim()) {
     Alert.alert(
       'Motivo Requerido',
-      'Debes proporcionar un motivo para denegar la cita.',  // CAMBIO
+      'Debes proporcionar un motivo para denegar la cita.',
       [{ text: 'Entendido' }]
     );
     return;
@@ -265,7 +288,7 @@ const handleConfirmRejection = async () => {
   setIsProcessingRejection(true);
 
   try {
-    console.log('📅 Denegando cita:', selectedAppointment.idCita);  // CAMBIO
+    console.log('📅 Denegando cita:', selectedAppointment.idCita);
     
     const result = await appointmentService.approveOrDenyAppointment(
       selectedAppointment.idCita,
@@ -278,8 +301,8 @@ const handleConfirmRejection = async () => {
       setRejectionReason('');
       
       Alert.alert(
-        'Cita Denegada',  // CAMBIO
-        'La cita ha sido denegada. El cliente será notificado.',  // CAMBIO
+        'Cita Denegada',
+        'La cita ha sido denegada. El cliente será notificado.',
         [{ 
           text: 'Entendido',
           onPress: () => {
@@ -292,13 +315,13 @@ const handleConfirmRejection = async () => {
       if (result.isNetworkError) {
         Alert.alert(
           'Error de Conexión',
-          result.error || 'No se pudo denegar la cita. Verifica tu conexión a internet.',  // CAMBIO
+          result.error || 'No se pudo denegar la cita. Verifica tu conexión a internet.',
           [{ text: 'Entendido' }]
         );
       } else {
         Alert.alert(
           'Error',
-          result.error || 'No se pudo denegar la cita. Intenta de nuevo.',  // CAMBIO
+          result.error || 'No se pudo denegar la cita. Intenta de nuevo.',
           [{ text: 'Entendido' }]
         );
       }
@@ -318,6 +341,52 @@ const handleCancelRejection = () => {
   setIsRejectionModalVisible(false);
   setRejectionReason('');
 };
+
+  const renderCancellationMetrics = () => {
+    if (!cancellationMetrics) return null;
+
+    const getRiskColor = (categoria: string) => {
+      switch (categoria.toLowerCase()) {
+        case 'alto': return colors.states.error;
+        case 'medio': return colors.states.warning;
+        case 'bajo': return colors.states.success;
+        default: return colors.text.secondary;
+      }
+    };
+
+    const riskColor = getRiskColor(cancellationMetrics.categoriaRiesgo);
+
+    return (
+      <View style={styles.metricsContainer}>
+        <View style={styles.metricsHeader}>
+          <Icon name="chart-bar" size={14} color={colors.text.secondary} />
+          <Text style={styles.metricsTitle}>Historial del Cliente</Text>
+        </View>
+        <View style={styles.metricsContent}>
+          <View style={styles.metricItem}>
+            <Text style={styles.metricLabel}>Citas totales:</Text>
+            <Text style={styles.metricValue}>{cancellationMetrics.totalCitas}</Text>
+          </View>
+          <View style={styles.metricItem}>
+            <Text style={styles.metricLabel}>Cancelaciones:</Text>
+            <Text style={styles.metricValue}>{cancellationMetrics.citasCanceladas}</Text>
+          </View>
+          <View style={styles.metricItem}>
+            <Text style={styles.metricLabel}>% Cancelación:</Text>
+            <Text style={[styles.metricValue, { color: riskColor }]}>
+              {cancellationMetrics.porcentajeCancelacion.toFixed(1)}%
+            </Text>
+          </View>
+          <View style={[styles.riskBadge, { backgroundColor: riskColor + '20' }]}>
+            <Icon name="info-circle" size={10} color={riskColor} />
+            <Text style={[styles.riskText, { color: riskColor }]}>
+              Riesgo {cancellationMetrics.categoriaRiesgo}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -426,7 +495,6 @@ const handleCancelRejection = () => {
           )}
         </View>
 
-        {/* Para el histórico no mostramos la calificación numérica, solo si fue calificada */}
         {appointment.estado === 'Completada' && (
           <View style={styles.ratingInfoContainer}>
             <View style={styles.ratingInfoCentered}>
@@ -489,7 +557,7 @@ const handleCancelRejection = () => {
         <Text style={styles.emptyTitle}>
           {selectedFilter === 'Todas' 
             ? 'No tienes citas registradas' 
-            : `No tienes citas ${selectedFilter.toLowerCase()}`}  {/* esto mostrará "denegadas" */}
+            : `No tienes citas ${selectedFilter.toLowerCase()}`}
         </Text>
         <Text style={styles.emptyMessage}>
           {selectedFilter === 'Pendiente'
@@ -524,7 +592,7 @@ const handleCancelRejection = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Detalles de la Cita</Text>
+              <Text style={styles.modalTitle}>Detalles</Text>
               <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
                 <Icon name="times" size={24} color={colors.text.primary} />
               </TouchableOpacity>
@@ -550,6 +618,20 @@ const handleCancelRejection = () => {
                   </Text>
                 </View>
               </View>
+
+              {isPending && (
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Análisis de Riesgo</Text>
+                  {isLoadingMetrics ? (
+                    <View style={styles.metricsLoading}>
+                      <Icon name="spinner" size={14} color={colors.text.secondary} />
+                      <Text style={styles.metricsLoadingText}>Cargando historial...</Text>
+                    </View>
+                  ) : (
+                    renderCancellationMetrics()
+                  )}
+                </View>
+              )}
 
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionTitle}>Cliente</Text>
@@ -616,8 +698,6 @@ const handleCancelRejection = () => {
                   </Text>
                 </View>
               </View>
-
-              {/* No mostrar la calificación numérica en el detalle histórico; se muestra el estado de calificación más abajo. */}
 
               {selectedAppointment.estado === 'Completada' && (
                 <View style={styles.modalSection}>
@@ -721,7 +801,6 @@ const handleCancelRejection = () => {
       </Modal>
     );
   };
-
 
   const renderRejectionModal = () => {
   if (!selectedAppointment) return null;
@@ -1464,5 +1543,84 @@ const styles = StyleSheet.create({
     color: colors.primary.main,
     fontWeight: typography.fontWeight.bold,
     fontSize: 18,
+  },
+
+  metricsContainer: {
+    backgroundColor: colors.background.secondary + '80',
+    borderRadius: spacing.sm + 2,
+    padding: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary.light,
+  },
+
+  metricsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+
+  metricsTitle: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    fontSize: 11,
+    fontWeight: typography.fontWeight.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  metricsContent: {
+    gap: spacing.xs,
+  },
+
+  metricItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  metricLabel: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    fontSize: 12,
+  },
+
+  metricValue: {
+    ...typography.styles.caption,
+    color: colors.text.primary,
+    fontSize: 12,
+    fontWeight: typography.fontWeight.semibold,
+  },
+
+  riskBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: spacing.xs + 2,
+    marginTop: spacing.xs,
+    alignSelf: 'flex-start',
+  },
+
+  riskText: {
+    ...typography.styles.caption,
+    fontSize: 10,
+    fontWeight: typography.fontWeight.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+
+  metricsLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+
+  metricsLoadingText: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    fontSize: 12,
   },
 });

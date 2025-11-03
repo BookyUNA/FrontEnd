@@ -36,16 +36,20 @@ interface PlanSelectionScreenProps {
 interface PlanData {
   id: PlanType;
   name: string;
-  price: string;
-  priceInColones: number; // Precio real en colones para el API
-  originalPrice?: string;
-  discount?: string;
+  monthlyPrice: string;
+  monthlyPriceInColones: number;
+  annualPrice: string;
+  annualPriceInColones: number;
+  annualDiscount: string;
   isPopular?: boolean;
   isFree?: boolean;
   features: string[];
   description: string;
   color: string;
 }
+
+// Tipo para el periodo de facturación
+type BillingPeriod = 'monthly' | 'annual';
 
 // =============================================
 // DATOS DE PLANES
@@ -55,50 +59,56 @@ const PLANS_DATA: PlanData[] = [
   {
     id: 'free',
     name: 'Plan Gratuito',
-    price: 'Gratis',
-    priceInColones: 0,
+    monthlyPrice: 'Gratis',
+    monthlyPriceInColones: 0,
+    annualPrice: 'Gratis',
+    annualPriceInColones: 0,
+    annualDiscount: '',
     isFree: true,
     color: colors.states.success,
-    description: 'Ideal para profesionales que están comenzando o tienen pocos servicios y quieran contar con una herramienta eficiente.',
+    description: 'Ideal para profesionales que están comenzando y quieren probar una herramienta eficiente para gestionar sus servicios.',
     features: [
       'Hasta 5 servicios registrados',
-      'Posibilidad de contar hasta con 30 clientes',
-      'Política de cancelación con máximo de 24 horas',
-      'Posibilidad de establecer horario profesional'
+      'Gestión básica de citas y horarios',
+      'Perfil profesional personalizable',
+      'Acceso a funcionalidades básicas de reservas'
     ]
   },
   {
     id: 'basic',
     name: 'Plan Básico',
-    price: '$9.99/mes',
-    priceInColones: 5995, // Aproximadamente $9.99 en colones
-    originalPrice: '$99/año',
-    discount: '17% descuento',
+    monthlyPrice: '$9.99/mes',
+    monthlyPriceInColones: 5025, // $9.99 × 503 CRC/USD
+    annualPrice: '$99/año',
+    annualPriceInColones: 49797, // $99 × 503 CRC/USD (17% descuento)
+    annualDiscount: '17% descuento',
     color: colors.primary.main,
-    description: 'Ideal para profesionales asentados con una clientela más extensa.',
+    description: 'Ideal para profesionales establecidos con clientela regular. Incluye funcionalidades avanzadas de gestión.',
     features: [
       'Todo lo que ofrece el plan gratuito',
       'Hasta 30 servicios registrados',
-      'Posibilidad de contar hasta con 120 clientes',
-      'Lista de espera de hasta 50 clientes',
-      'Política de cancelación ilimitada'
+      'Herramientas avanzadas de gestión',
+      'Configuraciones profesionales extendidas',
+      'Nuevos features premium se añadirán en el futuro'
     ]
   },
   {
     id: 'premium',
     name: 'Plan Premium',
-    price: '$39.99/mes',
-    priceInColones: 23995, // Aproximadamente $39.99 en colones
-    originalPrice: '$399/año',
-    discount: '17% descuento',
+    monthlyPrice: '$39.99/mes',
+    monthlyPriceInColones: 20115, // $39.99 × 503 CRC/USD
+    annualPrice: '$399/año',
+    annualPriceInColones: 200697, // $399 × 503 CRC/USD (17% descuento)
+    annualDiscount: '17% descuento',
     color: colors.states.warning,
-    description: 'Para profesionales con necesidades avanzadas y clientela extensa.',
+    description: 'Para profesionales con alto volumen de trabajo que requieren análisis avanzados y herramientas profesionales completas.',
     features: [
       'Todo lo que incluye el plan básico',
       'Hasta 300 servicios registrados',
-      'Clientes ilimitados',
-      'Lista de espera ilimitada',
-      'Una campaña de anuncio mensual (hasta 1000 clientes)'
+      'Estadísticas de clientes (% de cancelación)',
+      'Información detallada al aceptar citas',
+      'Análisis detallado de patrones de cancelación',
+      'Nuevos features premium se añadirán en el futuro'
     ]
   }
 ];
@@ -111,6 +121,7 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
   
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedPlan, setSelectedPlan] = useState<PlanType | null>('free'); // Preseleccionar plan gratuito
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly'); // Estado para el periodo de facturación
   const [expandedPlans, setExpandedPlans] = useState<string[]>([]);
   const [isUpdatingPlan, setIsUpdatingPlan] = useState<boolean>(false);
   const [currentUserPlan, setCurrentUserPlan] = useState<number | null>(null);
@@ -153,6 +164,22 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
         setIsLoading(false);
       }, 800);
     }
+  };
+
+  // Obtener precio según el periodo de facturación
+  const getPriceForPlan = (plan: PlanData): { price: string; priceInColones: number } => {
+    if (plan.isFree) {
+      return { price: plan.monthlyPrice, priceInColones: plan.monthlyPriceInColones };
+    }
+    
+    return billingPeriod === 'monthly' 
+      ? { price: plan.monthlyPrice, priceInColones: plan.monthlyPriceInColones }
+      : { price: plan.annualPrice, priceInColones: plan.annualPriceInColones };
+  };
+
+  // Manejar cambio de periodo de facturación
+  const handleBillingPeriodChange = (period: BillingPeriod) => {
+    setBillingPeriod(period);
   };
 
   // Manejar expansión/contracción de planes
@@ -289,14 +316,18 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
       return;
     }
 
+    // Obtener precio según periodo seleccionado
+    const priceData = getPriceForPlan(selectedPlanData);
+
     // Planes de pago: navegar a pasarela de pago
     navigation?.navigate('PaymentGateway', {
       plan: {
         id: selectedPlanData.id,
         name: selectedPlanData.name,
-        price: selectedPlanData.price,
-        priceInColones: selectedPlanData.priceInColones,
+        price: priceData.price,
+        priceInColones: priceData.priceInColones,
         color: selectedPlanData.color,
+        billingPeriod: billingPeriod,
       },
     });
   };
@@ -306,6 +337,51 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
     <View style={styles.loadingContainer}>
       <Icon name="spinner" size={30} color={colors.primary.main} />
       <Text style={styles.loadingText}>Cargando planes...</Text>
+    </View>
+  );
+
+  // Renderizado del selector de periodo de facturación
+  const renderBillingPeriodSelector = () => (
+    <View style={styles.billingPeriodContainer}>
+      <Text style={styles.billingPeriodTitle}>Periodo de facturación</Text>
+      <View style={styles.billingPeriodSelector}>
+        <TouchableOpacity
+          style={[
+            styles.billingPeriodOption,
+            billingPeriod === 'monthly' && styles.billingPeriodOptionActive
+          ]}
+          onPress={() => handleBillingPeriodChange('monthly')}
+          activeOpacity={0.8}
+        >
+          <Text style={[
+            styles.billingPeriodOptionText,
+            billingPeriod === 'monthly' && styles.billingPeriodOptionTextActive
+          ]}>
+            Mensual
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[
+            styles.billingPeriodOption,
+            billingPeriod === 'annual' && styles.billingPeriodOptionActive
+          ]}
+          onPress={() => handleBillingPeriodChange('annual')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.annualOptionContent}>
+            <Text style={[
+              styles.billingPeriodOptionText,
+              billingPeriod === 'annual' && styles.billingPeriodOptionTextActive
+            ]}>
+              Anual
+            </Text>
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountBadgeText}>-17%</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -332,6 +408,7 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
     const isSelected = selectedPlan === plan.id;
     const isExpanded = expandedPlans.includes(plan.id);
     const isCurrentPlan = currentUserPlan === (plan.id === 'free' ? 1 : plan.id === 'basic' ? 2 : 3);
+    const priceData = getPriceForPlan(plan);
     
     return (
       <View
@@ -366,12 +443,14 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
               <Text style={styles.planName}>{plan.name}</Text>
               <View style={styles.priceContainer}>
                 <Text style={[styles.planPrice, { color: plan.color }]}>
-                  {plan.price}
+                  {priceData.price}
                 </Text>
-                {plan.originalPrice && (
+                {!plan.isFree && billingPeriod === 'annual' && (
                   <View style={styles.discountContainer}>
-                    <Text style={styles.originalPrice}>{plan.originalPrice}</Text>
-                    <Text style={styles.discountText}>{plan.discount}</Text>
+                    <Text style={styles.originalPrice}>
+                      {billingPeriod === 'annual' ? plan.monthlyPrice.replace('/mes', '') + ' x 12' : ''}
+                    </Text>
+                    <Text style={styles.discountText}>{plan.annualDiscount}</Text>
                   </View>
                 )}
               </View>
@@ -463,6 +542,7 @@ export const PlanSelectionScreen: React.FC<PlanSelectionScreenProps> = ({ naviga
         contentContainerStyle={styles.scrollContent}
       >
         {renderHeader()}
+        {renderBillingPeriodSelector()}
         
         <View style={styles.plansContainer}>
           {PLANS_DATA.map(renderPlanCard)}
@@ -530,6 +610,72 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
+  },
+
+  // Selector de periodo de facturación
+  billingPeriodContainer: {
+    marginBottom: spacing.xl,
+    alignItems: 'center',
+  },
+
+  billingPeriodTitle: {
+    ...typography.styles.h3,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+  },
+
+  billingPeriodSelector: {
+    flexDirection: 'row',
+    backgroundColor: colors.background.secondary,
+    borderRadius: spacing.md,
+    padding: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+  },
+
+  billingPeriodOption: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: spacing.sm,
+    flex: 1,
+    alignItems: 'center',
+  },
+
+  billingPeriodOptionActive: {
+    backgroundColor: colors.primary.main,
+  },
+
+  billingPeriodOptionText: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    fontWeight: typography.fontWeight.medium,
+  },
+
+  billingPeriodOptionTextActive: {
+    color: colors.background.primary,
+  },
+
+  annualOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+
+  discountBadge: {
+    backgroundColor: colors.states.success,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: spacing.xs,
+    minWidth: 28,
+    alignItems: 'center',
+  },
+
+  discountBadgeText: {
+    ...typography.styles.caption,
+    color: colors.background.primary,
+    fontSize: 10,
+    fontWeight: typography.fontWeight.bold,
   },
 
   // Planes

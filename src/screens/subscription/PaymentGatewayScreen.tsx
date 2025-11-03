@@ -3,6 +3,7 @@
  * Sistema de reservas para profesionales independientes
  * Formulario de pago para planes de suscripción
  * Integrada con paymentService para procesamiento real de pagos
+ * Soporte para facturación mensual y anual
  */
 
 import React, { useState, useEffect } from 'react';
@@ -25,6 +26,9 @@ import { spacing } from '../../styles/spacing';
 import { paymentService, PaymentFormData, PlanType } from '../../services/professionals';
 import { authService } from '../../services/auth/authService';
 
+// Tipo para el periodo de facturación
+type BillingPeriod = 'monthly' | 'annual';
+
 interface PaymentGatewayScreenProps {
   navigation?: any;
   onLogout?: () => void;
@@ -36,6 +40,7 @@ interface PaymentGatewayScreenProps {
         price: string;
         priceInColones: number;
         color: string;
+        billingPeriod: BillingPeriod;
       };
     };
   };
@@ -217,6 +222,18 @@ export const PaymentGatewayScreen: React.FC<PaymentGatewayScreenProps> = ({
     return { isValid: true };
   };
 
+  // Obtener texto del periodo de facturación
+  const getBillingPeriodText = (): string => {
+    if (!selectedPlan?.billingPeriod) return '';
+    return selectedPlan.billingPeriod === 'monthly' ? 'Mensual' : 'Anual';
+  };
+
+  // Obtener descripción del ahorro para planes anuales
+  const getSavingsText = (): string => {
+    if (!selectedPlan || selectedPlan.billingPeriod !== 'annual') return '';
+    return '¡Ahorras 17% pagando anualmente!';
+  };
+
   // Procesar pago
   const handleProcessPayment = async () => {
     // Validar formulario
@@ -259,6 +276,7 @@ export const PaymentGatewayScreen: React.FC<PaymentGatewayScreenProps> = ({
       console.log('💳 Datos del pago:', {
         plan: selectedPlanData.name,
         price: selectedPlanData.price,
+        billingPeriod: selectedPlan.billingPeriod,
         email: paymentData.email,
         name: paymentData.name,
         phone: paymentData.phone,
@@ -274,9 +292,12 @@ export const PaymentGatewayScreen: React.FC<PaymentGatewayScreenProps> = ({
 
       if (result.success) {
         // Pago exitoso
+        const billingPeriodText = getBillingPeriodText();
+        const successMessage = `${result.message}${billingPeriodText ? ` (Facturación ${billingPeriodText})` : ''}`;
+        
         Alert.alert(
           '¡Pago Exitoso!',
-          result.message,
+          successMessage,
           [
             {
               text: 'Continuar',
@@ -371,7 +392,22 @@ export const PaymentGatewayScreen: React.FC<PaymentGatewayScreenProps> = ({
             </View>
             
             <View style={styles.planSummaryContent}>
-              <Text style={styles.planName}>{selectedPlan.name}</Text>
+              <View style={styles.planDetails}>
+                <Text style={styles.planName}>{selectedPlan.name}</Text>
+                {selectedPlan.billingPeriod && (
+                  <View style={styles.billingInfo}>
+                    <Text style={styles.billingPeriodText}>
+                      Facturación {getBillingPeriodText()}
+                    </Text>
+                    {selectedPlan.billingPeriod === 'annual' && (
+                      <Text style={styles.savingsText}>
+                        {getSavingsText()}
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </View>
+              
               <View style={styles.priceDetails}>
                 <Text style={[styles.planPrice, { color: selectedPlan.color }]}>
                   {selectedPlan.price}
@@ -630,12 +666,34 @@ const styles = StyleSheet.create({
   planSummaryContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+  },
+
+  planDetails: {
+    flex: 1,
   },
 
   planName: {
     ...typography.styles.h2,
     color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+
+  billingInfo: {
+    marginTop: spacing.xs,
+  },
+
+  billingPeriodText: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    fontWeight: typography.fontWeight.medium,
+  },
+
+  savingsText: {
+    ...typography.styles.caption,
+    color: colors.states.success,
+    fontWeight: typography.fontWeight.semibold,
+    marginTop: spacing.xs / 2,
   },
 
   priceDetails: {

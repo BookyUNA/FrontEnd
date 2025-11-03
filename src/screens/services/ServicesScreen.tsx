@@ -30,6 +30,7 @@ import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
 import { servicesService } from '../../services/services/servicesService';
 import { userService } from '../../services/user/userService';
+import { storageService } from '../../services/storage/simpleStorageService';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - (spacing.lg * 2) - spacing.md) / 2;
@@ -64,6 +65,20 @@ interface MenuOption {
   onPress: () => void;
 }
 
+// Interfaz para información del plan
+interface PlanInfo {
+  id: number;
+  name: string;
+  maxActiveServices: number;
+}
+
+// Configuración de límites por plan
+const PLAN_LIMITS: Record<number, PlanInfo> = {
+  1: { id: 1, name: 'Gratis', maxActiveServices: 5 },
+  2: { id: 2, name: 'Básico', maxActiveServices: 30 },
+  3: { id: 3, name: 'Premium', maxActiveServices: 300 },
+};
+
 export const ServicesScreen: React.FC<ServicesScreenProps> = ({ 
   navigation,
   onCreateService 
@@ -87,8 +102,20 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({
   const [isTogglingState, setIsTogglingState] = useState<boolean>(false);
 
   // Estado para calificación del profesional
-const [professionalRating, setProfessionalRating] = useState<number>(0);
-const [isLoadingRating, setIsLoadingRating] = useState<boolean>(false);
+  const [professionalRating, setProfessionalRating] = useState<number>(0);
+  const [isLoadingRating, setIsLoadingRating] = useState<boolean>(false);
+
+  // Estados para el plan del profesional
+  const [professionalPlan, setProfessionalPlan] = useState<number>(1);
+  const [isLoadingPlan, setIsLoadingPlan] = useState<boolean>(false);
+
+  // Estados para el modal de límite de servicios
+  const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
+  const [limitModalData, setLimitModalData] = useState<{
+    title: string;
+    message: string;
+    onViewPlan: () => void;
+  } | null>(null);
 
   /**
    * Hook para recargar datos cuando la pantalla recibe el foco
@@ -97,6 +124,7 @@ const [isLoadingRating, setIsLoadingRating] = useState<boolean>(false);
   useFocusEffect(
     useCallback(() => {
       loadServices();
+      loadProfessionalPlan();
     }, [])
   );
 
@@ -128,6 +156,105 @@ const [isLoadingRating, setIsLoadingRating] = useState<boolean>(false);
   }, [searchQuery, services]);
 
   /**
+   * Mostrar modal de límite de servicios alcanzado
+   */
+  const showLimitReachedModal = (title: string, message: string, onViewPlan: () => void) => {
+    setLimitModalData({
+      title,
+      message,
+      onViewPlan
+    });
+    setShowLimitModal(true);
+  };
+
+  /**
+   * Cerrar modal de límite de servicios
+   */
+  const closeLimitModal = () => {
+    setShowLimitModal(false);
+    setLimitModalData(null);
+  };
+
+  /**
+   * Cargar plan del profesional desde storageService
+   */
+  const loadProfessionalPlan = async () => {
+    try {
+      setIsLoadingPlan(true);
+      
+      console.log('📋 Cargando plan del profesional desde storage...');
+      
+      // Obtener plan ID desde el storage service
+      const planId = await storageService.getUserPlanId();
+      
+      // Si no hay plan guardado, usar plan gratis por defecto
+      let finalPlanId = planId || 1;
+      
+      // Validar que el plan existe en nuestros límites
+      if (!PLAN_LIMITS[finalPlanId]) {
+        console.log('📋 Plan ID inválido, usando plan gratis por defecto');
+        finalPlanId = 1;
+      }
+      
+      setProfessionalPlan(finalPlanId);
+      console.log('📋 Plan del profesional cargado:', {
+        planId: finalPlanId,
+        planName: PLAN_LIMITS[finalPlanId].name,
+        maxServices: PLAN_LIMITS[finalPlanId].maxActiveServices
+      });
+      
+    } catch (error) {
+      console.log('📋 Error al cargar plan del profesional:', error);
+      setProfessionalPlan(1); // Plan gratis por defecto en caso de error
+    } finally {
+      setIsLoadingPlan(false);
+    }
+  };
+
+  /**
+   * Obtener número de servicios activos
+   */
+  const getActiveServicesCount = (): number => {
+    return services.filter(service => service.Estado).length;
+  };
+
+  /**
+   * Validar si se puede crear un nuevo servicio
+   */
+  const canCreateNewService = (): { canCreate: boolean; reason?: string } => {
+    const activeCount = getActiveServicesCount();
+    const maxAllowed = PLAN_LIMITS[professionalPlan].maxActiveServices;
+    const planName = PLAN_LIMITS[professionalPlan].name;
+    
+    if (activeCount >= maxAllowed) {
+      return {
+        canCreate: false,
+        reason: `Has alcanzado el límite de ${maxAllowed} servicios activos para el plan ${planName}. Para crear más servicios, desactiva algún servicio existente o actualiza tu plan.`
+      };
+    }
+    
+    return { canCreate: true };
+  };
+
+  /**
+   * Validar si se puede activar un servicio
+   */
+  const canActivateService = (): { canActivate: boolean; reason?: string } => {
+    const activeCount = getActiveServicesCount();
+    const maxAllowed = PLAN_LIMITS[professionalPlan].maxActiveServices;
+    const planName = PLAN_LIMITS[professionalPlan].name;
+    
+    if (activeCount >= maxAllowed) {
+      return {
+        canActivate: false,
+        reason: `Ya tienes ${maxAllowed} servicios activos, que es el límite para el plan ${planName}. Para activar este servicio, desactiva otro servicio primero o actualiza tu plan.`
+      };
+    }
+    
+    return { canActivate: true };
+  };
+
+  /**
    * Cargar servicios desde la API
    */
   const loadServices = async (showRefreshIndicator = false) => {
@@ -148,7 +275,7 @@ const [isLoadingRating, setIsLoadingRating] = useState<boolean>(false);
         setServices(result.servicios);
         console.log('📋 Servicios cargados:', result.servicios.length);
         
-        // AÑADIR: Cargar calificación si hay servicios y tienen IdProfesional
+        // Cargar calificación si hay servicios y tienen IdProfesional
         if (result.servicios.length > 0 && result.servicios[0].IdProfesional) {
           await loadProfessionalRating(result.servicios[0].IdProfesional);
         }
@@ -172,36 +299,35 @@ const [isLoadingRating, setIsLoadingRating] = useState<boolean>(false);
     }
   };
 
-
   /**
- * Cargar calificación promedio del profesional
- */
-const loadProfessionalRating = async (idProfesional: number) => {
-  if (!idProfesional || idProfesional <= 0) {
-    console.log('⭐ ServicesScreen: IdProfesional inválido');
-    return;
-  }
-
-  setIsLoadingRating(true);
-
-  try {
-    console.log('⭐ ServicesScreen: Cargando calificación para profesional:', idProfesional);
-    const result = await userService.getProfessionalRating(idProfesional);
-
-    if (result.success && result.calificacionPromedio !== undefined) {
-      console.log('⭐ ServicesScreen: Calificación obtenida:', result.calificacionPromedio);
-      setProfessionalRating(result.calificacionPromedio);
-    } else {
-      console.log('⭐ ServicesScreen: No se pudo obtener calificación');
-      setProfessionalRating(0);
+   * Cargar calificación promedio del profesional
+   */
+  const loadProfessionalRating = async (idProfesional: number) => {
+    if (!idProfesional || idProfesional <= 0) {
+      console.log('⭐ ServicesScreen: IdProfesional inválido');
+      return;
     }
-  } catch (error) {
-    console.log('⭐ ServicesScreen: Error al cargar calificación:', error);
-    setProfessionalRating(0);
-  } finally {
-    setIsLoadingRating(false);
-  }
-};
+
+    setIsLoadingRating(true);
+
+    try {
+      console.log('⭐ ServicesScreen: Cargando calificación para profesional:', idProfesional);
+      const result = await userService.getProfessionalRating(idProfesional);
+
+      if (result.success && result.calificacionPromedio !== undefined) {
+        console.log('⭐ ServicesScreen: Calificación obtenida:', result.calificacionPromedio);
+        setProfessionalRating(result.calificacionPromedio);
+      } else {
+        console.log('⭐ ServicesScreen: No se pudo obtener calificación');
+        setProfessionalRating(0);
+      }
+    } catch (error) {
+      console.log('⭐ ServicesScreen: Error al cargar calificación:', error);
+      setProfessionalRating(0);
+    } finally {
+      setIsLoadingRating(false);
+    }
+  };
 
   /**
    * Filtrar servicios según el término de búsqueda
@@ -232,6 +358,23 @@ const loadProfessionalRating = async (idProfesional: number) => {
    * Navegar a crear servicio
    */
   const handleCreateService = () => {
+    // Validar límite de servicios activos antes de crear
+    const validation = canCreateNewService();
+    
+    if (!validation.canCreate) {
+      showLimitReachedModal(
+        'Límite de servicios alcanzado',
+        validation.reason || '',
+        () => {
+          closeLimitModal();
+          if (navigation?.navigate) {
+            navigation.navigate('PlanSelection');
+          }
+        }
+      );
+      return;
+    }
+
     if (navigation?.navigate) {
       navigation.navigate('CreateService');
     } else if (onCreateService) {
@@ -279,8 +422,8 @@ const loadProfessionalRating = async (idProfesional: number) => {
   };
 
   /**
-  * Obtener opciones del menú contextual
-  */
+   * Obtener opciones del menú contextual
+   */
   const getMenuOptions = (): MenuOption[] => {
     const baseOptions: MenuOption[] = [
       {
@@ -358,29 +501,28 @@ const loadProfessionalRating = async (idProfesional: number) => {
     }
   };
 
-
   /**
- * Renderizar estrellas de calificación
- */
-const renderRatingStars = (rating: number, size: number = 12) => {
-  const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 >= 0.5;
-  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+   * Renderizar estrellas de calificación
+   */
+  const renderRatingStars = (rating: number, size: number = 12) => {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
 
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-      {[...Array(fullStars)].map((_, i) => (
-        <Icon key={`full-${i}`} name="star" size={size} color={colors.states.warning} solid />
-      ))}
-      {hasHalfStar && (
-        <Icon name="star-half-alt" size={size} color={colors.states.warning} solid />
-      )}
-      {[...Array(emptyStars)].map((_, i) => (
-        <Icon key={`empty-${i}`} name="star" size={size} color={colors.border.light} />
-      ))}
-    </View>
-  );
-};
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+        {[...Array(fullStars)].map((_, i) => (
+          <Icon key={`full-${i}`} name="star" size={size} color={colors.states.warning} solid />
+        ))}
+        {hasHalfStar && (
+          <Icon name="star-half-alt" size={size} color={colors.states.warning} solid />
+        )}
+        {[...Array(emptyStars)].map((_, i) => (
+          <Icon key={`empty-${i}`} name="star" size={size} color={colors.border.light} />
+        ))}
+      </View>
+    );
+  };
 
   /**
    * Renderizar elemento de servicio en formato grid
@@ -497,6 +639,71 @@ const renderRatingStars = (rating: number, size: number = 12) => {
   );
 
   /**
+   * Renderizar modal de límite de servicios alcanzado
+   */
+  const renderLimitReachedModal = () => {
+    if (!limitModalData) return null;
+
+    return (
+      <Modal
+        visible={showLimitModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeLimitModal}
+      >
+        <TouchableWithoutFeedback onPress={closeLimitModal}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.limitModal}>
+                {/* Header del modal */}
+                <View style={styles.limitModalHeader}>
+                  <View style={styles.limitModalIcon}>
+                    <Icon name="exclamation-triangle" size={24} color={colors.states.warning} solid />
+                  </View>
+                  <Text style={styles.limitModalTitle}>
+                    {limitModalData.title}
+                  </Text>
+                </View>
+
+                {/* Contenido del modal */}
+                <View style={styles.limitModalContent}>
+                  <Text style={styles.limitModalMessage}>
+                    {limitModalData.message}
+                  </Text>
+                </View>
+
+                {/* Botones de acción */}
+                <View style={styles.limitModalActions}>
+                  <TouchableOpacity
+                    style={[styles.limitModalButton, styles.limitModalSecondaryButton]}
+                    onPress={closeLimitModal}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.limitModalSecondaryButtonText}>
+                      Entendido
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.limitModalButton, styles.limitModalPrimaryButton]}
+                    onPress={limitModalData.onViewPlan}
+                    activeOpacity={0.8}
+                  >
+                    <Icon name="gem" size={16} color="white" solid style={styles.limitModalButtonIcon} />
+                    <Text style={styles.limitModalPrimaryButtonText}>
+                      Ver Plan
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
+  };
+
+  /**
    * Renderizar menú contextual
    */
   const renderContextMenu = () => {
@@ -575,10 +782,30 @@ const renderRatingStars = (rating: number, size: number = 12) => {
   };
 
   /**
-  * Cambiar estado del servicio (activar/desactivar)
-  */
+   * Cambiar estado del servicio (activar/desactivar)
+   */
   const handleToggleServiceState = () => {
     if (!selectedService) return;
+
+    // Si va a activar un servicio, validar límites
+    if (!selectedService.Estado) {
+      const validation = canActivateService();
+      
+      if (!validation.canActivate) {
+        showLimitReachedModal(
+          'Límite de servicios activos alcanzado',
+          validation.reason || '',
+          () => {
+            closeLimitModal();
+            closeContextMenu();
+            if (navigation?.navigate) {
+              navigation.navigate('PlanSelection');
+            }
+          }
+        );
+        return;
+      }
+    }
 
     const action = selectedService.Estado ? 'desactivar' : 'activar';
     const actionPast = selectedService.Estado ? 'desactivado' : 'activado';
@@ -606,8 +833,8 @@ const renderRatingStars = (rating: number, size: number = 12) => {
   };
 
   /**
-  * Ejecutar el cambio de estado del servicio
-  */
+   * Ejecutar el cambio de estado del servicio
+   */
   const performToggleServiceState = async (serviceId: number, actionPast: string) => {
     try {
       setIsTogglingState(true);
@@ -676,7 +903,21 @@ const renderRatingStars = (rating: number, size: number = 12) => {
           <Text style={styles.title}>Mis Servicios</Text>
           <Text style={styles.subtitle}>Brindando un servicio ideal</Text>
           
-          {/* AÑADIR: Sección de calificación */}
+          {/* Información del plan y servicios activos */}
+          <View style={styles.planInfoSection}>
+            <View style={styles.planInfoContent}>
+              <View style={styles.planInfoIcon}>
+                <Icon name="gem" size={14} color={colors.primary.main} solid />
+              </View>
+              <View style={styles.planInfoDetails}>
+                <Text style={styles.planInfoCount}>
+                  {getActiveServicesCount()} / {PLAN_LIMITS[professionalPlan].maxActiveServices} servicios activos
+                </Text>
+              </View>
+            </View>
+          </View>
+          
+          {/* Sección de calificación */}
           {professionalRating > 0 && !isLoadingRating && (
             <View style={styles.ratingHeaderSection}>
               <View style={styles.ratingHeaderContent}>
@@ -790,6 +1031,9 @@ const renderRatingStars = (rating: number, size: number = 12) => {
 
         {/* Menú contextual */}
         {renderContextMenu()}
+
+        {/* Modal de límite de servicios */}
+        {renderLimitReachedModal()}
       </View>
     </SafeContainer>
   );
@@ -819,6 +1063,52 @@ const styles = StyleSheet.create({
     ...typography.styles.body,
     color: colors.text.secondary,
     textAlign: 'center',
+  },
+
+  planInfoSection: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.background.secondary,
+    borderRadius: spacing.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    alignSelf: 'stretch',
+  },
+
+  planInfoContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+
+  planInfoIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary.main + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  planInfoDetails: {
+    flex: 1,
+    gap: spacing.xs / 2,
+  },
+
+  planInfoLabel: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    fontSize: 11,
+    fontWeight: typography.fontWeight.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  planInfoCount: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    fontWeight: typography.fontWeight.semibold,
+    fontSize: 14,
   },
 
   searchContainer: {
@@ -1119,54 +1409,147 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
     flex: 1,
   },
-ratingHeaderSection: {
-  marginTop: spacing.lg,
-  backgroundColor: colors.background.secondary,
-  borderRadius: spacing.md,
-  padding: spacing.md,
-  borderWidth: 1,
-  borderColor: colors.border.light,
-},
 
-ratingHeaderContent: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: spacing.sm,
-},
+  ratingHeaderSection: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.background.secondary,
+    borderRadius: spacing.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    alignSelf: 'stretch',
+  },
 
-ratingHeaderIcon: {
-  width: 32,
-  height: 32,
-  borderRadius: 16,
-  backgroundColor: colors.primary.main + '15',
-  alignItems: 'center',
-  justifyContent: 'center',
-},
+  ratingHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
 
-ratingHeaderInfo: {
-  flex: 1,
-  gap: spacing.xs / 2,
-},
+  ratingHeaderIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary.main + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-ratingHeaderLabel: {
-  ...typography.styles.caption,
-  color: colors.text.secondary,
-  fontSize: 11,
-  fontWeight: typography.fontWeight.medium,
-  textTransform: 'uppercase',
-  letterSpacing: 0.5,
-},
+  ratingHeaderInfo: {
+    flex: 1,
+    gap: spacing.xs / 2,
+  },
 
-ratingHeaderStars: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: spacing.sm,
-},
+  ratingHeaderLabel: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    fontSize: 11,
+    fontWeight: typography.fontWeight.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
 
-ratingHeaderValue: {
-  ...typography.styles.h3,
-  color: colors.primary.main,
-  fontWeight: typography.fontWeight.bold,
-  fontSize: 16,
-},
+  ratingHeaderStars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+
+  ratingHeaderValue: {
+    ...typography.styles.h3,
+    color: colors.primary.main,
+    fontWeight: typography.fontWeight.bold,
+    fontSize: 16,
+  },
+
+  // Estilos para el modal de límite de servicios
+  limitModal: {
+    backgroundColor: colors.background.secondary,
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 340,
+    shadowColor: colors.text.primary,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+    overflow: 'hidden',
+  },
+
+  limitModalHeader: {
+    alignItems: 'center',
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+
+  limitModalIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.states.warning + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+
+  limitModalTitle: {
+    ...typography.styles.h2,
+    color: colors.text.primary,
+    textAlign: 'center',
+    fontWeight: typography.fontWeight.bold,
+  },
+
+  limitModalContent: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+
+  limitModalMessage: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  limitModalActions: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: colors.background.tertiary,
+  },
+
+  limitModalButton: {
+    flex: 1,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+
+  limitModalSecondaryButton: {
+    backgroundColor: colors.background.secondary,
+    borderRightWidth: 1,
+    borderRightColor: colors.background.tertiary,
+  },
+
+  limitModalPrimaryButton: {
+    backgroundColor: colors.primary.main,
+  },
+
+  limitModalButtonIcon: {
+    marginRight: spacing.xs / 2,
+  },
+
+  limitModalSecondaryButtonText: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    fontWeight: typography.fontWeight.medium,
+  },
+
+  limitModalPrimaryButtonText: {
+    ...typography.styles.body,
+    color: 'white',
+    fontWeight: typography.fontWeight.semibold,
+  },
 });

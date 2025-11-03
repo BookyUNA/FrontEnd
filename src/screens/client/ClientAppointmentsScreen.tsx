@@ -690,7 +690,7 @@ const getMenuOptions = (): MenuOption[] => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Detalles de la Cita</Text>
+              <Text style={styles.modalTitle}>Detalles de cita</Text>
               <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
                 <Icon name="times" size={24} color={colors.text.primary} />
               </TouchableOpacity>
@@ -1031,7 +1031,7 @@ const renderCancelModal = () => {
             </View>
 
             <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>Detalles de la Cita</Text>
+              <Text style={styles.modalSectionTitle}>Detalles de cita</Text>
               <View style={styles.modalField}>
                 <Icon name="briefcase" size={14} color={colors.text.secondary} />
                 <Text style={styles.modalFieldValue}>

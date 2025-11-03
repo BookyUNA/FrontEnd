@@ -14,7 +14,6 @@ import { BookingModal } from '../../components/modals/BookingModal';
 import { ServiceDetailsModal } from '../../components/modals/ServiceDetailsModal';
 import { ServicioCliente } from '../../services/services/clientServicesService';
 import { colors } from '../../styles/colors';
-import { spacing } from '../../styles/spacing';
 
 interface ProfessionalServicesScreenProps {
   navigation?: any;
@@ -98,6 +97,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
-    paddingTop: spacing['8xl'],
   },
 });

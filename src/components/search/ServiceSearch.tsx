@@ -22,6 +22,7 @@ import Icon from 'react-native-vector-icons/FontAwesome5';
 
 import { Input } from '../forms/Input';
 import { Button } from '../forms/Button';
+import { Logo } from '../ui/Logo';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
@@ -494,8 +495,26 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
     );
   };
 
+  /**
+   * Renderizar header con logo
+   */
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.logoContainer}>
+        <Logo size="small" showTagline={false} />
+      </View>
+      <View style={styles.headerContent}>
+        <Text style={styles.headerTitle}>Buscar Servicios</Text>
+        <Text style={styles.headerSubtitle}>Encuentra el profesional que necesitas</Text>
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
+      {/* Header con logo */}
+      {renderHeader()}
+
       {/* Botón para expandir/contraer búsqueda */}
       <View style={styles.searchToggleContainer}>
         <TouchableOpacity
@@ -509,7 +528,7 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
             color={colors.primary.main} 
           />
           <Text style={styles.searchToggleText}>
-            {isSearchExpanded ? 'Ocultar búsqueda' : 'Buscar servicios'}
+            {isSearchExpanded ? 'Ocultar búsqueda' : 'Opciones de búsqueda'}
           </Text>
           <Icon 
             name={isSearchExpanded ? "chevron-up" : "chevron-down"} 
@@ -527,7 +546,7 @@ export const ServiceSearch: React.FC<ServiceSearchProps> = ({
           bounces={false}
         >
           <View style={styles.searchContent}>
-            <Text style={styles.sectionTitle}>Buscar Servicios</Text>
+            <Text style={styles.sectionTitle}>Filtros de Búsqueda</Text>
             
             {/* Selector de filtros */}
             <View style={styles.filterSelectorContainer}>
@@ -738,9 +757,41 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.primary,
   },
 
+  // Estilos para el header con logo
+  header: {
+    paddingTop: spacing['6xl'],
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+    backgroundColor: colors.background.secondary,
+    borderBottomLeftRadius: spacing.xl + 4,
+    borderBottomRightRadius: spacing.xl + 4,
+  },
+
+  logoContainer: {
+    marginBottom: spacing.md,
+  },
+
+  headerContent: {
+    gap: spacing.xs,
+  },
+
+  headerTitle: {
+    ...typography.styles.h1,
+    color: colors.text.primary,
+    fontSize: 28,
+    fontWeight: typography.fontWeight.bold,
+    letterSpacing: -0.5,
+  },
+
+  headerSubtitle: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+    fontSize: 16,
+  },
+
   searchToggleContainer: {
     padding: spacing.lg,
-    backgroundColor: colors.background.secondary,
+    backgroundColor: colors.background.primary,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
   },
@@ -749,7 +800,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background.primary,
+    backgroundColor: colors.background.secondary,
     borderWidth: 1,
     borderColor: colors.primary.main,
     borderRadius: 8,
@@ -778,10 +829,11 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    ...typography.styles.h1,
+    ...typography.styles.h2,
     color: colors.text.primary,
     marginBottom: spacing.lg,
     textAlign: 'center',
+    fontSize: 20,
   },
 
   filterSelectorContainer: {

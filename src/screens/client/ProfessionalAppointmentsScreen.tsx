@@ -24,6 +24,7 @@ import {
   AppointmentStatus,
   CancellationMetrics
 } from '../../services/Appointment/AppointmentService';
+import { storageService } from '../../services/storage/simpleStorageService';
 import { colors } from '../../styles/colors';
 import { typography } from '../../styles/typography';
 import { spacing } from '../../styles/spacing';
@@ -109,14 +110,42 @@ export const ProfessionalAppointmentsScreen: React.FC<ProfessionalAppointmentsSc
   const [isProcessingRejection, setIsProcessingRejection] = useState<boolean>(false);
   const [cancellationMetrics, setCancellationMetrics] = useState<CancellationMetrics | null>(null);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(false);
+  const [professionalPlan, setProfessionalPlan] = useState<number>(1);
 
   useEffect(() => {
     loadAppointments();
+    loadProfessionalPlan();
   }, []);
 
   useEffect(() => {
     applyFilter();
   }, [appointments, selectedFilter]);
+
+  // Cargar plan del profesional desde storageService
+  const loadProfessionalPlan = async () => {
+    try {
+      console.log('📅 Cargando plan del profesional desde storage...');
+      
+      // Obtener plan ID desde el storage service
+      const planId = await storageService.getUserPlanId();
+      
+      // Si no hay plan guardado, usar plan gratis por defecto
+      let finalPlanId = planId || 1;
+      
+      // Validar que el plan existe (1, 2, o 3)
+      if (![1, 2, 3].includes(finalPlanId)) {
+        console.log('📅 Plan ID inválido, usando plan gratis por defecto');
+        finalPlanId = 1;
+      }
+      
+      setProfessionalPlan(finalPlanId);
+      console.log('📅 Plan del profesional cargado:', finalPlanId);
+      
+    } catch (error) {
+      console.log('📅 Error al cargar plan del profesional:', error);
+      setProfessionalPlan(1); // Plan gratis por defecto en caso de error
+    }
+  };
 
   const loadAppointments = async () => {
     try {
@@ -176,6 +205,11 @@ export const ProfessionalAppointmentsScreen: React.FC<ProfessionalAppointmentsSc
   };
 
   const loadCancellationMetrics = async (idCita: number) => {
+    // Solo cargar métricas si el plan es Premium (3)
+    if (professionalPlan !== 3) {
+      return;
+    }
+
     setIsLoadingMetrics(true);
     try {
       const result = await appointmentService.getCancellationMetrics(idCita);
@@ -194,7 +228,7 @@ export const ProfessionalAppointmentsScreen: React.FC<ProfessionalAppointmentsSc
     setSelectedAppointment(appointment);
     setIsModalVisible(true);
     
-    // Cargar métricas si la cita está pendiente
+    // Cargar métricas si la cita está pendiente y el plan es Premium
     if (appointment.estado === 'Pendiente') {
       loadCancellationMetrics(appointment.idCita);
     }
@@ -343,7 +377,8 @@ const handleCancelRejection = () => {
 };
 
   const renderCancellationMetrics = () => {
-    if (!cancellationMetrics) return null;
+    // Solo mostrar métricas para plan Premium (3)
+    if (professionalPlan !== 3 || !cancellationMetrics) return null;
 
     const getRiskColor = (categoria: string) => {
       switch (categoria.toLowerCase()) {
@@ -619,7 +654,7 @@ const handleCancelRejection = () => {
                 </View>
               </View>
 
-              {isPending && (
+              {isPending && professionalPlan === 3 && (
                 <View style={styles.modalSection}>
                   <Text style={styles.modalSectionTitle}>Análisis de Riesgo</Text>
                   {isLoadingMetrics ? (

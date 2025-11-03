@@ -232,8 +232,7 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({ navigation }
         <Logo size="small" showTagline={false} />
       </View>
       <View style={styles.welcomeSection}>
-        <Text style={styles.welcomeLabel}>Bienvenido de vuelta</Text>
-        <Text style={styles.userName}>{userName || 'Cliente'}</Text>
+        <Text style={styles.welcomeLabel}>¡Bienvenido de vuelta!</Text>
       </View>
     </View>
   );

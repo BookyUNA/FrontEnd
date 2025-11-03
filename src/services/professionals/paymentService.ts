@@ -555,13 +555,13 @@ class PaymentService {
       basic: {
         type: 'basic',
         name: 'Plan Básico',
-        price: 9990, // $9.99 en colones (aprox)
+        price: 5015, // $9.99 × 502 CRC/USD
         description: 'Ideal para profesionales asentados',
       },
       premium: {
         type: 'premium',
         name: 'Plan Premium',
-        price: 39990, // $39.99 en colones (aprox)
+        price: 10035, // $19.99 × 502 CRC/USD
         description: 'Para profesionales con necesidades avanzadas',
       },
     };

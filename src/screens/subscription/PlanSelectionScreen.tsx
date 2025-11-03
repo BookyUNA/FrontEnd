@@ -78,9 +78,9 @@ const PLANS_DATA: PlanData[] = [
     id: 'basic',
     name: 'Plan Básico',
     monthlyPrice: '$9.99/mes',
-    monthlyPriceInColones: 5025, // $9.99 × 503 CRC/USD
+    monthlyPriceInColones: 5015, // $9.99 × 502 CRC/USD
     annualPrice: '$99/año',
-    annualPriceInColones: 49797, // $99 × 503 CRC/USD (17% descuento)
+    annualPriceInColones: 49698, // $99 × 502 CRC/USD (17% descuento)
     annualDiscount: '17% descuento',
     color: colors.primary.main,
     description: 'Ideal para profesionales establecidos con clientela regular. Incluye funcionalidades avanzadas de gestión.',
@@ -95,10 +95,10 @@ const PLANS_DATA: PlanData[] = [
   {
     id: 'premium',
     name: 'Plan Premium',
-    monthlyPrice: '$39.99/mes',
-    monthlyPriceInColones: 20115, // $39.99 × 503 CRC/USD
-    annualPrice: '$399/año',
-    annualPriceInColones: 200697, // $399 × 503 CRC/USD (17% descuento)
+    monthlyPrice: '$19.99/mes',
+    monthlyPriceInColones: 10035, // $19.99 × 502 CRC/USD
+    annualPrice: '$199/año',
+    annualPriceInColones: 99898, // $199 × 502 CRC/USD (17% descuento)
     annualDiscount: '17% descuento',
     color: colors.states.warning,
     description: 'Para profesionales con alto volumen de trabajo que requieren análisis avanzados y herramientas profesionales completas.',

@@ -409,7 +409,7 @@ const handleCancelRejection = () => {
           <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>% Cancelación:</Text>
             <Text style={[styles.metricValue, { color: riskColor }]}>
-              {cancellationMetrics.porcentajeCancelacion.toFixed(1)}%
+              {(cancellationMetrics.porcentajeCancelacion*100)}%
             </Text>
           </View>
           <View style={[styles.riskBadge, { backgroundColor: riskColor + '20' }]}>

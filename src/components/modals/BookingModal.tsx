@@ -144,10 +144,6 @@ export const BookingModal = ({
     }
 
     const hours = formulario.hora.getHours();
-    if (hours < 8 || hours >= 18) {
-      Alert.alert('Error', 'La hora debe estar entre 8:00 AM y 6:00 PM.');
-      return;
-    }
 
     if (formulario.observaciones.trim().length === 0) {
       Alert.alert('Error', 'Por favor agrega algunas observaciones o notas.');
